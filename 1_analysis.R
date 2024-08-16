@@ -9,7 +9,7 @@
 require(pacman)
 
 # load libraries
-pacman::p_load(tidyverse, lubridate, scales, slider, cowplot, patchwork, progress, RColorBrewer, # general
+pacman::p_load(tidyverse, lubridate, scales, slider, cowplot, patchwork, RColorBrewer, # general
                broom, ggpmisc, ggpubr, # linear models
                RMV2.0, # TOWT model
                sprtt, effsize) # sequential testing
@@ -55,11 +55,11 @@ source(paste0(function_path, "cont_plot.R"))
 
 # define parameters
 # section run control
-run_params <- list(site = F, 
+run_params <- list(type = "tidy", 
+                   site = T, 
                    sprt = T, 
                    sprt_cont = T, 
-                   nre_occ = T, 
-                   nre_fan = T)
+                   nre_occ = T)
 
 # Adding intervention effect as advanced chiller operation
 ctr_params <- list(peak_hours = 10:16,                      # accounts for peak hours
@@ -96,10 +96,8 @@ occ_params <- list(change_start = c(1, 5, 9),
                    change_end = c(4, 8, 12),
                    change = c(10, 20))
 
-# Fan clogging
-fan_params <- list(fan_ratio = c(10, 15), 
-                   clog_ratio = c(0.05, 0.15), 
-                   clean = c("None", "1-year"))
+
+
 
 
 #### FUNCTIONS ####
@@ -258,8 +256,8 @@ get_frsaving <- function(timeline, dataframe){
     
     # saving calculation as mean difference
     FS_rand <- (mean(df %>% filter(strategy == 1) %>% .$eload) -
-                mean(df %>% filter(strategy == 2) %>% .$eload)) /
-                mean(df %>% filter(strategy == 1) %>% .$eload) * 100
+                  mean(df %>% filter(strategy == 2) %>% .$eload)) /
+      mean(df %>% filter(strategy == 1) %>% .$eload) * 100
     
     return_l <- c(return_l, FS_rand)
   }
@@ -278,9 +276,9 @@ get_frsaving <- function(timeline, dataframe){
 
 
 #### READ DATA ####
-readfile_path <- "./readfiles/"
-summaryfigs_path <- "./figs/site_summary/"
-combifigs_path <- "./figs/comb_analysis/"
+readfile_path <- str_glue("./readfiles/{run_params$type}/")
+summaryfigs_path <- str_glue("./figs/{run_params$type}/site_summary/")
+combifigs_path <- str_glue("./figs/{run_params$type}/comb_analysis/")
 
 df_energy <- read_rds(paste0(readfile_path, "df_energy.rds"))
 df_meta <- read_rds(paste0(readfile_path, "df_meta.rds"))
@@ -299,7 +297,7 @@ all_types <- df_energy %>%
 all_names <- df_energy %>%
   select(name) %>%
   distinct(name)
- 
+
 df_tmy <- get_tmy(all_sites$site)
 
 
@@ -670,19 +668,19 @@ energy <- list()
 # get site information
 # for (n in 1:2){
 for (n in 1:(nrow(all_names))){
-
+  
   name <- all_names$name[n]
-
+  
   site_info <- df_energy %>%
     filter(name == all_names$name[n]) %>%
     select(site, type) %>%
     distinct()
-
+  
   site <- site_info$site
-
-  ifelse(!dir.exists(file.path(str_glue("./figs/site_analysis/{site}/{name}"))), dir.create(file.path(str_glue("./figs/site_analysis/{site}/{name}"))), FALSE)
-  sitefigs_path <- str_glue("./figs/site_analysis/{site}/{name}")
-
+  
+  ifelse(!dir.exists(file.path(str_glue("./figs/{run_params$type}/site_analysis/{site}/{name}"))), dir.create(file.path(str_glue("./figs/{run_params$type}/site_analysis/{site}/{name}"))), FALSE)
+  sitefigs_path <- str_glue("./figs/{run_params$type}/site_analysis/{site}/{name}")
+  
   site_weather <- df_weather %>%
     filter(site == site_info$site) %>%
     select(timestamp, t_out) %>%
@@ -692,25 +690,25 @@ for (n in 1:(nrow(all_names))){
   
   site_tmy <- df_tmy %>% 
     filter(site == site_info$site)
-
+  
   df_all <- df_energy %>%
     filter(name == all_names$name[n]) %>%
     select(timestamp, eload) %>%
     left_join(site_weather, by = "timestamp")
-
+  
   # length check
   if (nrow(df_all) != (366 + 365) * 24){
     print("Incomplete/duplicate timestamp, please check")
   } else {
     print(paste0(name, " at ", site_info$site, " start"))
   }
-
+  
   # Linear interpolation of baseline
   df_all <- df_all %>%
     run_interpo()
-
+  
   plot_scale <- get_scale(df_all$base_eload)
-
+  
   df_hourly_conv <- df_all %>%
     run_reset()
   
@@ -784,41 +782,41 @@ for (n in 1:(nrow(all_names))){
     plot_annotation(title = "Case study building power consumption (hourly average)")
   
   ggsave(filename = "temp_time_power.png", path = sitefigs_path, units = "in", height = 5, width = 10, dpi = 300)
-
+  
   # separate baseline and intervention
   df_base_conv <- df_hourly_conv %>%
     select(datetime,
            eload = base_eload,
            t_out) %>% 
     drop_na()
-
+  
   df_interv_conv <- df_hourly_conv %>%
     select(datetime,
            eload = interv_eload,
            t_out) %>% 
     drop_na()
-
+  
   # Check prediction accuracy
   towt_base <- df_base_conv %>%
     filter(datetime < as.Date("2017-01-01")) %>%
     model_fit()
-
+  
   df_towt <- df_base_conv %>%
     filter(datetime < as.Date("2017-01-01")) %>%
     select(time = datetime,
            temp = t_out,
            eload)
-
+  
   base_proj <- model_pred(df_towt, towt_base) %>%
     rename("datetime" = "time") %>%
     mutate(error = eload - towt)
-
+  
   cv_rmse <- mean(sqrt(base_proj$error ^ 2)) / mean(base_proj$eload) * 100
   
   model_acc[[n]] <- tibble("name" = name,
                            "site" = site, 
                            "cvrmse" = cv_rmse)
-
+  
   base_proj %>%
     ggplot() +
     geom_point(aes(x = datetime, y = eload, color = "Measurement"), alpha = 0.2, size = 0.2) +
@@ -843,27 +841,27 @@ for (n in 1:(nrow(all_names))){
           legend.direction = "horizontal",
           legend.position = "bottom",
           plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
+  
   ggsave(filename = "towt_acc.png", path = sitefigs_path, units = "in", height = 6, width = 10, dpi = 300)
-
+  
   # TOWT baseline project for post retrofit period
   towt_base <- df_base_conv %>%
     filter(datetime < as.Date("2017-01-01")) %>%
     model_fit()
-
+  
   df_towt <- df_interv_conv %>%
     filter(datetime >= as.Date("2017-01-01")) %>%
     select(time = datetime,
            temp = t_out,
            eload)
-
+  
   base_proj <- model_pred(df_towt, towt_base) %>%
     rename("datetime" = "time")
-
-
-
-
-
+  
+  
+  
+  
+  
   #### RANDOMIZATION ####
   schedule <- blocking(start_date = block_params$start_date,
                        n_weeks = block_params$n_weeks,
@@ -873,14 +871,14 @@ for (n in 1:(nrow(all_names))){
                        jumps = 20,
                        treatments = 2,
                        consec = 1)
-
+  
   # schedule summary
   schedule$weekday_summary
-
+  
   df_schedule <- schedule$schedule %>%
     select(datetime = date,
            strategy)
-
+  
   df_rand <- df_hourly_conv %>%
     left_join(df_schedule, by = "datetime") %>%
     fill(strategy, .direction = "down") %>%
@@ -897,13 +895,13 @@ for (n in 1:(nrow(all_names))){
   FS_true <- (mean(df_base_conv$eload) - mean(df_interv_conv$eload)) / mean(df_base_conv$eload) * 100
   FS_conv <- (mean(base_proj$towt) - mean(base_proj$eload)) / mean(base_proj$towt) * 100
   FS_rand <- (mean(df_rand %>% filter(strategy == 1) %>% .$eload) -
-              mean(df_rand %>% filter(strategy == 2) %>% .$eload)) /
-              mean(df_rand %>% filter(strategy == 1) %>% .$eload) * 100
+                mean(df_rand %>% filter(strategy == 2) %>% .$eload)) /
+    mean(df_rand %>% filter(strategy == 1) %>% .$eload) * 100
   
   MD_true <- mean(df_base_conv$eload) - mean(df_interv_conv$eload)
   MD_conv <- mean(base_proj$towt) - mean(base_proj$eload)
   MD_rand <- mean(df_rand %>% filter(strategy == 1) %>% .$eload) -
-             mean(df_rand %>% filter(strategy == 2) %>% .$eload)
+    mean(df_rand %>% filter(strategy == 2) %>% .$eload)
   
   FS_ref[[n]] <- tibble("name" = name,
                         "site" = site, 
@@ -938,7 +936,7 @@ for (n in 1:(nrow(all_names))){
           axis.text.x = element_blank(),
           legend.position = "bottom",
           plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
+  
   p2 <- df_hourly_conv %>%
     mutate(year = as.factor(year(datetime))) %>%
     ggplot(aes(x = datetime, y = t_out)) +
@@ -958,7 +956,7 @@ for (n in 1:(nrow(all_names))){
           legend.direction = "horizontal",
           legend.position = "bottom",
           plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
+  
   ggarrange(p1, p2,
             ncol=1, nrow=2,
             labels = c("a)", "b)"),
@@ -967,10 +965,10 @@ for (n in 1:(nrow(all_names))){
             common.legend = TRUE,
             legend="bottom") +
     plot_annotation(title = "Case study building intervention savings")
-
+  
   ggsave(filename = "savings_true.png", path = sitefigs_path, units = "in", height = 8, width = 10, dpi = 300)
-
-
+  
+  
   
   
   
@@ -1091,8 +1089,8 @@ for (n in 1:(nrow(all_names))){
     
     # saving calculation as mean difference
     fs_rand <- (mean(df_rand_cont %>% filter(strategy == 1) %>% .$eload) -
-                mean(df_rand_cont %>% filter(strategy == 2) %>% .$eload)) /
-                mean(df_rand_cont %>% filter(strategy == 1) %>% .$eload) * 100
+                  mean(df_rand_cont %>% filter(strategy == 2) %>% .$eload)) /
+      mean(df_rand_cont %>% filter(strategy == 1) %>% .$eload) * 100
     
     cont_frsaving[[n]] <- list("name" = name, 
                                "site" = site, 
@@ -1108,7 +1106,7 @@ for (n in 1:(nrow(all_names))){
   
   
   
-
+  
   #### NRE ####
   if (run_params$nre_occ) {
     
@@ -1191,133 +1189,9 @@ for (n in 1:(nrow(all_names))){
     FS_occ <- bind_rows(FS_occ, tibble_occ)
     
   }
-    
-  
-  
-  
-  if (run_params$nre_fan){
-    
-    scenario <- 1
-    tibble_fan <- list()
-    tibble_fan[[n]] <- tibble("name" = name, 
-                              "site" = site)
-    
-    for (i in fan_params$fan_ratio){
-      
-      for (j in fan_params$clean){
-        
-        if (j == "None"){
-          
-          clogging <- cumsum(runif(24, min = fan_params$clog_ratio[1], max = fan_params$clog_ratio[2]))
-          month = ifelse(year(df_base_conv$datetime) == 2016, month(df_base_conv$datetime), month(df_base_conv$datetime) + 12)
-          
-        } else if (j == "1-year"){
-          
-          clogging <- cumsum(runif(12, min = fan_params$clog_ratio[1], max = fan_params$clog_ratio[2]))
-          month = month(df_base_conv$datetime)
-          
-        } else if (j == "9-month"){
-          
-          clogging <- cumsum(runif(9, min = fan_params$clog_ratio[1], max = fan_params$clog_ratio[2]))
-          month = ifelse(month(df_base_conv$datetime) > 9, month(df_base_conv$datetime) - 9, month(df_base_conv$datetime))
-          
-        } else {
-          
-          clogging <- cumsum(runif(6, min = fan_params$clog_ratio[1], max = fan_params$clog_ratio[2]))
-          month = ifelse(month(df_base_conv$datetime) > 6, month(df_base_conv$datetime) - 6, month(df_base_conv$datetime))
-          
-        }
-        
-        df_base_fan <- df_base_conv %>% 
-          mutate(hour = hour(datetime), 
-                 fan_ratio = i / 100) %>% 
-          mutate(month = month, 
-                 fan = eload * fan_ratio, 
-                 clog_ratio = clogging[month]) %>% 
-          mutate(eload = eload + fan * clog_ratio) %>% 
-          select(datetime, eload, t_out)
-        
-        base_pre_meas <- df_base_fan %>% 
-          filter(datetime < as.Date("2017-01-01"))
-        
-        base_pos_true <- df_base_fan %>% 
-          filter(datetime >= as.Date("2017-01-01"))
-        
-        # Baseline projection
-        towt_base <- base_pre_meas %>%
-          model_fit()
-        
-        df_towt <- df_interv_conv %>%
-          filter(datetime >= as.Date("2017-01-01")) %>%
-          select(time = datetime,
-                 temp = t_out,
-                 eload)
-        
-        base_pos_proj <- model_pred(df_towt, towt_base) %>%
-          rename("datetime" = "time") %>%
-          select(datetime, towt, eload)
-        
-        df_interv_fan <- df_interv_conv %>% 
-          mutate(hour = hour(datetime), 
-                 fan_ratio = i / 100) %>% 
-          mutate(month = month, 
-                 fan = eload * fan_ratio, 
-                 clog_ratio = clogging[month]) %>% 
-          mutate(eload = eload + fan * clog_ratio) %>% 
-          select(datetime, eload, t_out)
-        
-        interv_pos_meas <- df_interv_fan %>% 
-          filter(datetime >= as.Date("2017-01-01"))
-        
-        interv_pre_true <- df_interv_fan %>% 
-          filter(datetime < as.Date("2017-01-01"))
-        
-        rand <- df_rand %>%
-          mutate(hour = hour(datetime), 
-                 fan_ratio = ifelse(hour %in% fan_params$opt_hours, fan_params$fan_ratio[2] / 100, fan_params$fan_ratio[1] / 100)) %>% 
-          mutate(month = month, 
-                 fan = eload * fan_ratio, 
-                 clog_ratio = clogging[month]) %>% 
-          mutate(eload = eload + fan * clog_ratio) %>% 
-          select(datetime, strategy, eload, t_out)
-        
-        prepost_plot(base_pre_meas,  
-                     base_pos_proj, 
-                     base_pos_true, 
-                     interv_pos_meas, 
-                     str_glue("Building energy consumption over a 2-year period\n({i}% fan energy with {j} filter clean)"))
-        
-        ggsave(filename = str_glue("fan_clogging_conv_S{scenario}.png"), path = sitefigs_path, units = "in", height = 5, width = 10, dpi = 300)
-        
-        # saving calculation as mean difference
-        base_true <- rbind(base_pre_meas, base_pos_true)
-        interv_true <- rbind(interv_pre_true, interv_pos_meas)
-        
-        FS_true <- (mean(base_true$eload) - mean(interv_true$eload)) / mean(base_true$eload) * 100
-        FS_conv <- (mean(base_pos_proj$towt) - mean(interv_pos_meas$eload)) / mean(base_pos_proj$towt) * 100
-        FS_rand <- (mean(rand %>% filter(strategy == 1) %>% .$eload) -
-                      mean(rand %>% filter(strategy == 2) %>% .$eload)) /
-          mean(rand %>% filter(strategy == 1) %>% .$eload) * 100
-        
-        new_tibble <- as_tibble(setNames(list(FS_true, FS_conv, FS_rand),
-                                         c(str_glue("S{scenario}_true"),
-                                           str_glue("S{scenario}_conv"),
-                                           str_glue("S{scenario}_rand"))))
-        
-        tibble_fan[[n]] <- bind_cols(tibble_fan[[n]], new_tibble)
-        
-        scenario <- scenario + 1
-        
-      }
-      
-    }
-    
-    FS_fan <- bind_rows(FS_fan, tibble_fan)
-    
-  }
   
   print(paste0("Finished: ", n, "/", nrow(all_names)))
-
+  
 }
 
 
@@ -1351,15 +1225,9 @@ df_sprt_all <- bind_rows(seq_mdsaving) %>%
               select(-c(base_temp, interv_temp)) %>% 
               pivot_longer(-c(name, site), names_to = "seq", values_to = "n_weeks"), 
             by = c("name", "site", "seq"))
-  
+
 df_NRE_occ <- df_FS %>%
   rbind(FS_occ %>% 
-          pivot_longer(-c(name, site), names_to = "type", values_to = "savings") %>%
-          separate(type, into = c("scenario", "method"), sep = "_"))
-  
-
-df_NRE_fan <- df_FS %>%
-  rbind(FS_fan %>% 
           pivot_longer(-c(name, site), names_to = "type", values_to = "savings") %>%
           separate(type, into = c("scenario", "method"), sep = "_"))
 
@@ -1370,7 +1238,6 @@ df_eui <- bind_rows(energy) %>%
 write_rds(df_sprt_all, paste0(readfile_path, "df_sprt_all.rds"), compress = "gz")
 write_rds(df_seq_FS, paste0(readfile_path, "df_seq_FS.rds"), compress = "gz")
 write_rds(df_NRE_occ, paste0(readfile_path, "df_NRE_occ.rds"), compress = "gz")
-write_rds(df_NRE_fan, paste0(readfile_path, "df_NRE_fan.rds"), compress = "gz")
 write_rds(df_MD, paste0(readfile_path, "df_MD.rds"), compress = "gz")
 write_rds(df_FS, paste0(readfile_path, "df_FS.rds"), compress = "gz")
 write_rds(df_eui, paste0(readfile_path, "df_eui.rds"), compress = "gz")
@@ -1506,7 +1373,7 @@ ggarrange(p1, p2,
   plot_annotation(title = str_glue("Deviation in saving estimation at early stop\n(Measured savings from observed weather)"))
 
 ggsave(filename = str_glue("md_comp.png"), path = combifigs_path, units = "in", height = 8, width = 8, dpi = 300)
-  
+
 # continuous sprt mean difference 
 p1 <- bind_rows(cont_mdsaving) %>% 
   left_join(df_MD %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
@@ -1732,18 +1599,62 @@ df_sprt_all %>%
 
 ggsave(filename = str_glue("seq_timeline.png"), path = combifigs_path, units = "in", height = 18, width = 10, dpi = 300)
 
-df_eui %>% 
+# continue sampling visualization
+df_rand_cont %>% 
+  mutate(strategy = as.factor(strategy), 
+         strategy = recode_factor(strategy, "1" = "Baseline", "2" = "Intervention")) %>% 
+  mutate(week = interval(min(datetime), datetime) %>% as.numeric('weeks') %>% floor(), 
+         sample = as.factor(ifelse(week <= eob, "Before", "After")), 
+         sample = fct_relevel(sample, c("Before", "After"))) %>%
+  group_by(sample, strategy) %>% 
+  summarise(n = n()) %>% 
+  mutate(n = n, 
+         perc = n / sum(n)) %>%
+  ungroup() %>% 
+  ggplot(aes(x = sample, y = perc, fill = strategy)) +
+  geom_bar(position="fill", stat="identity") +
+  geom_hline(yintercept = 0.5, 
+             linetype = "dashed", 
+             color = "red") +
+  annotate(geom = "text",
+           color = "red", 
+           x = 0.5, 
+           y = 0.52, 
+           label = "50%") +
+  labs(x = NULL,
+       fill = NULL,
+       y = NULL,
+       title = "Sampling ratio between baseline and intervention", 
+       subtitle = "Before and after the sequential test") +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 4), 
+                     labels = number_format(suffix = "%", scale = 100)) +
+  scale_fill_manual(values = ls_colors) +
+  theme(legend.direction = "horizontal",
+        legend.position = "bottom",
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+
+# Continue sampling energy saving
+mean_perc <- df_eui %>% 
   mutate(ref_saving = (ref - interv) / sqm, 
          rand_saving = (ref - rand) / sqm, 
          perc = rand_saving / ref_saving * 100) %>% 
+  group_by(site) %>%
+  summarise(perc_mean = round(mean(perc), digits = 0),
+            pos = round(n() / 2) + 1)
+
+df_eui %>% 
+  mutate(ref_saving = (ref - interv) / sqm, 
+         rand_saving = (ref - rand) / sqm) %>% 
   ggplot() +
   geom_col(aes(x = name, y = ref_saving, fill = "Estimated savings"), position = "identity") +
   geom_col(aes(x = name, y = rand_saving, fill = "Measured savings"), position = "identity") +
-  geom_text(aes(x = min(name), y = conv), 
-            df_eui %>% 
+  geom_text(data = mean_perc, aes(x = pos, y = -.5, group = site, label = paste0(perc_mean, "%"))) +
+  geom_text(aes(x = pos, y = conv), 
+            mean_perc %>% 
               filter(site == df_eui %>% tail(1) %>% .$site) %>% 
               mutate(conv = 20), 
-            position = position_nudge(x = 2.5),
             color = "grey40",
             label = "Conventional M&V\nbase-year savings: 0") +
   facet_wrap(~site, nrow = 1, scales = "free_x") +
@@ -1773,24 +1684,24 @@ for (s in c("ref", "S1", "S2", "S3", "S4", "S5", "S6")){
     group_by(name, site, scenario) %>%
     summarise(conv = abs(diff(savings))) %>%
     ungroup()
-
+  
   dev_rand <- df_NRE_occ %>%
     filter(scenario == s) %>%
     filter(method != "conv") %>%
     group_by(name, site, scenario) %>%
     summarise(rand = abs(diff(savings))) %>%
     ungroup()
-
+  
   dev_FS <- dev_rand %>%
     left_join(dev_conv, by = c("name", "site", "scenario")) %>% 
     mutate(diff_in_diff = conv - rand)
-
+  
   mean_diff <- dev_FS %>%
     group_by(site) %>%
     summarise(mean = round(mean(diff_in_diff), digits = 1),
               pos = round(n() / 2) + 1,
               .groups = 'keep')
-
+  
   dev_FS %>%
     ggplot(aes(group = site)) +
     geom_col(aes(x = name, y = diff_in_diff), position = "identity", alpha = 0.5) +
@@ -1812,57 +1723,6 @@ for (s in c("ref", "S1", "S2", "S3", "S4", "S5", "S6")){
           legend.direction = "horizontal",
           legend.position = "bottom",
           plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
+  
   ggsave(filename = str_glue("occ_{s}_savings.png"), path = combifigs_path, units = "in", height = 5, width = 15, dpi = 300)
-}
-
-# NRE saving estimation: fan change
-for (s in c("ref", "S1", "S2", "S3", "S4")){
-  dev_conv <- df_NRE_fan %>%
-    filter(scenario == s) %>%
-    filter(method != "rand") %>%
-    group_by(name, site, scenario) %>%
-    summarise(conv = abs(diff(savings))) %>%
-    ungroup()
-  
-  dev_rand <- df_NRE_fan %>%
-    filter(scenario == s) %>%
-    filter(method != "conv") %>%
-    group_by(name, site, scenario) %>%
-    summarise(rand = abs(diff(savings))) %>%
-    ungroup()
-  
-  dev_FS <- dev_rand %>%
-    left_join(dev_conv, by = c("name", "site", "scenario")) %>% 
-    mutate(diff_in_diff = conv - rand)
-  
-  mean_diff <- dev_FS %>%
-    group_by(site) %>%
-    summarise(mean = round(mean(diff_in_diff), digits = 1),
-              pos = round(n() / 2) + 1,
-              .groups = 'keep')
-  
-  dev_FS %>%
-    ggplot(aes(group = site)) +
-    geom_col(aes(x = name, y = diff_in_diff), position = "identity", alpha = 0.5) +
-    facet_wrap(~site, nrow = 1, scales = "free_x") +
-    scale_y_continuous(expand = c(0.1, 0),
-                       breaks = breaks_pretty(n = 4), 
-                       labels = number_format(suffix = "%")) +
-    geom_text(data = mean_diff,
-              aes(x = pos, y = -.5, group = site, label = paste0(mean, "%"))) +
-    geom_line(aes(x = name, y = rand, color = "Absolute deviation of randomized method"), alpha = 0.5) +
-    geom_point(aes(x = name, y = rand, color = "Absolute deviation of randomized method"), alpha = 0.5) +
-    labs(x = NULL,
-         fill = NULL,
-         y = NULL,
-         color = NULL, 
-         title = "Difference-in-difference of fractional savings calculated for each building") +
-    theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-          axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
-          legend.direction = "horizontal",
-          legend.position = "bottom",
-          plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-  
-  ggsave(filename = str_glue("fan_{s}_savings.png"), path = combifigs_path, units = "in", height = 5, width = 15, dpi = 300)
 }
