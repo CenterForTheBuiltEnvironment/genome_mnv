@@ -75,7 +75,7 @@ seq_run <- function(param, dataframe, tmy){
   annual_saving <- list()
   
   # do sample
-  for (i in 2:param$n_weeks) {
+  for (i in seq(2, param$n_weeks)) {
     
     # subset data by week
     df_seq <- df_sprt %>%
@@ -94,7 +94,7 @@ seq_run <- function(param, dataframe, tmy){
                                     ol_est(., quantile_tmy))
     
     # start estimation after 2 months for complete ftow profile
-    if (i/4 > 2) {
+    if (i / 4 >= 2 & i %% 4 == 0) {
       
       # Update user on the week of update
       # print(paste0("updating TOWT model in week ", i))
