@@ -12,7 +12,7 @@ seq_plot <- function(df_means, sprt_res, sprt_overlap_base, sprt_overlap_interv,
   #' @param eob n_weeks at the end of blocking period (end of the test)
   #' @return a stacked ggplots of different results
   #' 
-
+  
   p2 <- ggplot(sprt_res, aes(x = n_weeks, y = ns_stat)) +
     geom_ribbon(aes(ymin = ns_ci_low, ymax = ns_ci_high), alpha = 0.5, fill = "#D0E3F1") +
     geom_line(size = 1.25, color = "grey20", alpha = 0.4) +
@@ -180,11 +180,12 @@ seq_plot <- function(df_means, sprt_res, sprt_overlap_base, sprt_overlap_interv,
   
   # Annotation
   # ES: Estimation start
-  # BTC: Baseline temperature check
-  # ITC: Interventional temperature check
+  # TC: Temperature check
   # MinC: Minimum test check
   # SPRT: SPRT check
   # EE: End of the block period
+  
+  TC <- round(max(sprt_overlap_base %>% filter(flag == 1) %>% .$n_weeks, sprt_overlap_interv %>% filter(flag == 1) %>% .$n_weeks) / 4) * 4
   
   p3 <- ggplot(annual_saving) +
     geom_line(aes(x = n_weeks, y = annual_saving), 
@@ -201,33 +202,17 @@ seq_plot <- function(df_means, sprt_res, sprt_overlap_base, sprt_overlap_interv,
                   label = paste0("ES: ", n_weeks)), 
               position = position_nudge(y = 2.5),
               color = "grey20", size = 2.5, fontface = "italic") +
-    geom_point(data = sprt_overlap_base %>% filter(flag == 1), 
-               aes(x = ifelse(is.null(first(flag)), max(sprt_overlap_base$n_weeks), n_weeks), 
-                   y = ifelse(is.null(first(flag)), max(sprt_overlap_base$annual_saving), annual_saving)), 
+    geom_point(data = annual_saving %>% filter(n_weeks == TC), 
+               aes(x = n_weeks, 
+                   y = annual_saving), 
                size = 4,
                alpha = 0.8, 
                shape = 16, 
                color = "#347EB3") +
-    geom_text(data = sprt_overlap_base %>% filter(flag == 1), 
-              aes(x = ifelse(is.null(first(flag)), max(sprt_overlap_base$n_weeks), n_weeks), 
-                  y = ifelse(is.null(first(flag)), max(sprt_overlap_base$annual_saving), annual_saving), 
-                  label = paste0("BTC: ", n_weeks)), 
-              position = position_nudge(y = 2.5),
-              color = "grey20", 
-              size = 2.5, 
-              fontface = "italic",
-              check_overlap = TRUE) +
-    geom_point(data = sprt_overlap_interv %>% filter(flag == 1), 
-               aes(x = ifelse(is.null(first(flag)), max(sprt_overlap_interv$n_weeks), n_weeks), 
-                   y = ifelse(is.null(first(flag)), max(sprt_overlap_interv$annual_saving), annual_saving)), 
-               size = 4,
-               alpha = 0.8, 
-               shape = 16, 
-               color = "#347EB3") +
-    geom_text(data = sprt_overlap_interv %>% filter(flag == 1), 
-              aes(x = ifelse(is.null(first(flag)), max(sprt_overlap_interv$n_weeks), n_weeks), 
-                  y = ifelse(is.null(first(flag)), max(sprt_overlap_interv$annual_saving), annual_saving), 
-                  label = paste0("ITC: ", n_weeks)), 
+    geom_text(data = annual_saving %>% filter(n_weeks == TC), 
+               aes(x = n_weeks, 
+                   y = annual_saving,  
+                   label = paste0("TC: ", n_weeks)), 
               position = position_nudge(y = -2.5),
               color = "grey20", 
               size = 2.5, 

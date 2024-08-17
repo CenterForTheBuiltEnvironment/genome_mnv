@@ -56,20 +56,21 @@ source(paste0(function_path, "cont_plot.R"))
 # define parameters
 # section run control
 run_params <- list(type = "tidy", 
-                   site = T, 
+                   site = F, 
                    sprt = T, 
                    sprt_cont = T, 
                    nre_occ = T)
 
 # Adding intervention effect as advanced chiller operation
 ctr_params <- list(peak_hours = 10:16,                      # accounts for peak hours
-                   coe_temp = 2.5,                          # % of savings from raising swt every 1°C
-                   conv_swt = 6,                            # baseline swt
+                   chwl_perc = 0.25,                        # % of chw electricity consumption (wrt building)
+                   step_perc = 0.08,                        # % of chw electricity saving by raising 1 °C
+                   conv_swt = 6,                            # baseline swt °C
                    weather_knots = c(15, 25),               # outdoor temperature reset steps
                    swt_knots = c(12, 7),                    # swt reset steps
-                   coe_peak = 0.75,                         # coefficient adjustments for peak hours
-                   coe_off = 1.25,                          # coefficient adjustments for off-peak hours
-                   enable_temp = 10)                        # assume chiller operation starts
+                   coe_peak = 0.8,                          # coefficient adjustments for peak hours
+                   coe_off = 1.2,                           # coefficient adjustments for off-peak hours
+                   enable_temp = 8)                         # assume chiller operation starts
 
 # adding random sampling schedules
 block_params <- list(start_date = "2016-01-01",
@@ -141,19 +142,24 @@ get_scale <- function(eload, range = 2){
 
 # Function defined to add chwst reset intervention
 run_reset <- function(df_baseline){
+  
+  mean <- mean(df_baseline$base_eload, na.rm = T) * ctr_params$chwl_perc
+  
   grad <- (ctr_params$swt_knots[2] - ctr_params$swt_knots[1]) / 
     (ctr_params$weather_knots[2] - ctr_params$weather_knots[1])
   
   interc <- ctr_params$swt_knots[2] - (ctr_params$weather_knots[2] * grad)
   
-  df_interv <- df_all %>% 
+  df_interv <- df_baseline %>% 
     mutate(swt = t_out * grad + interc, 
+           chwl = mean,
            hour = hour(datetime)) %>% 
-    mutate(swt = ifelse(swt > ctr_params$swt_knots[1], ctr_params$swt_knots[1], ifelse(swt < ctr_params$swt_knots[2], ctr_params$swt_knots[2], swt))) %>% 
-    mutate(temp_savings = ifelse(t_out >= ctr_params$enable_temp, (swt - ctr_params$conv_swt) * ctr_params$coe_temp, 0)) %>% 
-    mutate(time_adj = ifelse(hour %in% ctr_params$peak_hours, ctr_params$coe_peak, ctr_params$coe_off)) %>% 
-    mutate(perc_savings = temp_savings * time_adj) %>% 
-    mutate(interv_eload = base_eload * (1 - perc_savings / 100)) %>% 
+    mutate(swt = ifelse(swt > ctr_params$swt_knots[1], ctr_params$swt_knots[1], ifelse(swt < ctr_params$swt_knots[2], ctr_params$swt_knots[2], swt)), 
+           temp_savings = ifelse(t_out >= ctr_params$enable_temp, (swt - ctr_params$conv_swt) * ctr_params$step_perc, 0), 
+           time_adj = ifelse(hour %in% ctr_params$peak_hours, ctr_params$coe_peak, ctr_params$coe_off), 
+           perc_savings = temp_savings * time_adj, 
+           savings = chwl * perc_savings, 
+           interv_eload = base_eload - savings) %>% 
     select(datetime, base_eload, interv_eload, t_out)
   
   return(df_interv)
@@ -303,6 +309,7 @@ df_tmy <- get_tmy(all_sites$site)
 
 
 
+
 #### SITE ####
 if (run_params$site){
   colors <- brewer.pal(nrow(all_types), "Set3")
@@ -332,7 +339,6 @@ if (run_params$site){
           panel.grid.major.y = element_line(color = "grey80"),
           legend.direction = "horizontal",
           plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-  
   
   p2 <- df_energy %>%
     group_by(site, type) %>%
@@ -416,7 +422,6 @@ if (run_params$site){
           legend.direction = "horizontal",
           legend.position = "bottom",
           plot.margin = margin(t = 0.2, l = -0.5, unit = "cm"))
-  
   
   combined_plot <- plot_grid(
     bar_plot,
@@ -654,7 +659,6 @@ if (run_params$site){
 # storing results
 FS_ref <- list()
 FS_occ <- list()
-FS_fan <- list()
 MD_ref <- list()
 model_acc <- list()
 seq_timeline <- list()
@@ -857,7 +861,6 @@ for (n in 1:(nrow(all_names))){
   
   base_proj <- model_pred(df_towt, towt_base) %>%
     rename("datetime" = "time")
-  
   
   
   
@@ -1310,10 +1313,13 @@ ggarrange(p1, p2,
 ggsave(filename = str_glue("FS_Dev.png"), path = combifigs_path, units = "in", height = 5, width = 8, dpi = 300)
 
 # Sequential mean difference 
-p1 <- df_sprt_all %>% 
+plot_data <- df_sprt_all %>% 
   filter(seq == "eob") %>% 
   left_join(df_MD %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(abs_diff = abs(savings - - sprt)) %>% 
+  mutate(abs_diff = abs(savings - - sprt), 
+         plot_max = max(abs_diff))
+
+p1 <- plot_data %>% 
   ggplot() +
   geom_boxplot(aes(x = abs_diff), width = 0.1) +
   geom_text(aes(x = median(abs_diff), y = 0, label = paste0(round(median(abs_diff), digits = 1), " kW")), 
@@ -1326,16 +1332,13 @@ p1 <- df_sprt_all %>%
   labs(x = NULL, 
        y = NULL, 
        subtitle = "Aggregated") +
-  coord_cartesian(xlim = c(0, 36)) +
+  coord_cartesian(xlim = c(0, max(plot_data$plot_max) + 1)) +
   theme(legend.direction = "horizontal",
         axis.text = element_blank(), 
         legend.position = "bottom",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 
-p2 <- df_sprt_all %>% 
-  filter(seq == "eob") %>% 
-  left_join(df_MD %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(abs_diff = abs(savings - - sprt)) %>% 
+p2 <- plot_data %>% 
   mutate(bin = cut(abs_diff, breaks = 20, include.lowest = T)) %>%
   group_by(bin) %>%
   summarise(count = n(), 
@@ -1358,7 +1361,7 @@ p2 <- df_sprt_all %>%
   labs(x = "Absolute difference in measured savings", 
        y = "Number of buildings", 
        subtitle = "Accumulated breakdown by deviation") +
-  coord_cartesian(xlim = c(0, 36)) +
+  coord_cartesian(xlim = c(0, max(plot_data$plot_max) + 1)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
         legend.direction = "horizontal",
         legend.position = "bottom",
@@ -1375,9 +1378,12 @@ ggarrange(p1, p2,
 ggsave(filename = str_glue("md_comp.png"), path = combifigs_path, units = "in", height = 8, width = 8, dpi = 300)
 
 # continuous sprt mean difference 
-p1 <- bind_rows(cont_mdsaving) %>% 
+plot_data <- bind_rows(cont_mdsaving) %>% 
   left_join(df_MD %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(abs_diff = abs(savings - - cont)) %>% 
+  mutate(abs_diff = abs(savings - - cont), 
+         plot_max = max(abs_diff))
+
+p1 <-  plot_data %>% 
   ggplot() +
   geom_boxplot(aes(x = abs_diff), width = 0.1) +
   geom_text(aes(x = median(abs_diff), y = 0, label = paste0(round(median(abs_diff), digits = 1), " kW")), 
@@ -1390,15 +1396,13 @@ p1 <- bind_rows(cont_mdsaving) %>%
   labs(x = NULL, 
        y = NULL, 
        subtitle = "Aggregated") +
-  coord_cartesian(xlim = c(0, 12)) +
+  coord_cartesian(xlim = c(0, max(plot_data$plot_max) + 1)) +
   theme(legend.direction = "horizontal",
         axis.text = element_blank(), 
         legend.position = "bottom",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 
-p2 <- bind_rows(cont_mdsaving) %>% 
-  left_join(df_MD %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(abs_diff = abs(savings - - cont)) %>% 
+p2 <- plot_data %>% 
   mutate(bin = cut(abs_diff, breaks = 20, include.lowest = T)) %>%
   group_by(bin) %>%
   summarise(count = n(), 
@@ -1421,7 +1425,7 @@ p2 <- bind_rows(cont_mdsaving) %>%
   labs(x = "Absolute difference in measured savings", 
        y = "Number of buildings", 
        subtitle = "Accumulated breakdown by deviation") +
-  coord_cartesian(xlim = c(0, 12)) +
+  coord_cartesian(xlim = c(0, max(plot_data$plot_max) + 1)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
         legend.direction = "horizontal",
         legend.position = "bottom",
@@ -1438,10 +1442,13 @@ ggarrange(p1, p2,
 ggsave(filename = str_glue("md_comp_cont.png"), path = combifigs_path, units = "in", height = 8, width = 8, dpi = 300)
 
 # Sequential fractional savings
-p1 <- df_seq_FS %>% 
+plot_data <- df_seq_FS %>% 
   filter(seq == "eob") %>% 
   left_join(df_NRE_occ %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(abs_diff = abs(savings - FS)) %>% 
+  mutate(abs_diff = abs(savings - FS), 
+         plot_max = max(abs_diff))
+
+p1 <- plot_data %>% 
   ggplot() +
   geom_boxplot(aes(x = abs_diff), width = 0.1) +
   geom_text(aes(x = median(abs_diff), y = 0, label = paste0(round(median(abs_diff), digits = 1), "%")), 
@@ -1454,16 +1461,13 @@ p1 <- df_seq_FS %>%
   labs(x = NULL, 
        y = NULL, 
        subtitle = "Aggregated") +
-  coord_cartesian(xlim = c(0, 10)) +
+  coord_cartesian(xlim = c(0, max(plot_data$plot_max) + 1)) +
   theme(legend.direction = "horizontal",
         axis.text = element_blank(), 
         legend.position = "bottom",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 
-p2 <- df_seq_FS %>% 
-  filter(seq == "eob") %>% 
-  left_join(df_NRE_occ %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(abs_diff = abs(savings - FS)) %>% 
+p2 <- plot_data %>% 
   mutate(bin = cut(abs_diff, breaks = 20, include.lowest = T)) %>%
   group_by(bin) %>%
   summarise(count = n(), 
@@ -1486,7 +1490,7 @@ p2 <- df_seq_FS %>%
   labs(x = "Absolute difference in normalized fractional savings", 
        y = "Number of buildings", 
        subtitle = "Accumulated breakdown by deviation") +
-  coord_cartesian(xlim = c(0, 10)) +
+  coord_cartesian(xlim = c(0, max(plot_data$plot_max) + 1)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
         legend.direction = "horizontal",
         legend.position = "bottom",
@@ -1503,9 +1507,12 @@ ggarrange(p1, p2,
 ggsave(filename = str_glue("fr_comp.png"), path = combifigs_path, units = "in", height = 8, width = 8, dpi = 300)
 
 # continuous sprt fractional savings
-p1 <- bind_rows(cont_frsaving) %>% 
+plot_data <- bind_rows(cont_frsaving) %>% 
   left_join(df_FS %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(abs_diff = abs(savings - cont)) %>% 
+  mutate(abs_diff = abs(savings - cont), 
+         plot_max = max(abs_diff))
+
+p1 <- plot_data %>% 
   ggplot() +
   geom_boxplot(aes(x = abs_diff), width = 0.1) +
   geom_text(aes(x = median(abs_diff), y = 0, label = paste0(round(median(abs_diff), digits = 1), "%")), 
@@ -1518,15 +1525,13 @@ p1 <- bind_rows(cont_frsaving) %>%
   labs(x = NULL, 
        y = NULL, 
        subtitle = "Aggregated") +
-  coord_cartesian(xlim = c(0, 12)) +
+  coord_cartesian(xlim = c(0, max(plot_data$plot_max) + 1)) +
   theme(legend.direction = "horizontal",
         axis.text = element_blank(), 
         legend.position = "bottom",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 
-p2 <- bind_rows(cont_frsaving) %>% 
-  left_join(df_FS %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(abs_diff = abs(savings - cont)) %>% 
+p2 <- plot_data %>% 
   mutate(bin = cut(abs_diff, breaks = 20, include.lowest = T)) %>%
   group_by(bin) %>%
   summarise(count = n(), 
@@ -1549,7 +1554,7 @@ p2 <- bind_rows(cont_frsaving) %>%
   labs(x = "Absolute difference in normalized fractional savings", 
        y = "Number of buildings", 
        subtitle = "Accumulated breakdown by deviation") +
-  coord_cartesian(xlim = c(0, 12)) +
+  coord_cartesian(xlim = c(0, max(plot_data$plot_max) + 1)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
         legend.direction = "horizontal",
         legend.position = "bottom",
