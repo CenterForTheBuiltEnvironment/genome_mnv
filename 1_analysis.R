@@ -55,11 +55,11 @@ source(paste0(function_path, "cont_plot.R"))
 
 # define parameters
 # section run control
-run_params <- list(type = "tidy", 
-                   site = F, 
+run_params <- list(type = "messy", 
+                   site = T, 
                    sprt = T, 
                    sprt_cont = T, 
-                   nre_occ = T)
+                   nre_occ = F)
 
 # Adding intervention effect as advanced chiller operation
 ctr_params <- list(peak_hours = 10:16,                      # accounts for peak hours
@@ -312,8 +312,8 @@ df_tmy <- get_tmy(all_sites$site)
 
 #### SITE ####
 if (run_params$site){
-  colors <- brewer.pal(nrow(all_types), "Set3")
-  type_colors <- setNames(as.list(colors), all_types$type)
+  set3 <- colorRampPalette(brewer.pal('Set3',n=12))
+  type_colors <- setNames(set3(13), all_types$type)
   df_tmy <- get_tmy(all_sites$site)
   
   
@@ -1248,7 +1248,7 @@ write_rds(df_eui, paste0(readfile_path, "df_eui.rds"), compress = "gz")
 # Normalized savings
 p1 <- df_sprt_all %>% 
   filter(seq == "eob") %>% 
-  left_join(df_NRE_occ %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  left_join(df_FS %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
   left_join(df_seq_FS %>% filter(seq == "eob"), by = c("name", "site", "seq")) %>% 
   mutate(Deviation = abs(savings - FS),
          n_weeks = as.factor(n_weeks)) %>% 
@@ -1275,7 +1275,7 @@ p1 <- df_sprt_all %>%
 
 p2 <- df_sprt_all %>% 
   filter(seq == "final") %>% 
-  left_join(df_NRE_occ %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  left_join(df_FS %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
   left_join(df_seq_FS %>% filter(seq == "final"), by = c("name", "site", "seq")) %>% 
   mutate(Deviation = abs(savings - FS),
          n_weeks = as.factor(n_weeks)) %>% 
@@ -1339,7 +1339,7 @@ p1 <- plot_data %>%
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 
 p2 <- plot_data %>% 
-  mutate(bin = cut(abs_diff, breaks = 20, include.lowest = T)) %>%
+  mutate(bin = cut(abs_diff, breaks = 5, include.lowest = T)) %>%
   group_by(bin) %>%
   summarise(count = n(), 
             knot = max(abs_diff)) %>%
@@ -1403,7 +1403,7 @@ p1 <-  plot_data %>%
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 
 p2 <- plot_data %>% 
-  mutate(bin = cut(abs_diff, breaks = 20, include.lowest = T)) %>%
+  mutate(bin = cut(abs_diff, breaks = 5, include.lowest = T)) %>%
   group_by(bin) %>%
   summarise(count = n(), 
             knot = max(abs_diff)) %>%
@@ -1444,7 +1444,7 @@ ggsave(filename = str_glue("md_comp_cont.png"), path = combifigs_path, units = "
 # Sequential fractional savings
 plot_data <- df_seq_FS %>% 
   filter(seq == "eob") %>% 
-  left_join(df_NRE_occ %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  left_join(df_FS %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
   mutate(abs_diff = abs(savings - FS), 
          plot_max = max(abs_diff))
 
@@ -1468,7 +1468,7 @@ p1 <- plot_data %>%
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 
 p2 <- plot_data %>% 
-  mutate(bin = cut(abs_diff, breaks = 20, include.lowest = T)) %>%
+  mutate(bin = cut(abs_diff, breaks = 5, include.lowest = T)) %>%
   group_by(bin) %>%
   summarise(count = n(), 
             knot = max(abs_diff)) %>%
@@ -1532,7 +1532,7 @@ p1 <- plot_data %>%
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 
 p2 <- plot_data %>% 
-  mutate(bin = cut(abs_diff, breaks = 20, include.lowest = T)) %>%
+  mutate(bin = cut(abs_diff, breaks = 5, include.lowest = T)) %>%
   group_by(bin) %>%
   summarise(count = n(), 
             knot = max(abs_diff)) %>%
