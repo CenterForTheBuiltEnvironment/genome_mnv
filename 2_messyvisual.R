@@ -61,6 +61,8 @@ if (run_params$type == "tidy"){
 df_MD <- read_rds(paste0(readfile_path, "df_MD.rds"))
 df_FS <- read_rds(paste0(readfile_path, "df_FS.rds"))
 df_eui <- read_rds(paste0(readfile_path, "df_eui.rds"))
+df_cont_MD <- read_rds(paste0(readfile_path, "df_cont_MD.rds"))
+df_cont_FS <- read_rds(paste0(readfile_path, "df_cont_FS.rds"))
 
 all_sites <- df_energy %>%
   select(site) %>%
@@ -256,7 +258,7 @@ p1 <-  plot_data %>%
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 
 median <- median(plot_data$abs_diff)
-upper <- quantile(plot_data$abs_diff, 0.95)
+upper <- quantile(plot_data$abs_diff, probs = 0.95)
 
 sequence <- seq(from = 50, to = max(plot_data$abs_diff), by = 50)
 seq_df <- data.frame(knot = sequence)
@@ -607,52 +609,52 @@ df_eui %>%
 ggsave(filename = str_glue("saving_cont.png"), path = combifigs_path, units = "in", height = 5, width = 15, dpi = 300)
 
 # NRE saving estimation: occupancy change
-for (s in c("ref", "S1", "S2", "S3", "S4", "S5", "S6")){
-  dev_conv <- df_NRE_occ %>%
-    filter(scenario == s) %>%
-    filter(method != "rand") %>%
-    group_by(name, site, scenario) %>%
-    summarise(conv = abs(diff(savings))) %>%
-    ungroup()
-  
-  dev_rand <- df_NRE_occ %>%
-    filter(scenario == s) %>%
-    filter(method != "conv") %>%
-    group_by(name, site, scenario) %>%
-    summarise(rand = abs(diff(savings))) %>%
-    ungroup()
-  
-  dev_FS <- dev_rand %>%
-    left_join(dev_conv, by = c("name", "site", "scenario")) %>% 
-    mutate(diff_in_diff = conv - rand)
-  
-  mean_diff <- dev_FS %>%
-    group_by(site) %>%
-    summarise(mean = round(mean(diff_in_diff), digits = 1),
-              pos = round(n() / 2) + 1,
-              .groups = 'keep')
-  
-  dev_FS %>%
-    ggplot(aes(group = site)) +
-    geom_col(aes(x = name, y = diff_in_diff), position = "identity", alpha = 0.5) +
-    facet_wrap(~site, nrow = 1, scales = "free_x") +
-    scale_y_continuous(expand = c(0.1, 0),
-                       breaks = breaks_pretty(n = 4), 
-                       labels = number_format(suffix = "%")) +
-    geom_text(data = mean_diff,
-              aes(x = pos, y = -.5, group = site, label = paste0(mean, "%"))) +
-    geom_line(aes(x = name, y = rand, color = "Absolute deviation of randomized method"), alpha = 0.5) +
-    geom_point(aes(x = name, y = rand, color = "Absolute deviation of randomized method"), alpha = 0.5) +
-    labs(x = NULL,
-         fill = NULL,
-         y = NULL,
-         color = NULL, 
-         title = "Difference-in-difference of fractional savings calculated for each building") +
-    theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-          axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
-          legend.direction = "horizontal",
-          legend.position = "bottom",
-          plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-  
-  ggsave(filename = str_glue("occ_{s}_savings.png"), path = combifigs_path, units = "in", height = 5, width = 15, dpi = 300)
-}
+s = "ref"
+dev_conv <- df_FS %>%
+  filter(scenario == s) %>%
+  filter(method != "rand") %>%
+  group_by(name, site, scenario) %>%
+  summarise(conv = abs(diff(savings))) %>%
+  ungroup()
+
+dev_rand <- df_FS %>%
+  filter(scenario == s) %>%
+  filter(method != "conv") %>%
+  group_by(name, site, scenario) %>%
+  summarise(rand = abs(diff(savings))) %>%
+  ungroup()
+
+dev_FS <- dev_rand %>%
+  left_join(dev_conv, by = c("name", "site", "scenario")) %>% 
+  mutate(diff_in_diff = conv - rand)
+
+mean_diff <- dev_FS %>%
+  group_by(site) %>%
+  summarise(mean = round(mean(diff_in_diff), digits = 1),
+            pos = round(n() / 2) + 1,
+            .groups = 'keep')
+
+dev_FS %>%
+  ggplot(aes(group = site)) +
+  geom_col(aes(x = name, y = diff_in_diff), position = "identity", alpha = 0.5) +
+  facet_wrap(~site, nrow = 1, scales = "free_x") +
+  scale_y_continuous(expand = c(0.1, 0),
+                     breaks = breaks_pretty(n = 4), 
+                     labels = number_format(suffix = "%")) +
+  geom_text(data = mean_diff,
+            aes(x = pos, y = -.5, group = site, label = paste0(mean, "%"))) +
+  geom_line(aes(x = name, y = rand, color = "Absolute deviation of randomized method"), alpha = 0.5) +
+  geom_point(aes(x = name, y = rand, color = "Absolute deviation of randomized method"), alpha = 0.5, size = 0.1) +
+  labs(x = NULL,
+       fill = NULL,
+       y = NULL,
+       color = NULL, 
+       title = "Difference-in-difference of fractional savings calculated for each building") +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        axis.text.x = element_blank(),
+        legend.direction = "horizontal",
+        legend.position = "bottom",
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+ggsave(filename = str_glue("comp_savings.png"), path = combifigs_path, units = "in", height = 5, width = 15, dpi = 300)
+
