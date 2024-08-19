@@ -39,7 +39,7 @@ ls_colors <- c("Baseline" = "#99d8c9",
                "True normalized savings" = "black")
 
 # define parameters
-run_params <- list(type = "messy")
+run_params <- list(type = "tidy")
 
 #### READ DATA ####
 readfile_path <- str_glue("./readfiles/{run_params$type}/")
@@ -192,13 +192,13 @@ p2 <- seq_data %>%
   geom_text(aes(x = cumulative_count, 
                 y = knot, 
                 label = paste0("(n = ", cumulative_count, ")")), 
-            position = position_nudge(x = -25, y = 1), 
+            position = position_nudge(x = -1, y = 1), 
             size = 4) +
   geom_hline(yintercept = median(plot_data$abs_diff), 
              linetype = "dashed", 
              color = "red") +
   geom_text(aes(y = median, 
-                x = 120, 
+                x = 12, 
                 label = paste0("(", "50% buildings: < ", round(median, digits = 1), " kW)")), 
             position = position_nudge(y = 1), 
             check_overlap = T,
@@ -207,7 +207,7 @@ p2 <- seq_data %>%
              linetype = "dashed", 
              color = "red") +
   geom_text(aes(y = upper, 
-                x = 120, 
+                x = 12, 
                 label = paste0("(", "95% buildings: < ", round(upper, digits = 1), " kW)")), 
             position = position_nudge(y = 1), 
             check_overlap = T,
@@ -260,7 +260,7 @@ p1 <-  plot_data %>%
 median <- median(plot_data$abs_diff)
 upper <- quantile(plot_data$abs_diff, probs = 0.95)
 
-sequence <- seq(from = 50, to = max(plot_data$abs_diff), by = 50)
+sequence <- seq(from = 5, to = max(plot_data$abs_diff), by = 10)
 seq_df <- data.frame(knot = sequence)
 seq_data <- seq_df %>%
   rowwise() %>%
@@ -279,24 +279,24 @@ p2 <- seq_data %>%
   geom_text(aes(x = cumulative_count, 
                 y = knot, 
                 label = paste0("(n = ", cumulative_count, ")")), 
-            position = position_nudge(x = -25, y = 5), 
+            position = position_nudge(x = -1, y = 1), 
             size = 4) +
   geom_hline(yintercept = median(plot_data$abs_diff), 
              linetype = "dashed", 
              color = "red") +
   geom_text(aes(y = median, 
-                x = 150, 
+                x = 15, 
                 label = paste0("(", "50% buildings: < ", round(median, digits = 1), " kW)")), 
-            position = position_nudge(y = 5), 
+            position = position_nudge(y = 1), 
             check_overlap = T,
             size = 4) +
   geom_hline(yintercept = upper, 
              linetype = "dashed", 
              color = "red") +
   geom_text(aes(y = upper, 
-                x = 150, 
+                x = 15, 
                 label = paste0("(", "95% buildings: < ", round(upper, digits = 1), " kW)")), 
-            position = position_nudge(y = 5), 
+            position = position_nudge(y = 1), 
             check_overlap = T,
             size = 4) +
   scale_x_continuous(expand = c(0.02, 0), 
@@ -347,7 +347,7 @@ p1 <- plot_data %>%
 median <- median(plot_data$abs_diff)
 upper <- quantile(plot_data$abs_diff, probs = 0.95)
 
-sequence <- seq(from = 5, to = max(plot_data$abs_diff), by = 10)
+sequence <- seq(from = 2, to = max(plot_data$abs_diff), by = 4)
 seq_df <- data.frame(knot = sequence)
 seq_data <- seq_df %>%
   rowwise() %>%
@@ -366,13 +366,13 @@ p2 <- seq_data %>%
   geom_text(aes(x = cumulative_count, 
                 y = knot, 
                 label = paste0("(n = ", cumulative_count, ")")), 
-            position = position_nudge(x = -25, y = 1), 
+            position = position_nudge(x = -1, y = 1), 
             size = 4) +
   geom_hline(yintercept = median(plot_data$abs_diff), 
              linetype = "dashed", 
              color = "red") +
   geom_text(aes(y = median, 
-                x = 150, 
+                x = 15, 
                 label = paste0("(", "50% buildings: < ", round(median, digits = 1), " %)")), 
             position = position_nudge(y = 1), 
             check_overlap = T,
@@ -381,7 +381,7 @@ p2 <- seq_data %>%
              linetype = "dashed", 
              color = "red") +
   geom_text(aes(y = upper, 
-                x = 150, 
+                x = 15, 
                 label = paste0("(", "95% buildings: < ", round(upper, digits = 1), " %)")), 
             position = position_nudge(y = 1), 
             check_overlap = T,
@@ -433,7 +433,7 @@ p1 <- plot_data %>%
 median <- median(plot_data$abs_diff)
 upper <- quantile(plot_data$abs_diff, probs = 0.95)
 
-sequence <- seq(from = 5, to = max(plot_data$abs_diff), by = 15)
+sequence <- seq(from = 4, to = max(plot_data$abs_diff), by = 4)
 seq_df <- data.frame(knot = sequence)
 seq_data <- seq_df %>%
   rowwise() %>%
@@ -452,24 +452,24 @@ p2 <- seq_data %>%
   geom_text(aes(x = cumulative_count, 
                 y = knot, 
                 label = paste0("(n = ", cumulative_count, ")")), 
-            position = position_nudge(x = -25, y = 1), 
+            position = position_nudge(x = -1, y = 0.5), 
             size = 4) +
   geom_hline(yintercept = median(plot_data$abs_diff), 
              linetype = "dashed", 
              color = "red") +
   geom_text(aes(y = median, 
-                x = 150, 
+                x = 15, 
                 label = paste0("(", "50% buildings: < ", round(median, digits = 1), " %)")), 
-            position = position_nudge(y = 1), 
+            position = position_nudge(y = 0.5), 
             check_overlap = T,
             size = 4) +
   geom_hline(yintercept = upper, 
              linetype = "dashed", 
              color = "red") +
   geom_text(aes(y = upper, 
-                x = 150, 
+                x = 15, 
                 label = paste0("(", "95% buildings: < ", round(upper, digits = 1), " %)")), 
-            position = position_nudge(y = 1), 
+            position = position_nudge(y = 0.5), 
             check_overlap = T,
             size = 4) +
   scale_x_continuous(expand = c(0.02, 0), 
@@ -608,7 +608,6 @@ df_eui %>%
 
 ggsave(filename = str_glue("saving_cont.png"), path = combifigs_path, units = "in", height = 5, width = 15, dpi = 300)
 
-# NRE saving estimation: occupancy change
 # NRE saving estimation: occupancy change
 for (s in c("ref", "S1", "S2", "S3", "S4", "S5", "S6")){
   dev_conv <- df_NRE_occ %>%
