@@ -41,6 +41,17 @@ ls_colors <- c("Baseline" = "#99d8c9",
 # define parameters
 run_params <- list(type = "messy")
 
+sprt_param <- list(baseline = "Baseline",
+                   strategy = "Intervention",
+                   parameter = "power_ave",
+                   label = "power",
+                   n_weeks = 48)
+
+block_params <- list(start_date = "2016-01-01",
+                     n_weeks = 108,
+                     n_seasons = 9, 
+                     block_unit = 12)
+
 #### READ DATA ####
 readfile_path <- str_glue("./readfiles/{run_params$type}/")
 summaryfigs_path <- str_glue("./figs/{run_params$type}/site_summary/")
@@ -237,7 +248,8 @@ ggarrange(p2, p1,
 ggsave(filename = str_glue("md_comp.png"), path = combifigs_path, units = "in", height = 8, width = 8, dpi = 300)
 
 # continuous sprt mean difference 
-plot_data <- bind_rows(cont_mdsaving) %>% 
+plot_data <- df_cont_MD %>% 
+  rename(cont = sprt) %>% 
   left_join(df_MD %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
   mutate(abs_diff = abs(savings - - cont), 
          plot_max = max(abs_diff))
@@ -411,7 +423,8 @@ ggarrange(p2, p1,
 ggsave(filename = str_glue("fr_comp.png"), path = combifigs_path, units = "in", height = 8, width = 8, dpi = 300)
 
 # continuous sprt fractional savings
-plot_data <- bind_rows(cont_frsaving) %>% 
+plot_data <- df_cont_FS %>% 
+  rename(cont = FS) %>% 
   left_join(df_FS %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
   mutate(abs_diff = abs(savings - cont), 
          plot_max = max(abs_diff))
@@ -532,39 +545,39 @@ df_sprt_all %>%
 ggsave(filename = str_glue("seq_timeline.png"), path = combifigs_path, units = "in", height = 18, width = 10, dpi = 300)
 
 # continue sampling visualization
-df_rand_cont %>% 
-  mutate(strategy = as.factor(strategy), 
-         strategy = recode_factor(strategy, "1" = "Baseline", "2" = "Intervention")) %>% 
-  mutate(week = interval(min(datetime), datetime) %>% as.numeric('weeks') %>% floor(), 
-         sample = as.factor(ifelse(week <= eob, "Before", "After")), 
-         sample = fct_relevel(sample, c("Before", "After"))) %>%
-  group_by(sample, strategy) %>% 
-  summarise(n = n()) %>% 
-  mutate(n = n, 
-         perc = n / sum(n)) %>%
-  ungroup() %>% 
-  ggplot(aes(x = sample, y = perc, fill = strategy)) +
-  geom_bar(position="fill", stat="identity") +
-  geom_hline(yintercept = 0.5, 
-             linetype = "dashed", 
-             color = "red") +
-  annotate(geom = "text",
-           color = "red", 
-           x = 0.5, 
-           y = 0.52, 
-           label = "50%") +
-  labs(x = NULL,
-       fill = NULL,
-       y = NULL,
-       title = "Sampling ratio between baseline and intervention", 
-       subtitle = "Before and after the sequential test") +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = "%", scale = 100)) +
-  scale_fill_manual(values = ls_colors) +
-  theme(legend.direction = "horizontal",
-        legend.position = "bottom",
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+# df_rand_cont %>% 
+#   mutate(strategy = as.factor(strategy), 
+#          strategy = recode_factor(strategy, "1" = "Baseline", "2" = "Intervention")) %>% 
+#   mutate(week = interval(min(datetime), datetime) %>% as.numeric('weeks') %>% floor(), 
+#          sample = as.factor(ifelse(week <= eob, "Before", "After")), 
+#          sample = fct_relevel(sample, c("Before", "After"))) %>%
+#   group_by(sample, strategy) %>% 
+#   summarise(n = n()) %>% 
+#   mutate(n = n, 
+#          perc = n / sum(n)) %>%
+#   ungroup() %>% 
+#   ggplot(aes(x = sample, y = perc, fill = strategy)) +
+#   geom_bar(position="fill", stat="identity") +
+#   geom_hline(yintercept = 0.5, 
+#              linetype = "dashed", 
+#              color = "red") +
+#   annotate(geom = "text",
+#            color = "red", 
+#            x = 0.5, 
+#            y = 0.52, 
+#            label = "50%") +
+#   labs(x = NULL,
+#        fill = NULL,
+#        y = NULL,
+#        title = "Sampling ratio between baseline and intervention", 
+#        subtitle = "Before and after the sequential test") +
+#   scale_y_continuous(expand = c(0, 0), 
+#                      breaks = breaks_pretty(n = 4), 
+#                      labels = number_format(suffix = "%", scale = 100)) +
+#   scale_fill_manual(values = ls_colors) +
+#   theme(legend.direction = "horizontal",
+#         legend.position = "bottom",
+#         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 
 
 # Continue sampling energy saving

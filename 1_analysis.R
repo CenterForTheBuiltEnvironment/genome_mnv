@@ -55,11 +55,11 @@ source(paste0(function_path, "cont_plot.R"))
 
 # define parameters
 # section run control
-run_params <- list(type = "tidy", 
+run_params <- list(type = "messy", 
                    site = T, 
                    sprt = T, 
                    sprt_cont = T, 
-                   nre_occ = T)
+                   nre_occ = F)
 
 # Adding intervention effect as advanced chiller operation
 ctr_params <- list(peak_hours = 10:16,                      # accounts for peak hours
@@ -71,6 +71,7 @@ ctr_params <- list(peak_hours = 10:16,                      # accounts for peak 
                    coe_peak = 0.8,                          # coefficient adjustments for peak hours
                    coe_off = 1.2,                           # coefficient adjustments for off-peak hours
                    enable_temp = 8)                         # assume chiller operation starts
+
 
 # adding random sampling schedules
 block_params <- list(start_date = "2016-01-01",
