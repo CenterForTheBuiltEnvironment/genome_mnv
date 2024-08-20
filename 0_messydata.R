@@ -39,6 +39,9 @@ perform_mean_diff <- function(df_pre, df_post, building) {
   abs(mean(df_pre[[building]], na.rm = T) - mean(df_post[[building]], na.rm = T)) / mean(df_pre[[building]], na.rm = T) * 100
 }
 
+perform_mean_est <- function(df_pre, df_post, building) {
+  0.5 * (sum(df_pre[[building]], na.rm = T) + sum(df_post[[building]], na.rm = T))
+}
 
 #### READ DATA ####
 data_path <- "../buds-lab-building-data-genome-project-2/data/meters/cleaned/"
@@ -55,7 +58,7 @@ df_weather <- read_csv(paste0(weather_path, "weather.csv"))
 
 #### FILTER ####
 # Focus
-remove_type <- c("parking", "warehouse", "utility")
+remove_type <- c("parking", "warehouse", "other")
 remove_site <- c("Eagle", "Bobcat", "Swan", "Hog", "Gator")
 
 # NAs
@@ -92,13 +95,24 @@ mean_diff <- sapply(buildings, function(building) {
   perform_mean_diff(df_pre, df_post, building)
 })
 
-results <- data.frame(Building = buildings, P_Value = p_values, Dev = mean_diff) %>% 
-  filter(P_Value < 0.05 & Dev < 50)
+mean_est <- sapply(buildings, function(building) {
+  perform_mean_est(df_pre, df_post, building)
+})
+
+# electricity intensity
+eui_max <- 750
+
+results <- data.frame(Building = buildings, P_Value = p_values, Dev = mean_diff, mean = mean_est) %>% 
+  filter(P_Value < 0.05 & Dev < 25) %>% 
+  left_join(df_meta, by = c("Building" = "building_id")) %>% 
+  mutate(elec_eui = mean / sqm) %>% 
+  filter(elec_eui <= eui_max)
 
 cols_to_keep <- c("timestamp", results %>% .$Building)
 
 
 df_elec <- df_elec[, cols_to_keep]
+
 
 # process corresponding metadata
 df_meta <- df_meta %>% 
