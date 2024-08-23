@@ -187,7 +187,7 @@ if (run_params$site){
   ggsave(filename = "site_summary.png", path = summaryfigs_path, units = "in", height = 8, width = 8, dpi = 300)
   
   # EUI summary across all buildings
-  df_eui <- df_energy %>%
+  eui <- df_energy %>%
     group_by(name) %>%
     summarise(total_eload = sum(eload, na.rm = T),
               type = unique(type),
@@ -201,7 +201,7 @@ if (run_params$site){
     mutate(name = fct_reorder(name, type, .desc = F))
   
   
-  bar_plot <- df_eui %>%
+  bar_plot <- eui %>%
     ggplot() +
     geom_col(aes(x = name, y = avg_eui, fill = type)) +
     scale_fill_manual(values = type_colors) +
@@ -217,7 +217,7 @@ if (run_params$site){
           legend.position = "bottom",
           plot.margin = margin(t = 0.2, r = -0.5, unit = "cm"))
   
-  hist_plot <- df_eui %>%
+  hist_plot <- eui %>%
     ggplot(aes(x = avg_eui)) +
     geom_histogram(stat = "bin", position = "identity") +
     labs(title = NULL,
@@ -502,11 +502,11 @@ p1 <- plot_data %>%
   ggplot() +
   geom_boxplot(aes(y = abs_diff)) +
   scale_y_continuous(expand = c(0, 0), 
-                     limits = c(0, max(plot_data$plot_max) + 2)) +
+                     limits = c(0, max(plot_data$plot_max) + 1)) +
   labs(x = NULL, 
        y = NULL, 
        subtitle = "Aggregated") +
-  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 2)) +
+  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 1)) +
   theme(legend.direction = "horizontal",
         axis.text = element_blank(), 
         legend.position = "bottom",
@@ -560,11 +560,11 @@ p2 <- seq_data %>%
   scale_y_continuous(expand = c(0, 0), 
                      breaks = sequence,
                      labels = number_format(suffix = " kW"),
-                     limits = c(0, max(plot_data$plot_max) + 2)) +
+                     limits = c(0, max(plot_data$plot_max) + 1)) +
   labs(x = "Number of buildings", 
        y = "Absolute difference in measured savings", 
        subtitle = "Accumulated breakdown by deviation") +
-  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 2)) +
+  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 1)) +
   theme(legend.direction = "horizontal",
         legend.position = "bottom",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
@@ -577,7 +577,7 @@ ggarrange(p2, p1,
           legend="bottom") +
   plot_annotation(title = str_glue("Deviation in randomized M&V saving estimation at early stop"))
 
-ggsave(filename = str_glue("md_comp_rand.png"), path = combifigs_path, units = "in", height = 8, width = 8, dpi = 300)
+ggsave(filename = str_glue("md_comp_rand.png"), path = combifigs_path, units = "in", height = 7, width = 8, dpi = 300)
 
 # conventional mean difference
 plot_data <- df_MD %>% 
@@ -591,11 +591,11 @@ p1 <- plot_data %>%
   ggplot() +
   geom_boxplot(aes(y = abs_diff)) +
   scale_y_continuous(expand = c(0, 0), 
-                     limits = c(0, max(plot_data$plot_max) + 2)) +
+                     limits = c(0, max(plot_data$plot_max) + 5)) +
   labs(x = NULL, 
        y = NULL, 
        subtitle = "Aggregated") +
-  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 2)) +
+  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 5)) +
   theme(legend.direction = "horizontal",
         axis.text = element_blank(), 
         legend.position = "bottom",
@@ -649,11 +649,11 @@ p2 <- seq_data %>%
   scale_y_continuous(expand = c(0, 0), 
                      breaks = sequence,
                      labels = number_format(suffix = " kW"),
-                     limits = c(0, max(plot_data$plot_max) + 2)) +
+                     limits = c(0, max(plot_data$plot_max) + 5)) +
   labs(x = "Number of buildings", 
        y = "Absolute difference in measured savings", 
        subtitle = "Accumulated breakdown by deviation") +
-  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 2)) +
+  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 5)) +
   theme(legend.direction = "horizontal",
         legend.position = "bottom",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
@@ -666,7 +666,7 @@ ggarrange(p2, p1,
           legend="bottom") +
   plot_annotation(title = str_glue("Deviation in conventional M&V saving estimation"))
 
-ggsave(filename = str_glue("md_comp_conv.png"), path = combifigs_path, units = "in", height = 8, width = 8, dpi = 300)
+ggsave(filename = str_glue("md_comp_conv.png"), path = combifigs_path, units = "in", height = 7, width = 8, dpi = 300)
 
 # continuous sprt mean difference 
 plot_data <- df_cont_MD %>% 
@@ -680,11 +680,11 @@ p1 <-  plot_data %>%
   ggplot() +
   geom_boxplot(aes(y = abs_diff)) +
   scale_y_continuous(expand = c(0, 0), 
-                     limits = c(0, max(plot_data$plot_max) + 2)) +
+                     limits = c(0, max(plot_data$plot_max) + 1)) +
   labs(x = NULL, 
        y = NULL, 
        subtitle = "Aggregated") +
-  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 2)) +
+  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 1)) +
   theme(legend.direction = "horizontal",
         axis.text = element_blank(), 
         legend.position = "bottom",
@@ -719,7 +719,7 @@ p2 <- seq_data %>%
              linetype = "dashed", 
              color = "red") +
   geom_text(aes(y = median, 
-                x = 150, 
+                x = 120, 
                 label = paste0("(", "50% buildings: < ", round(median, digits = 1), " kW)")), 
             position = position_nudge(y = 1), 
             check_overlap = T,
@@ -728,7 +728,7 @@ p2 <- seq_data %>%
              linetype = "dashed", 
              color = "red") +
   geom_text(aes(y = upper, 
-                x = 150, 
+                x = 120, 
                 label = paste0("(", "95% buildings: < ", round(upper, digits = 1), " kW)")), 
             position = position_nudge(y = 1), 
             check_overlap = T,
@@ -738,11 +738,11 @@ p2 <- seq_data %>%
   scale_y_continuous(expand = c(0, 0), 
                      breaks = sequence,
                      labels = number_format(suffix = " kW"),
-                     limits = c(0, max(plot_data$plot_max) + 2)) +
+                     limits = c(0, max(plot_data$plot_max) + 1)) +
   labs(x = "Number of buildings", 
        y = "Absolute difference in measured savings", 
        subtitle = "Accumulated breakdown by deviation") +
-  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 2)) +
+  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 1)) +
   theme(legend.direction = "horizontal",
         legend.position = "bottom",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
@@ -755,7 +755,7 @@ ggarrange(p2, p1,
           legend="bottom") +
   plot_annotation(title = str_glue("Deviation in randomized M&V saving estimation after sequential test\n(continue with 20%/80% sampling)"))
 
-ggsave(filename = str_glue("md_comp_cont.png"), path = combifigs_path, units = "in", height = 8, width = 8, dpi = 300)
+ggsave(filename = str_glue("md_comp_cont.png"), path = combifigs_path, units = "in", height = 7, width = 8, dpi = 300)
 
 # Sequential fractional savings
 plot_data <- df_seq_FS %>% 
@@ -768,11 +768,11 @@ p1 <- plot_data %>%
   ggplot() +
   geom_boxplot(aes(y = abs_diff)) +
   scale_y_continuous(expand = c(0, 0), 
-                     limits = c(0, max(plot_data$plot_max) + 2)) +
+                     limits = c(0, max(plot_data$plot_max) + 0.5)) +
   labs(x = NULL, 
        y = NULL, 
        subtitle = "Aggregated") +
-  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 2)) +
+  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 0.5)) +
   theme(legend.direction = "horizontal",
         axis.text = element_blank(), 
         legend.position = "bottom",
@@ -801,7 +801,7 @@ p2 <- seq_data %>%
   geom_text(aes(x = cumulative_count, 
                 y = knot, 
                 label = paste0("(n = ", cumulative_count, ")")), 
-            position = position_nudge(x = -25, y = 1), 
+            position = position_nudge(x = -25, y = 0.5), 
             size = 4) +
   geom_hline(yintercept = median(plot_data$abs_diff), 
              linetype = "dashed", 
@@ -809,7 +809,7 @@ p2 <- seq_data %>%
   geom_text(aes(y = median, 
                 x = 150, 
                 label = paste0("(", "50% buildings: < ", round(median, digits = 1), " %)")), 
-            position = position_nudge(y = 1), 
+            position = position_nudge(y = 0.5), 
             check_overlap = T,
             size = 4) +
   geom_hline(yintercept = upper, 
@@ -818,7 +818,7 @@ p2 <- seq_data %>%
   geom_text(aes(y = upper, 
                 x = 150, 
                 label = paste0("(", "95% buildings: < ", round(upper, digits = 1), " %)")), 
-            position = position_nudge(y = 1), 
+            position = position_nudge(y = 0.5), 
             check_overlap = T,
             size = 4) +
   scale_x_continuous(expand = c(0.02, 0), 
@@ -826,11 +826,11 @@ p2 <- seq_data %>%
   scale_y_continuous(expand = c(0, 0), 
                      breaks = sequence,
                      labels = number_format(suffix = " %"),
-                     limits = c(0, max(plot_data$plot_max) + 2)) +
+                     limits = c(0, max(plot_data$plot_max) + 0.5)) +
   labs(x = "Number of buildings", 
        y = "Absolute difference in measured savings", 
        subtitle = "Accumulated breakdown by deviation") +
-  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 2)) +
+  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 0.5)) +
   theme(legend.direction = "horizontal",
         legend.position = "bottom",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
@@ -843,7 +843,7 @@ ggarrange(p2, p1,
           legend="bottom") +
   plot_annotation(title = str_glue("Deviation in randomized M&V fractional saving estimation at early stop"))
 
-ggsave(filename = str_glue("fr_comp_rand.png"), path = combifigs_path, units = "in", height = 8, width = 8, dpi = 300)
+ggsave(filename = str_glue("fr_comp_rand.png"), path = combifigs_path, units = "in", height = 7, width = 8, dpi = 300)
 
 # conventional fractional savings
 plot_data <- df_FS %>% 
@@ -857,11 +857,11 @@ p1 <- plot_data %>%
   ggplot() +
   geom_boxplot(aes(y = abs_diff)) +
   scale_y_continuous(expand = c(0, 0), 
-                     limits = c(0, max(plot_data$plot_max) + 2)) +
+                     limits = c(0, max(plot_data$plot_max) + 0.5)) +
   labs(x = NULL, 
        y = NULL, 
        subtitle = "Aggregated") +
-  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 2)) +
+  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 0.5)) +
   theme(legend.direction = "horizontal",
         axis.text = element_blank(), 
         legend.position = "bottom",
@@ -890,24 +890,24 @@ p2 <- seq_data %>%
   geom_text(aes(x = cumulative_count, 
                 y = knot, 
                 label = paste0("(n = ", cumulative_count, ")")), 
-            position = position_nudge(x = -25, y = 1), 
+            position = position_nudge(x = -25, y = 0.5), 
             size = 4) +
   geom_hline(yintercept = median(plot_data$abs_diff), 
              linetype = "dashed", 
              color = "red") +
   geom_text(aes(y = median, 
-                x = 150, 
+                x = 120, 
                 label = paste0("(", "50% buildings: < ", round(median, digits = 1), " %)")), 
-            position = position_nudge(y = 1), 
+            position = position_nudge(y = 0.5), 
             check_overlap = T,
             size = 4) +
   geom_hline(yintercept = upper, 
              linetype = "dashed", 
              color = "red") +
   geom_text(aes(y = upper, 
-                x = 150, 
+                x = 120, 
                 label = paste0("(", "95% buildings: < ", round(upper, digits = 1), " %)")), 
-            position = position_nudge(y = 1), 
+            position = position_nudge(y = 0.5), 
             check_overlap = T,
             size = 4) +
   scale_x_continuous(expand = c(0.02, 0), 
@@ -915,11 +915,11 @@ p2 <- seq_data %>%
   scale_y_continuous(expand = c(0, 0), 
                      breaks = sequence,
                      labels = number_format(suffix = " %"),
-                     limits = c(0, max(plot_data$plot_max) + 2)) +
+                     limits = c(0, max(plot_data$plot_max) + 0.5)) +
   labs(x = "Number of buildings", 
        y = "Absolute difference in measured savings", 
        subtitle = "Accumulated breakdown by deviation") +
-  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 2)) +
+  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 0.5)) +
   theme(legend.direction = "horizontal",
         legend.position = "bottom",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
@@ -932,7 +932,7 @@ ggarrange(p2, p1,
           legend="bottom") +
   plot_annotation(title = str_glue("Deviation in conventional M&V fractional saving estimation"))
 
-ggsave(filename = str_glue("fr_comp_conv.png"), path = combifigs_path, units = "in", height = 8, width = 8, dpi = 300)
+ggsave(filename = str_glue("fr_comp_conv.png"), path = combifigs_path, units = "in", height = 7, width = 8, dpi = 300)
 
 # continuous sprt fractional savings
 plot_data <- df_cont_FS %>% 
@@ -945,11 +945,11 @@ p1 <- plot_data %>%
   ggplot() +
   geom_boxplot(aes(y = abs_diff)) +
   scale_y_continuous(expand = c(0, 0), 
-                     limits = c(0, max(plot_data$plot_max) + 2)) +
+                     limits = c(0, max(plot_data$plot_max) + 1)) +
   labs(x = NULL, 
        y = NULL, 
        subtitle = "Aggregated") +
-  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 2)) +
+  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 1)) +
   theme(legend.direction = "horizontal",
         axis.text = element_blank(), 
         legend.position = "bottom",
@@ -1003,11 +1003,11 @@ p2 <- seq_data %>%
   scale_y_continuous(expand = c(0, 0), 
                      breaks = sequence,
                      labels = number_format(suffix = " %"),
-                     limits = c(0, max(plot_data$plot_max) + 2)) +
+                     limits = c(0, max(plot_data$plot_max) + 1)) +
   labs(x = "Number of buildings", 
        y = "Absolute difference in measured savings", 
        subtitle = "Accumulated breakdown by deviation") +
-  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 2)) +
+  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 1)) +
   theme(legend.direction = "horizontal",
         legend.position = "bottom",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
@@ -1020,7 +1020,7 @@ ggarrange(p2, p1,
           legend="bottom") +
   plot_annotation(title = str_glue("Deviation in randomized M&V fractional saving estimation after sequential test\n(continue with 20%/80% sampling)"))
 
-ggsave(filename = str_glue("fr_comp_cont.png"), path = combifigs_path, units = "in", height = 8, width = 8, dpi = 300)
+ggsave(filename = str_glue("fr_comp_cont.png"), path = combifigs_path, units = "in", height = 7, width = 8, dpi = 300)
 
 
 # Timeline
@@ -1162,7 +1162,7 @@ mean_diff <- dev_FS %>%
 
 dev_FS %>%
   ggplot(aes(group = site)) +
-  geom_col(aes(x = name, y = diff_in_diff), position = "identity", alpha = 0.5) +
+  geom_col(aes(x = name, y = diff_in_diff), position = "identity", alpha = 0.3) +
   facet_wrap(~site, nrow = 1, scales = "free_x") +
   scale_y_continuous(expand = c(0.1, 0),
                      breaks = breaks_pretty(n = 4), 

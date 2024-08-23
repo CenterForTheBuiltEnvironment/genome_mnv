@@ -39,7 +39,8 @@ ls_colors <- c("Baseline" = "#99d8c9",
                "True normalized savings" = "black")
 
 # define parameters
-run_params <- list(type = "tidy")
+run_params <- list(type = "tidy", 
+                   site = T)
 
 sprt_param <- list(baseline = "Baseline",
                    strategy = "Intervention",
@@ -51,6 +52,34 @@ block_params <- list(start_date = "2016-01-01",
                      n_weeks = 108,
                      n_seasons = 9, 
                      block_unit = 12)
+
+
+
+
+#### FUNCTIONS ####
+# Function defined to read downloaded tmy files
+get_tmy <- function(all_sites){
+  
+  df_tmy <- data.frame()
+  
+  for (site in all_sites){
+    df <- read_csv(paste0(readfile_path, "tmy/", str_glue("{site}.epw")),
+                   skip = 8, col_types = "ddddd-d---------------------------------",
+                   col_names = c("year", "month", "day", "hour", "min", "tmy")) %>%
+      mutate(year = 2017,
+             time = ymd_h(paste(paste(year, month, day, sep = "-"), hour, sep = " ")),
+             temp = tmy) %>%
+      dplyr::select(time, temp) %>% 
+      mutate(site = site)
+    
+    df_tmy <- rbind(df_tmy, df)
+  }
+  
+  return(df_tmy)
+}
+
+
+
 
 #### READ DATA ####
 readfile_path <- str_glue("./readfiles/{run_params$type}/")
@@ -92,22 +121,364 @@ all_names <- df_energy %>%
 
 
 
-#### PLOT ####
+#### SITE ####
+if (run_params$site){
+  set3 <- colorRampPalette(brewer.pal('Set3',n=12))
+  type_colors <- setNames(set3(13), all_types$type)
+  df_tmy <- get_tmy(all_sites$site)
+  
+  
+  # site and type number summary
+  p1 <- df_energy %>%
+    group_by(type) %>%
+    distinct(name) %>%
+    summarise(n = n()) %>%
+    ungroup() %>%
+    mutate(type = fct_reorder(type, n, .desc = F)) %>%
+    ggplot(aes(x = 1, y = n, fill = as.factor(type))) +
+    geom_col() +
+    geom_text(aes(label = n), color = "black", position = position_stack(vjust = 0.5)) +
+    scale_y_continuous(expand = c(0, 0),
+                       breaks = breaks_pretty(n = 4)) +
+    scale_x_discrete(expand = c(0, 0.1)) +
+    scale_fill_manual(values = type_colors) +
+    labs(x = NULL,
+         y = NULL,
+         subtitle = "Across all sites",
+         fill = NULL) +
+    theme(axis.text.x = element_blank(),
+          panel.grid.major.y = element_line(color = "grey80"),
+          legend.direction = "horizontal",
+          plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+  
+  p2 <- df_energy %>%
+    group_by(site, type) %>%
+    distinct(name) %>%
+    summarise(n = n()) %>%
+    mutate(proportion = n / sum(n),
+           total = sum(n),
+           ymax = cumsum(proportion),
+           ymin = c(0, head(ymax, n = -1))) %>%
+    mutate(label_pos = (ymax + ymin) / 2) %>%
+    ungroup() %>%
+    group_by(type) %>%
+    mutate(order = sum(n)) %>%
+    ungroup() %>%
+    mutate(type = fct_reorder(type, order, .desc = F)) %>%
+    ggplot(aes(ymax = ymax, ymin = ymin, xmax = 4, xmin = 3, fill = type)) +
+    geom_rect() +
+    coord_polar(theta = "y") +
+    xlim(c(2, 4)) +
+    facet_wrap(~ site, nrow = 2) +
+    labs(x = NULL,
+         y = NULL,
+         subtitle = "For each site",
+         fill = NULL) +
+    scale_fill_manual(values = type_colors) +
+    geom_text(aes(x = 3.5, y = label_pos, label = n)) +
+    geom_text(aes(x = 2, y = 0, label = paste0("Total\n", total)), color = "black") +
+    theme(legend.direction = "horizontal",
+          axis.text = element_blank(),
+          plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+  
+  ggarrange(p1, p2,
+            ncol = 2, nrow = 1,
+            widths = c(0.25, 1),
+            common.legend = TRUE,
+            legend = "bottom") +
+    plot_annotation(title = "Case study building type summary")
+  
+  ggsave(filename = "site_summary.png", path = summaryfigs_path, units = "in", height = 6, width = 8, dpi = 300)
+  
+  # EUI summary across all buildings
+  eui <- df_energy %>%
+    group_by(name) %>%
+    summarise(total_eload = sum(eload, na.rm = T),
+              type = unique(type),
+              site = unique(site)) %>%
+    ungroup() %>%
+    left_join(df_meta, by = c("site", "type", "name")) %>%
+    mutate(eui = total_eload / sqm) %>%
+    group_by(site, type, name) %>%
+    summarise(avg_eui = eui / 2) %>%
+    ungroup() %>%
+    mutate(name = fct_reorder(name, type, .desc = F))
+  
+  
+  bar_plot <- eui %>%
+    ggplot() +
+    geom_col(aes(x = name, y = avg_eui, fill = type)) +
+    scale_fill_manual(values = type_colors) +
+    scale_y_continuous(expand = c(0, 0),
+                       breaks = breaks_pretty(n = 4),
+                       labels = number_format(suffix = " kWh/m\U00B2")) +
+    labs(x = "All buildings",
+         y = NULL,
+         fill = NULL) +
+    theme(panel.grid.major.y = element_line(color = "grey80"),
+          axis.text.x = element_blank(),
+          legend.direction = "horizontal",
+          legend.position = "bottom",
+          plot.margin = margin(t = 0.2, r = -0.5, unit = "cm"))
+  
+  hist_plot <- eui %>%
+    ggplot(aes(x = avg_eui)) +
+    geom_histogram(stat = "bin", position = "identity") +
+    labs(title = NULL,
+         x = NULL,
+         y = "Frequency") +
+    coord_flip() +
+    theme(panel.grid.major.x = element_line(color = "grey80"),
+          axis.text.y = element_blank(),
+          legend.direction = "horizontal",
+          legend.position = "bottom",
+          plot.margin = margin(t = 0.2, l = -0.5, unit = "cm"))
+  
+  combined_plot <- plot_grid(
+    bar_plot,
+    hist_plot,
+    align = 'hv',
+    nrow = 1,
+    rel_widths = c(2, 1)
+  )
+  
+  final_plot <- plot_grid(
+    ggdraw() + draw_label("Electricity usage intensity for all buildings", fontface = 'bold', size = 18),
+    combined_plot,
+    ncol = 1,
+    rel_heights = c(0.05, 1)
+  )
+  
+  print(final_plot)
+  
+  ggsave(filename = "eui_all.png", path = summaryfigs_path, units = "in", height = 5, width = 8, dpi = 300)
+  
+  df_energy %>%
+    mutate(year = as.factor(year(timestamp))) %>%
+    group_by(name, year) %>%
+    summarise(total_eload = sum(eload, na.rm = T),
+              type = unique(type),
+              site = unique(site)) %>%
+    ungroup() %>%
+    left_join(df_meta, by = c("site", "type", "name")) %>%
+    mutate(eui = total_eload / sqm) %>%
+    ggplot() +
+    geom_boxplot(aes(x = type, y = eui, fill = year), outlier.shape = NA) +
+    scale_y_continuous(expand = c(0, 0),
+                       limits = c(0, 450),
+                       breaks = breaks_pretty(n = 4),
+                       labels = number_format(suffix = " kWh/m\U00B2")) +
+    labs(x = NULL,
+         y = NULL,
+         fill = NULL,
+         title = "Electricity usage intensity for each building type") +
+    coord_flip() +
+    theme(panel.grid.major.x = element_line(color = "grey80"),
+          legend.direction = "horizontal",
+          legend.position = "bottom",
+          plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+  
+  ggsave(filename = "eui_type.png", path = summaryfigs_path, units = "in", height = 5, width = 6, dpi = 300)
+  
+  # Weather condition summary across all sites
+  df_weather %>%
+    mutate(year = as.factor(year(timestamp)),
+           datetime = as.POSIXct(format(timestamp, "%m-%d %H:%M:%S"), format="%m-%d %H:%M:%OS")) %>%
+    ggplot(aes(x = datetime, y = t_out, color = year)) +
+    geom_point(size = 0.1, alpha = 0.05) +
+    geom_smooth(formula = y ~ x, method = "loess", linewidth = 1) +
+    scale_x_datetime(date_breaks = "2 months", date_labels = "%b") +
+    scale_y_continuous(expand = c(0, 0),
+                       breaks = breaks_pretty(n = 4),
+                       labels = number_format(suffix = " °C")) +
+    facet_wrap(~site, nrow = 2) +
+    coord_cartesian(ylim = c(-8, 38)) +
+    labs(x = NULL,
+         y = NULL,
+         color = NULL,
+         title = "Outdoor weather conditions across all sites") +
+    theme(panel.grid.major.y = element_line(color = "grey80"),
+          legend.direction = "horizontal",
+          legend.position = "bottom",
+          plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+  
+  ggsave(filename = "weather_summary.png", path = summaryfigs_path, units = "in", height = 5, width = 10, dpi = 300)
+  
+  # density plot of tmy and actual tout
+  df_weather %>%
+    filter(year(timestamp) == 2016) %>%
+    mutate(type = "observed") %>%
+    ggplot() +
+    geom_histogram(aes(x = t_out, fill = type), alpha = 0.6, color = NA) +
+    geom_histogram(data = df_tmy %>% mutate(type = "tmy"), aes(x = temp, fill = type), alpha = 0.6, color = NA) +
+    scale_fill_manual(values = c("observed" = "#5941A9", "tmy" = "#E5D4ED")) +
+    facet_wrap(~site, nrow = 2) +
+    labs(x = NULL, y = NULL, color = NULL, fill = NULL,
+         title = "Outdoor temperature histogram\nfor observed and typical conditions") +
+    scale_x_continuous(labels = number_format(suffix = " °C")) +
+    coord_cartesian(clip = "off") +
+    theme(axis.text.y = element_blank(),
+          legend.direction = "horizontal",
+          legend.position = "bottom")
+  
+  ggsave(filename = "weather_tmy.png", path = summaryfigs_path, units = "in", height = 5, width = 10, dpi = 300)
+  
+  # Energy and temperature dependence across each site
+  df_all <- df_energy %>%
+    left_join(df_weather, by = c("timestamp", "site"))
+  
+  df_daily <- df_all %>%
+    group_by(site, type, date = floor_date(timestamp, unit = "day")) %>%
+    summarise(t_out = mean(t_out, na.rm = T),
+              eload = mean(eload, na.rm = T)) %>%
+    ungroup()
+  
+  plot_list <- list()
+  
+  for (i in all_sites$site) {
+    
+    df <- df_daily %>%
+      filter(site == i)
+    
+    df$type <- factor(df$type, levels = all_types$type)
+    
+    p <- df %>%
+      ggplot(aes(x = t_out, y = eload, color = type)) +
+      geom_point(data = .%>%
+                   group_by(type) %>%
+                   slice_sample(n = 100),
+                 size = 0.5,
+                 alpha = 0.5,
+                 shape = 16) +
+      geom_smooth(formula = y ~ x, method = "loess", linewidth = 0.5, alpha = 0.1) +
+      scale_x_continuous(expand = c(0, 0),
+                         breaks = breaks_pretty(n = 3),
+                         labels = number_format(suffix = " °C")) +
+      scale_y_continuous(expand = c(0, 0),
+                         breaks = breaks_pretty(n = 4),
+                         labels = number_format(suffix = " kW")) +
+      scale_color_manual(values = type_colors) +
+      labs(x = NULL,
+           y = NULL,
+           color = NULL,
+           subtitle = str_glue("{i}")) +
+      theme(panel.grid.major.y = element_line(),
+            legend.direction = "horizontal",
+            legend.position = "none")
+    
+    # Store the plot in the list
+    plot_list[[i]] <- p
+  }
+  
+  temp_legend <- ggplot(df_daily, aes(x=t_out, y = eload, color = type)) +
+    geom_point(size = 0.5, alpha = 0.2, shape = 16) +
+    geom_smooth(formula = y ~ x, method = "loess", linewidth = 0.5, alpha = 0.1) +
+    scale_x_continuous(expand = c(0, 0),
+                       breaks = breaks_pretty(n = 3),
+                       labels = number_format(suffix = " °C")) +
+    scale_y_continuous(expand = c(0, 0),
+                       breaks = breaks_pretty(n = 4),
+                       labels = number_format(suffix = " kW")) +
+    scale_color_manual(values = type_colors) +
+    labs(x = NULL,
+         y = NULL,
+         color = NULL,
+         subtitle = str_glue("{i}")) +
+    theme(panel.grid.major.y = element_line(),
+          legend.direction = "horizontal",
+          legend.position = "bottom")
+  
+  legend <- get_legend(temp_legend)
+  
+  combined_plot <- plot_grid(plotlist = plot_list, nrow = 2)
+  combined_plot <- plot_grid(combined_plot, legend, ncol = 1, rel_heights = c(1, 0.2))
+  
+  final_plot <- plot_grid(
+    ggdraw() + draw_label("Daily average power usage by average outdoor weather conditions", fontface = 'bold', size = 18),
+    combined_plot,
+    ncol = 1,
+    rel_heights = c(0.05, 1)
+  )
+  
+  print(final_plot)
+  
+  ggsave(filename = "energy_weather.png", path = summaryfigs_path, units = "in", height = 5, width = 10, dpi = 300)
+  
+  # energy consumption by each hour of the day
+  df_hour <- df_energy %>%
+    group_by(site,
+             type,
+             timestamp) %>%
+    summarize_if(is.numeric, mean, na.rm=T) %>%
+    ungroup()
+  
+  plot_list <- list()
+  
+  for (i in all_sites$site) {
+    
+    df <- df_hour %>%
+      filter(site == i)
+    
+    p <- df %>%
+      ggplot(aes(x = hour(timestamp), y = eload, color = type)) +
+      geom_point(data = .%>%
+                   group_by(type) %>%
+                   slice_sample(n = 100),
+                 size = 0.5,
+                 alpha = 0.5,
+                 shape = 16) +
+      geom_smooth(formula = y ~ x, method = "loess", linewidth = 0.5, alpha = 0.1) +
+      scale_x_continuous(breaks = c(0, 6, 12, 18),
+                         labels = c("12 AM", "6 AM", "12 PM", "6 PM")) +
+      scale_y_continuous(expand = c(0, 0),
+                         breaks = breaks_pretty(n = 4),
+                         labels = number_format(suffix = " kW")) +
+      scale_color_manual(values = type_colors) +
+      labs(x = NULL,
+           y = NULL,
+           color = NULL,
+           subtitle = str_glue("{i}")) +
+      theme(panel.grid.major.y = element_line(),
+            legend.direction = "horizontal",
+            legend.position = "none")
+    
+    # Store the plot in the list
+    plot_list[[i]] <- p
+  }
+  
+  combined_plot <- plot_grid(plotlist = plot_list, nrow = 2)
+  combined_plot <- plot_grid(combined_plot, legend, ncol = 1, rel_heights = c(1, 0.2))
+  
+  final_plot <- plot_grid(
+    ggdraw() + draw_label("Average power usage by each hour of the day", fontface = 'bold', size = 18),
+    combined_plot,
+    ncol = 1,
+    rel_heights = c(0.05, 1)
+  )
+  
+  print(final_plot)
+  
+  ggsave(filename = "energy_hour_site.png", path = summaryfigs_path, units = "in", height = 5, width = 10, dpi = 300)
+}
+
+
+
+
+#### INDIVIDUAL ####
 # Normalized savings
-p1 <- df_sprt_all %>% 
-  filter(seq == "eob") %>% 
-  left_join(df_FS %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  left_join(df_seq_FS %>% filter(seq == "eob"), by = c("name", "site", "seq")) %>% 
-  mutate(Deviation = abs(savings - FS),
-         n_weeks = as.factor(n_weeks)) %>% 
-  rename("Normalized on TMY" = annual, 
-         "Measured" = FS) %>% 
-  pivot_longer(c("Measured", "Normalized on TMY", Deviation), names_to = "parameter", values_to = "value") %>% 
-  ggplot(aes(x = n_weeks, y = value, fill = parameter)) +
-  stat_boxplot(geom ='errorbar', width = 0.75) +
-  geom_boxplot(width = 0.5, position = position_dodge(0.75), outlier.shape = NA) +
-  scale_x_discrete(expand = c(0.5, 0),
-                   labels = c("24\nweeks", "36\nweeks")) +
+df_FS %>% 
+  pivot_wider(names_from = method, values_from = savings) %>% 
+  left_join(df_seq_FS %>% filter(seq == "eob"), by = c("name", "site")) %>% 
+  pivot_longer(c(true, conv, rand, FS), names_to = "parameter", values_to = "value") %>% 
+  mutate(parameter = as.factor(parameter), 
+         parameter = recode_factor(parameter, 
+                                   "true" = "True savings", 
+                                   "conv" = "Conventional M&V", 
+                                   "rand" = "Randomized M&V", 
+                                   "FS" = "Randomized M&V at early stop")) %>% 
+  ggplot(aes(x = parameter, y = value, fill = parameter)) +
+  stat_boxplot(geom ='errorbar', width = 0.5) +
+  geom_boxplot(outlier.shape = NA) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 5), 
                      limits = c(0, 16), 
@@ -115,50 +486,15 @@ p1 <- df_sprt_all %>%
   labs(x = NULL, 
        y = NULL, 
        fill = NULL, 
-       subtitle = "Early stop after satisfying all criteria") +
+       title = "Savings estimation comparison", 
+       subtitle = "between convention and randomized M&V (with early stop)") +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
         legend.direction = "horizontal",
         legend.position = "bottom",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-p2 <- df_sprt_all %>% 
-  filter(seq == "final") %>% 
-  left_join(df_FS %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  left_join(df_seq_FS %>% filter(seq == "final"), by = c("name", "site", "seq")) %>% 
-  mutate(Deviation = abs(savings - FS),
-         n_weeks = as.factor(n_weeks)) %>% 
-  rename("Normalized on TMY" = annual, 
-         "Measured" = FS) %>% 
-  pivot_longer(c("Measured", "Normalized on TMY", Deviation), names_to = "parameter", values_to = "value") %>% 
-  ggplot(aes(x = n_weeks, y = value, fill = parameter)) +
-  stat_boxplot(geom ='errorbar', width = 0.75) +
-  geom_boxplot(width = 0.5, position = position_dodge(0.75), outlier.shape = NA) +
-  scale_x_discrete(expand = c(0.5, 0),
-                   labels = c("48\nweeks")) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 5), 
-                     limits = c(0, 16), 
-                     labels = number_format(suffix = "%")) +
-  labs(x = NULL, 
-       y = NULL, 
-       fill = NULL, 
-       subtitle = "At the end of the full testing period") +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        axis.text.y = element_blank(), 
-        legend.direction = "horizontal",
-        legend.position = "bottom",
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-ggarrange(p1, p2,
-          ncol=2, nrow=1,
-          labels = c("a)", "b)"),
-          widths = c(2, 1),
-          align = "hv",
-          common.legend = T, 
-          legend="bottom") +
-  plot_annotation(title = "Fractional savings estimation using randomized M&V")
 
 ggsave(filename = str_glue("FS_Dev.png"), path = combifigs_path, units = "in", height = 5, width = 8, dpi = 300)
+
 
 # Sequential mean difference 
 plot_data <- df_sprt_all %>% 
@@ -166,6 +502,95 @@ plot_data <- df_sprt_all %>%
   left_join(df_MD %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
   mutate(abs_diff = abs(savings - - sprt), 
          plot_max = max(abs_diff))
+
+p1 <- plot_data %>% 
+  ggplot() +
+  geom_boxplot(aes(y = abs_diff)) +
+  scale_y_continuous(expand = c(0, 0), 
+                     limits = c(0, max(plot_data$plot_max) + 1)) +
+  labs(x = NULL, 
+       y = NULL, 
+       subtitle = "Aggregated") +
+  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 1)) +
+  theme(legend.direction = "horizontal",
+        axis.text = element_blank(), 
+        legend.position = "bottom",
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+median <- median(plot_data$abs_diff)
+upper <- quantile(plot_data$abs_diff, 0.95)
+
+sequence <- seq(from = 0, to = max(plot_data$abs_diff), by = 10)
+seq_df <- data.frame(knot = sequence)
+seq_data <- seq_df %>%
+  rowwise() %>%
+  filter(knot > 0) %>% 
+  mutate(cumulative_count = sum(plot_data$abs_diff <= knot)) %>%
+  ungroup()
+
+p2 <- seq_data %>% 
+  ggplot() +
+  geom_hline(aes(yintercept = knot), 
+             linetype = "dashed", 
+             color = "grey80") +
+  geom_bar(data = plot_data %>% 
+             arrange(abs_diff), 
+           aes(x = seq(1, nrow(all_names), by = 1), y = abs_diff), 
+           stat = "identity", alpha = 0.5) +
+  geom_text(aes(x = cumulative_count, 
+                y = knot, 
+                label = paste0("(n = ", cumulative_count, ")")), 
+            position = position_nudge(x = -5, y = 1), 
+            size = 4) +
+  geom_hline(yintercept = median(plot_data$abs_diff), 
+             linetype = "dashed", 
+             color = "red") +
+  geom_text(aes(y = median, 
+                x = 20, 
+                label = paste0("(", "50% buildings: < ", round(median, digits = 1), " kW)")), 
+            position = position_nudge(y = 1), 
+            check_overlap = T,
+            size = 4) +
+  geom_hline(yintercept = upper, 
+             linetype = "dashed", 
+             color = "red") +
+  geom_text(aes(y = upper, 
+                x = 20, 
+                label = paste0("(", "95% buildings: < ", round(upper, digits = 1), " kW)")), 
+            position = position_nudge(y = 1), 
+            check_overlap = T,
+            size = 4) +
+  scale_x_continuous(expand = c(0.02, 0), 
+                     breaks = breaks_pretty(n = 3)) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = sequence,
+                     labels = number_format(suffix = " kW"),
+                     limits = c(0, max(plot_data$plot_max) + 1)) +
+  labs(x = "Number of buildings", 
+       y = "Absolute difference in measured savings", 
+       subtitle = "Accumulated breakdown by deviation") +
+  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 1)) +
+  theme(legend.direction = "horizontal",
+        legend.position = "bottom",
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+ggarrange(p2, p1,
+          ncol=2, nrow=1,
+          labels = c("a)", "b)"),
+          widths = c(4, 1),
+          align = "hv",
+          legend="bottom") +
+  plot_annotation(title = str_glue("Deviation in randomized M&V saving estimation at early stop"))
+
+ggsave(filename = str_glue("md_comp_rand.png"), path = combifigs_path, units = "in", height = 7, width = 8, dpi = 300)
+
+# conventional mean difference
+plot_data <- df_MD %>% 
+  filter(method != "rand") %>% 
+  group_by(name) %>% 
+  summarise(abs_diff = abs(sum(savings))) %>% 
+  ungroup() %>% 
+  mutate(plot_max = max(abs_diff))
 
 p1 <- plot_data %>% 
   ggplot() +
@@ -184,10 +609,11 @@ p1 <- plot_data %>%
 median <- median(plot_data$abs_diff)
 upper <- quantile(plot_data$abs_diff, 0.95)
 
-sequence <- seq(from = 5, to = max(plot_data$abs_diff), by = 10)
+sequence <- seq(from = 0, to = max(plot_data$abs_diff), by = 25)
 seq_df <- data.frame(knot = sequence)
 seq_data <- seq_df %>%
   rowwise() %>%
+  filter(knot > 0) %>% 
   mutate(cumulative_count = sum(plot_data$abs_diff <= knot)) %>%
   ungroup()
 
@@ -203,24 +629,24 @@ p2 <- seq_data %>%
   geom_text(aes(x = cumulative_count, 
                 y = knot, 
                 label = paste0("(n = ", cumulative_count, ")")), 
-            position = position_nudge(x = -1, y = 1), 
+            position = position_nudge(x = -5, y = 2), 
             size = 4) +
   geom_hline(yintercept = median(plot_data$abs_diff), 
              linetype = "dashed", 
              color = "red") +
   geom_text(aes(y = median, 
-                x = 12, 
+                x = 20, 
                 label = paste0("(", "50% buildings: < ", round(median, digits = 1), " kW)")), 
-            position = position_nudge(y = 1), 
+            position = position_nudge(y = 2), 
             check_overlap = T,
             size = 4) +
   geom_hline(yintercept = upper, 
              linetype = "dashed", 
              color = "red") +
   geom_text(aes(y = upper, 
-                x = 12, 
+                x = 20, 
                 label = paste0("(", "95% buildings: < ", round(upper, digits = 1), " kW)")), 
-            position = position_nudge(y = 1), 
+            position = position_nudge(y = 2), 
             check_overlap = T,
             size = 4) +
   scale_x_continuous(expand = c(0.02, 0), 
@@ -243,27 +669,26 @@ ggarrange(p2, p1,
           widths = c(4, 1),
           align = "hv",
           legend="bottom") +
-  plot_annotation(title = str_glue("Deviation in saving estimation at early stop\n(Measured savings from observed weather)"))
+  plot_annotation(title = str_glue("Deviation in conventional M&V saving estimation"))
 
-ggsave(filename = str_glue("md_comp.png"), path = combifigs_path, units = "in", height = 8, width = 8, dpi = 300)
+ggsave(filename = str_glue("md_comp_conv.png"), path = combifigs_path, units = "in", height = 7, width = 8, dpi = 300)
 
 # continuous sprt mean difference 
-plot_data <- df_cont_MD %>%
+plot_data <- df_cont_MD %>% 
   rename(cont = sprt) %>% 
   left_join(df_MD %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
   mutate(abs_diff = abs(savings - - cont), 
          plot_max = max(abs_diff))
 
-
-p1 <-  plot_data %>% 
+p1 <- plot_data %>% 
   ggplot() +
   geom_boxplot(aes(y = abs_diff)) +
   scale_y_continuous(expand = c(0, 0), 
-                     limits = c(0, max(plot_data$plot_max) + 2)) +
+                     limits = c(0, max(plot_data$plot_max) + 1)) +
   labs(x = NULL, 
        y = NULL, 
        subtitle = "Aggregated") +
-  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 2)) +
+  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 1)) +
   theme(legend.direction = "horizontal",
         axis.text = element_blank(), 
         legend.position = "bottom",
@@ -272,10 +697,11 @@ p1 <-  plot_data %>%
 median <- median(plot_data$abs_diff)
 upper <- quantile(plot_data$abs_diff, probs = 0.95)
 
-sequence <- seq(from = 5, to = max(plot_data$abs_diff), by = 10)
+sequence <- seq(from = 0, to = max(plot_data$abs_diff), by = 10)
 seq_df <- data.frame(knot = sequence)
 seq_data <- seq_df %>%
   rowwise() %>%
+  filter(knot > 0) %>% 
   mutate(cumulative_count = sum(plot_data$abs_diff <= knot)) %>%
   ungroup()
 
@@ -291,13 +717,13 @@ p2 <- seq_data %>%
   geom_text(aes(x = cumulative_count, 
                 y = knot, 
                 label = paste0("(n = ", cumulative_count, ")")), 
-            position = position_nudge(x = -1, y = 1), 
+            position = position_nudge(x = -5, y = 1), 
             size = 4) +
   geom_hline(yintercept = median(plot_data$abs_diff), 
              linetype = "dashed", 
              color = "red") +
   geom_text(aes(y = median, 
-                x = 15, 
+                x = 20, 
                 label = paste0("(", "50% buildings: < ", round(median, digits = 1), " kW)")), 
             position = position_nudge(y = 1), 
             check_overlap = T,
@@ -306,7 +732,7 @@ p2 <- seq_data %>%
              linetype = "dashed", 
              color = "red") +
   geom_text(aes(y = upper, 
-                x = 15, 
+                x = 20, 
                 label = paste0("(", "95% buildings: < ", round(upper, digits = 1), " kW)")), 
             position = position_nudge(y = 1), 
             check_overlap = T,
@@ -316,11 +742,11 @@ p2 <- seq_data %>%
   scale_y_continuous(expand = c(0, 0), 
                      breaks = sequence,
                      labels = number_format(suffix = " kW"),
-                     limits = c(0, max(plot_data$plot_max) + 2)) +
+                     limits = c(0, max(plot_data$plot_max) + 1)) +
   labs(x = "Number of buildings", 
        y = "Absolute difference in measured savings", 
        subtitle = "Accumulated breakdown by deviation") +
-  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 2)) +
+  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 1)) +
   theme(legend.direction = "horizontal",
         legend.position = "bottom",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
@@ -331,9 +757,9 @@ ggarrange(p2, p1,
           widths = c(4, 1),
           align = "hv",
           legend="bottom") +
-  plot_annotation(title = str_glue("Deviation in saving estimation after sequential test\n(Measured savings from observed weather)"))
+  plot_annotation(title = str_glue("Deviation in randomized M&V saving estimation after sequential test\n(continue with 20%/80% sampling)"))
 
-ggsave(filename = str_glue("md_comp_cont.png"), path = combifigs_path, units = "in", height = 8, width = 8, dpi = 300)
+ggsave(filename = str_glue("md_comp_cont.png"), path = combifigs_path, units = "in", height = 7, width = 8, dpi = 300)
 
 # Sequential fractional savings
 plot_data <- df_seq_FS %>% 
@@ -346,11 +772,11 @@ p1 <- plot_data %>%
   ggplot() +
   geom_boxplot(aes(y = abs_diff)) +
   scale_y_continuous(expand = c(0, 0), 
-                     limits = c(0, max(plot_data$plot_max) + 2)) +
+                     limits = c(0, max(plot_data$plot_max) + 0.2)) +
   labs(x = NULL, 
        y = NULL, 
        subtitle = "Aggregated") +
-  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 2)) +
+  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 0.2)) +
   theme(legend.direction = "horizontal",
         axis.text = element_blank(), 
         legend.position = "bottom",
@@ -359,10 +785,11 @@ p1 <- plot_data %>%
 median <- median(plot_data$abs_diff)
 upper <- quantile(plot_data$abs_diff, probs = 0.95)
 
-sequence <- seq(from = 2, to = max(plot_data$abs_diff), by = 4)
+sequence <- seq(from = 0, to = max(plot_data$abs_diff), by = 5)
 seq_df <- data.frame(knot = sequence)
 seq_data <- seq_df %>%
   rowwise() %>%
+  filter(knot > 0) %>% 
   mutate(cumulative_count = sum(plot_data$abs_diff <= knot)) %>%
   ungroup()
 
@@ -378,24 +805,24 @@ p2 <- seq_data %>%
   geom_text(aes(x = cumulative_count, 
                 y = knot, 
                 label = paste0("(n = ", cumulative_count, ")")), 
-            position = position_nudge(x = -1, y = 1), 
+            position = position_nudge(x = -5, y = 0.2), 
             size = 4) +
   geom_hline(yintercept = median(plot_data$abs_diff), 
              linetype = "dashed", 
              color = "red") +
   geom_text(aes(y = median, 
-                x = 15, 
+                x = 20, 
                 label = paste0("(", "50% buildings: < ", round(median, digits = 1), " %)")), 
-            position = position_nudge(y = 1), 
+            position = position_nudge(y = 0.2), 
             check_overlap = T,
             size = 4) +
   geom_hline(yintercept = upper, 
              linetype = "dashed", 
              color = "red") +
   geom_text(aes(y = upper, 
-                x = 15, 
+                x = 20, 
                 label = paste0("(", "95% buildings: < ", round(upper, digits = 1), " %)")), 
-            position = position_nudge(y = 1), 
+            position = position_nudge(y = 0.2), 
             check_overlap = T,
             size = 4) +
   scale_x_continuous(expand = c(0.02, 0), 
@@ -403,11 +830,11 @@ p2 <- seq_data %>%
   scale_y_continuous(expand = c(0, 0), 
                      breaks = sequence,
                      labels = number_format(suffix = " %"),
-                     limits = c(0, max(plot_data$plot_max) + 2)) +
+                     limits = c(0, max(plot_data$plot_max) + 0.2)) +
   labs(x = "Number of buildings", 
        y = "Absolute difference in measured savings", 
        subtitle = "Accumulated breakdown by deviation") +
-  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 2)) +
+  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 0.2)) +
   theme(legend.direction = "horizontal",
         legend.position = "bottom",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
@@ -418,12 +845,101 @@ ggarrange(p2, p1,
           widths = c(4, 1),
           align = "hv",
           legend="bottom") +
-  plot_annotation(title = str_glue("Deviation in fractional saving estimation at early stop\n(Measured savings from observed weather)"))
+  plot_annotation(title = str_glue("Deviation in randomized M&V fractional saving estimation at early stop"))
 
-ggsave(filename = str_glue("fr_comp.png"), path = combifigs_path, units = "in", height = 8, width = 8, dpi = 300)
+ggsave(filename = str_glue("fr_comp_rand.png"), path = combifigs_path, units = "in", height = 8, width = 8, dpi = 300)
+
+# conventional fractional savings
+plot_data <- df_FS %>% 
+  filter(method != "rand") %>% 
+  group_by(name) %>% 
+  summarise(abs_diff = abs(diff(savings))) %>% 
+  ungroup() %>% 
+  mutate(plot_max = max(abs_diff))
+
+p1 <- plot_data %>% 
+  ggplot() +
+  geom_boxplot(aes(y = abs_diff)) +
+  scale_y_continuous(expand = c(0, 0), 
+                     limits = c(0, max(plot_data$plot_max) + 0.1)) +
+  labs(x = NULL, 
+       y = NULL, 
+       subtitle = "Aggregated") +
+  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 0.1)) +
+  theme(legend.direction = "horizontal",
+        axis.text = element_blank(), 
+        legend.position = "bottom",
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+median <- median(plot_data$abs_diff)
+upper <- quantile(plot_data$abs_diff, probs = 0.95)
+
+sequence <- seq(from = 0, to = max(plot_data$abs_diff), by = 1)
+seq_df <- data.frame(knot = sequence)
+seq_data <- seq_df %>%
+  rowwise() %>%
+  filter(knot > 0) %>% 
+  mutate(cumulative_count = sum(plot_data$abs_diff <= knot)) %>%
+  ungroup()
+
+p2 <- seq_data %>% 
+  ggplot() +
+  geom_hline(aes(yintercept = knot), 
+             linetype = "dashed", 
+             color = "grey80") +
+  geom_bar(data = plot_data %>% 
+             arrange(abs_diff), 
+           aes(x = seq(1, nrow(all_names), by = 1), y = abs_diff), 
+           stat = "identity", alpha = 0.5) +
+  geom_text(aes(x = cumulative_count, 
+                y = knot, 
+                label = paste0("(n = ", cumulative_count, ")")), 
+            position = position_nudge(x = -5, y = 0.1), 
+            size = 4) +
+  geom_hline(yintercept = median(plot_data$abs_diff), 
+             linetype = "dashed", 
+             color = "red") +
+  geom_text(aes(y = median, 
+                x = 20, 
+                label = paste0("(", "50% buildings: < ", round(median, digits = 1), " %)")), 
+            position = position_nudge(y = 0.1), 
+            check_overlap = T,
+            size = 4) +
+  geom_hline(yintercept = upper, 
+             linetype = "dashed", 
+             color = "red") +
+  geom_text(aes(y = upper, 
+                x = 20, 
+                label = paste0("(", "95% buildings: < ", round(upper, digits = 1), " %)")), 
+            position = position_nudge(y = 0.1), 
+            check_overlap = T,
+            size = 4) +
+  scale_x_continuous(expand = c(0.02, 0), 
+                     breaks = breaks_pretty(n = 3)) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = sequence,
+                     labels = number_format(suffix = " %"),
+                     limits = c(0, max(plot_data$plot_max) + 0.1)) +
+  labs(x = "Number of buildings", 
+       y = "Absolute difference in measured savings", 
+       subtitle = "Accumulated breakdown by deviation") +
+  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 0.1)) +
+  theme(legend.direction = "horizontal",
+        legend.position = "bottom",
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+ggarrange(p2, p1,
+          ncol=2, nrow=1,
+          labels = c("a)", "b)"),
+          widths = c(4, 1),
+          align = "hv",
+          legend="bottom") +
+  plot_annotation(title = str_glue("Deviation in conventional M&V fractional saving estimation"))
+
+ggsave(filename = str_glue("fr_comp_conv.png"), path = combifigs_path, units = "in", height = 8, width = 8, dpi = 300)
 
 # continuous sprt fractional savings
-plot_data <- df_cont_FS %>%
+plot_data <- df_cont_FS %>% 
   rename(cont = FS) %>% 
   left_join(df_FS %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
   mutate(abs_diff = abs(savings - cont), 
@@ -433,11 +949,11 @@ p1 <- plot_data %>%
   ggplot() +
   geom_boxplot(aes(y = abs_diff)) +
   scale_y_continuous(expand = c(0, 0), 
-                     limits = c(0, max(plot_data$plot_max) + 2)) +
+                     limits = c(0, max(plot_data$plot_max) + 0.2)) +
   labs(x = NULL, 
        y = NULL, 
        subtitle = "Aggregated") +
-  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 2)) +
+  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 0.2)) +
   theme(legend.direction = "horizontal",
         axis.text = element_blank(), 
         legend.position = "bottom",
@@ -446,10 +962,11 @@ p1 <- plot_data %>%
 median <- median(plot_data$abs_diff)
 upper <- quantile(plot_data$abs_diff, probs = 0.95)
 
-sequence <- seq(from = 4, to = max(plot_data$abs_diff), by = 4)
+sequence <- seq(from = 0, to = max(plot_data$abs_diff), by = 5)
 seq_df <- data.frame(knot = sequence)
 seq_data <- seq_df %>%
   rowwise() %>%
+  filter(knot > 0) %>% 
   mutate(cumulative_count = sum(plot_data$abs_diff <= knot)) %>%
   ungroup()
 
@@ -465,24 +982,24 @@ p2 <- seq_data %>%
   geom_text(aes(x = cumulative_count, 
                 y = knot, 
                 label = paste0("(n = ", cumulative_count, ")")), 
-            position = position_nudge(x = -1, y = 0.5), 
+            position = position_nudge(x = -5, y = 0.2), 
             size = 4) +
   geom_hline(yintercept = median(plot_data$abs_diff), 
              linetype = "dashed", 
              color = "red") +
   geom_text(aes(y = median, 
-                x = 15, 
+                x = 20, 
                 label = paste0("(", "50% buildings: < ", round(median, digits = 1), " %)")), 
-            position = position_nudge(y = 0.5), 
+            position = position_nudge(y = 0.2), 
             check_overlap = T,
             size = 4) +
   geom_hline(yintercept = upper, 
              linetype = "dashed", 
              color = "red") +
   geom_text(aes(y = upper, 
-                x = 15, 
+                x = 20, 
                 label = paste0("(", "95% buildings: < ", round(upper, digits = 1), " %)")), 
-            position = position_nudge(y = 0.5), 
+            position = position_nudge(y = 0.2), 
             check_overlap = T,
             size = 4) +
   scale_x_continuous(expand = c(0.02, 0), 
@@ -490,11 +1007,11 @@ p2 <- seq_data %>%
   scale_y_continuous(expand = c(0, 0), 
                      breaks = sequence,
                      labels = number_format(suffix = " %"),
-                     limits = c(0, max(plot_data$plot_max) + 2)) +
+                     limits = c(0, max(plot_data$plot_max) + 0.2)) +
   labs(x = "Number of buildings", 
        y = "Absolute difference in measured savings", 
        subtitle = "Accumulated breakdown by deviation") +
-  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 2)) +
+  coord_cartesian(ylim = c(0, max(plot_data$plot_max) + 0.2)) +
   theme(legend.direction = "horizontal",
         legend.position = "bottom",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
@@ -505,9 +1022,11 @@ ggarrange(p2, p1,
           widths = c(4, 1),
           align = "hv",
           legend="bottom") +
-  plot_annotation(title = str_glue("Deviation in fractional saving estimation after sequential test\n(Measured savings from observed weather)"))
+  plot_annotation(title = str_glue("Deviation in randomized M&V fractional saving estimation after sequential test\n(continue with 20%/80% sampling)"))
 
 ggsave(filename = str_glue("fr_comp_cont.png"), path = combifigs_path, units = "in", height = 8, width = 8, dpi = 300)
+
+
 
 
 # Timeline
@@ -649,7 +1168,7 @@ for (s in c("ref", "S1", "S2", "S3", "S4", "S5", "S6")){
   
   dev_FS %>%
     ggplot(aes(group = site)) +
-    geom_col(aes(x = name, y = diff_in_diff), position = "identity", alpha = 0.5) +
+    geom_col(aes(x = name, y = diff_in_diff), position = "identity", alpha = 0.3) +
     facet_wrap(~site, nrow = 1, scales = "free_x") +
     scale_y_continuous(expand = c(0.1, 0),
                        breaks = breaks_pretty(n = 4), 
