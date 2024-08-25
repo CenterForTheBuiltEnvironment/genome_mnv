@@ -11,7 +11,6 @@ require(pacman)
 # load libraries
 pacman::p_load(tidyverse, lubridate, scales, slider, cowplot, patchwork, RColorBrewer, # general
                broom, ggpmisc, ggpubr, # linear models
-               RMV2.0, # TOWT model
                sprtt, effsize) # sequential testing
 
 # turn off scientific notation
@@ -55,11 +54,11 @@ source(paste0(function_path, "cont_plot.R"))
 
 # define parameters
 # section run control
-run_params <- list(type = "messy", 
-                   site = T, 
+run_params <- list(type = "tidy", 
                    sprt = T, 
-                   sprt_cont = T, 
-                   nre_occ = F)
+                   sprt_cont = F, 
+                   nre_occ = F, 
+                   nsprt = F)
 
 # Adding intervention effect as advanced chiller operation
 ctr_params <- list(peak_hours = 10:16,                      # accounts for peak hours
@@ -204,9 +203,16 @@ get_eob <- function(sprt_res, sprt_overlap_base, sprt_overlap_interv){
 # Function defined to get sequential test results timeline
 get_timeline <- function(sprt_res, sprt_overlap_base, sprt_overlap_interv){
   
+  sprt <- sprt_res %>% filter(flag == 1) %>% slice(1) %>% .$n_weeks
+  
+  if (identical(sprt, integer(0))) {
+    sprt <- 48
+  }
+  
+  
   return(list(name = name,
               site = site, 
-              sprt = sprt_res %>% filter(flag == 1) %>% slice(1) %>% .$n_weeks,
+              sprt = sprt,
               base_temp = sprt_overlap_base %>% filter(flag == 1) %>% .$n_weeks,
               interv_temp = sprt_overlap_interv %>% filter(flag == 1) %>% .$n_weeks,
               eob = get_eob(sprt_res, sprt_overlap_base, sprt_overlap_interv), 
@@ -857,6 +863,216 @@ for (n in 1:(nrow(all_names))){
 
 
 
+#### NSPRT ####
+if (run_params$nsprt) {
+  
+  FS_ref_nsprt <- list()
+  MD_ref_nsprt <- list()
+  seq_timeline_nsprt <- list()
+  seq_mdsaving_nsprt <- list()
+  seq_nmsaving_nsprt <- list()
+  seq_frsaving_nsprt <- list()
+  
+  failed_sprt <- 0
+  
+  # for (n in 1:10){
+  for (n in 1:(nrow(all_names))){
+    
+    name <- all_names$name[n]
+    
+    site_info <- df_energy %>%
+      filter(name == all_names$name[n]) %>%
+      select(site, type) %>%
+      distinct()
+    
+    site <- site_info$site
+    
+    ifelse(!dir.exists(file.path(str_glue("./figs/{run_params$type}/site_analysis/{site}/{name}"))), dir.create(file.path(str_glue("./figs/{run_params$type}/site_analysis/{site}/{name}"))), FALSE)
+    sitefigs_path <- str_glue("./figs/{run_params$type}/site_analysis/{site}/{name}")
+    
+    site_weather <- df_weather %>%
+      filter(site == site_info$site) %>%
+      select(timestamp, t_out) %>%
+      group_by(timestamp) %>%
+      summarise(t_out = mean(t_out)) %>%
+      ungroup()
+    
+    site_tmy <- df_tmy %>% 
+      filter(site == site_info$site)
+    
+    df_all <- df_energy %>%
+      filter(name == all_names$name[n]) %>%
+      select(timestamp, eload) %>%
+      left_join(site_weather, by = "timestamp")
+    
+    # length check
+    if (nrow(df_all) != (366 + 365) * 24){
+      print("Incomplete/duplicate timestamp, please check")
+    } else {
+      print(paste0(name, " at ", site_info$site, " start"))
+    }
+    
+    # Linear interpolation of baseline
+    df_all <- df_all %>%
+      run_interpo()
+    
+    plot_scale <- get_scale(df_all$base_eload)
+    
+    df_hourly_conv <- df_all %>%
+      mutate(interv_eload = base_eload)
+    
+    # separate baseline and intervention
+    df_base_conv <- df_hourly_conv %>%
+      select(datetime,
+             eload = base_eload,
+             t_out) %>% 
+      drop_na()
+    
+    df_interv_conv <- df_hourly_conv %>%
+      select(datetime,
+             eload = interv_eload,
+             t_out) %>% 
+      drop_na()
+    
+    # Check prediction accuracy
+    towt_base <- df_base_conv %>%
+      filter(datetime < as.Date("2017-01-01")) %>%
+      model_fit()
+    
+    df_towt <- df_base_conv %>%
+      filter(datetime < as.Date("2017-01-01")) %>%
+      select(time = datetime,
+             temp = t_out,
+             eload)
+    
+    base_proj <- model_pred(df_towt, towt_base) %>%
+      rename("datetime" = "time")
+    
+    
+    # TOWT baseline project for post retrofit period
+    towt_base <- df_base_conv %>%
+      filter(datetime < as.Date("2017-01-01")) %>%
+      model_fit()
+    
+    df_towt <- df_interv_conv %>%
+      filter(datetime >= as.Date("2017-01-01")) %>%
+      select(time = datetime,
+             temp = t_out,
+             eload)
+    
+    base_proj <- model_pred(df_towt, towt_base) %>%
+      rename("datetime" = "time")
+    
+    # Repeat randomization
+    schedule <- blocking(start_date = block_params$start_date,
+                         n_weeks = block_params$n_weeks,
+                         n_seasons = block_params$n_seasons,
+                         seed = sample(1, 2^15, 1),
+                         searches = 20,
+                         jumps = 20,
+                         treatments = 2,
+                         consec = 1)
+    
+    # schedule summary
+    schedule$weekday_summary
+    
+    df_schedule <- schedule$schedule %>%
+      select(datetime = date,
+             strategy)
+    
+    df_rand <- df_hourly_conv %>%
+      left_join(df_schedule, by = "datetime") %>%
+      fill(strategy, .direction = "down") %>%
+      filter(datetime <= as.Date("2016-01-01") + weeks(block_params$n_weeks)) %>%
+      pivot_longer(c(base_eload, interv_eload), names_to = "eload_type", values_to = "eload") %>%
+      filter((strategy == 1 & eload_type == "base_eload") | (strategy == 2 & eload_type == "interv_eload")) %>%
+      select(-eload_type) %>% 
+      drop_na()
+    
+    err_plot(df_rand, df_base_conv, df_interv_conv)
+    ggsave(filename = "sampling_err_nsprt.png", path = sitefigs_path, units = "in", height = 9, width = 8, dpi = 300)
+    
+    # saving calculation as mean difference
+    FS_true <- (mean(df_base_conv$eload) - mean(df_interv_conv$eload)) / mean(df_base_conv$eload) * 100
+    FS_conv <- (mean(base_proj$towt) - mean(base_proj$eload)) / mean(base_proj$towt) * 100
+    FS_rand <- (mean(df_rand %>% filter(strategy == 1) %>% .$eload) -
+                  mean(df_rand %>% filter(strategy == 2) %>% .$eload)) /
+      mean(df_rand %>% filter(strategy == 1) %>% .$eload) * 100
+    
+    MD_true <- mean(df_base_conv$eload) - mean(df_interv_conv$eload)
+    MD_conv <- mean(base_proj$towt) - mean(base_proj$eload)
+    MD_rand <- mean(df_rand %>% filter(strategy == 1) %>% .$eload) -
+      mean(df_rand %>% filter(strategy == 2) %>% .$eload)
+    
+    FS_ref_nsprt[[n]] <- tibble("name" = name,
+                          "site" = site, 
+                          "ref_true" = FS_true,
+                          "ref_conv" = FS_conv,
+                          "ref_rand" = FS_rand)
+    
+    MD_ref_nsprt[[n]] <- tibble("name" = name,
+                          "site" = site, 
+                          "ref_true" = MD_true,
+                          "ref_conv" = MD_conv,
+                          "ref_rand" = MD_rand)
+    
+    # get true savings
+    df_week <- df_base_conv %>% 
+      select(datetime, 
+             base_eload = eload) %>% 
+      left_join(df_interv_conv, by = "datetime") %>% 
+      mutate(savings = eload - base_eload) %>% 
+      mutate(week = interval(min(datetime), datetime) %>% as.numeric('weeks') %>% floor()) %>% 
+      filter(week <= sprt_param$n_weeks)
+    
+    true_saving_nsprt <- list()
+    
+    for (i in 2:sprt_param$n_weeks){
+      saving <- df_week %>% 
+        filter(week <= i)
+      
+      true_saving_nsprt[[i]] <- tibble("n_weeks" = i, 
+                                       savings = mean(saving %>% .$savings))
+    }
+    
+    true_saving_nsprt <- bind_rows(true_saving_nsprt)
+    
+    seq_res <- try(seq_run(sprt_param, df_rand, site_tmy), silent = TRUE)  
+    
+    if (inherits(seq_res, "try-error")) {
+      
+      message("An error occurred. Skipping this part...")
+      failed_sprt <- failed_sprt + 1
+      
+    } else {
+      
+      annual_saving <- seq_res$annual_saving
+      df_means <- seq_res$df_means
+      sprt_res <- seq_res$sprt_res
+      sprt_overlap_base <- seq_res$sprt_overlap_base
+      sprt_overlap_interv <- seq_res$sprt_overlap_interv
+      
+      # get sequential test timeline
+      eob <- get_eob(sprt_res, sprt_overlap_base, sprt_overlap_interv)
+      seq_timeline_nsprt[[n]] <- get_timeline(sprt_res, sprt_overlap_base, sprt_overlap_interv)
+      
+      # plot overall results
+      seq_plot(df_means, sprt_res, sprt_overlap_base, sprt_overlap_interv, annual_saving, true_saving_nsprt, eob)
+      ggsave(filename = "overall_seq_nsprt.png", path = sitefigs_path, units = "in", height = 9, width = 8, dpi = 300)
+      
+      # savings at timeline
+      seq_mdsaving_nsprt[[n]] <- get_mdsaving(seq_timeline_nsprt[[n]], sprt_res)
+      seq_nmsaving_nsprt[[n]] <- get_nmsaving(seq_timeline_nsprt[[n]], sprt_res)
+      seq_frsaving_nsprt[[n]] <- get_frsaving(seq_timeline_nsprt[[n]], df_rand)
+      
+    }
+      
+    print(paste0("Finished: ", n, "/", nrow(all_names)))
+  
+  }
+
+}
+
 
 
 
@@ -864,55 +1080,88 @@ for (n in 1:(nrow(all_names))){
 
 #### BIND ####
 # savings calculation
-df_seq_FS <- bind_rows(seq_frsaving) %>% 
+df_seq_FS <- bind_rows(seq_frsaving) %>%
   pivot_longer(-c(name, site), names_to = "seq", values_to = "FS")
 
 df_MD <- bind_rows(MD_ref) %>%
   pivot_longer(-c(name, site), names_to = "type", values_to = "savings") %>%
   separate(type, into = c("scenario", "method"), sep = "_")
 
-df_FS <- bind_rows(FS_ref) %>% 
+df_FS <- bind_rows(FS_ref) %>%
   pivot_longer(-c(name, site), names_to = "type", values_to = "savings") %>%
   separate(type, into = c("scenario", "method"), sep = "_")
 
-df_sprt_all <- bind_rows(seq_mdsaving) %>% 
-  pivot_longer(-c(name, site), names_to = "seq", values_to = "sprt") %>% 
-  left_join(bind_rows(seq_nmsaving) %>% 
-              pivot_longer(-c(name, site), names_to = "seq", values_to = "annual"), 
-            by = c("name", "site", "seq")) %>% 
-  left_join(bind_rows(seq_timeline) %>% 
-              mutate(temp = pmax(base_temp, interv_temp)) %>% 
-              select(-c(base_temp, interv_temp)) %>% 
-              pivot_longer(-c(name, site), names_to = "seq", values_to = "n_weeks"), 
+df_sprt_all <- bind_rows(seq_mdsaving) %>%
+  pivot_longer(-c(name, site), names_to = "seq", values_to = "sprt") %>%
+  left_join(bind_rows(seq_nmsaving) %>%
+              pivot_longer(-c(name, site), names_to = "seq", values_to = "annual"),
+            by = c("name", "site", "seq")) %>%
+  left_join(bind_rows(seq_timeline) %>%
+              mutate(temp = pmax(base_temp, interv_temp)) %>%
+              select(-c(base_temp, interv_temp)) %>%
+              pivot_longer(-c(name, site), names_to = "seq", values_to = "n_weeks"),
             by = c("name", "site", "seq"))
 
-if (run_params$type == "tidy"){
-  
+if (run_params$nre_occ == T){
+
   df_NRE_occ <- df_FS %>%
-    rbind(FS_occ %>% 
+    rbind(FS_occ %>%
             pivot_longer(-c(name, site), names_to = "type", values_to = "savings") %>%
             separate(type, into = c("scenario", "method"), sep = "_"))
-  
+
 }
 
+df_model_acc <- bind_rows(model_acc) 
 
-df_eui <- bind_rows(energy) %>% 
-  left_join(df_meta, by = c("name", "site")) 
+df_eui <- bind_rows(energy) %>%
+  left_join(df_meta, by = c("name", "site"))
 
-df_cont_FS <- bind_rows(cont_frsaving) %>% 
+df_cont_FS <- bind_rows(cont_frsaving) %>%
   pivot_longer(-c(name, site), names_to = "seq", values_to = "FS")
 
-df_cont_MD <- bind_rows(cont_mdsaving) %>% 
+df_cont_MD <- bind_rows(cont_mdsaving) %>%
   pivot_longer(-c(name, site), names_to = "seq", values_to = "sprt")
 
+if (run_params$nsprt == T){
+  
+  df_seq_FS_nsprt <- bind_rows(seq_frsaving_nsprt) %>%
+    pivot_longer(-c(name, site), names_to = "seq", values_to = "FS")
+  
+  df_nsprt_all <- bind_rows(seq_mdsaving_nsprt) %>%
+    pivot_longer(-c(name, site), names_to = "seq", values_to = "sprt") %>%
+    left_join(bind_rows(seq_nmsaving_nsprt) %>%
+                pivot_longer(-c(name, site), names_to = "seq", values_to = "annual"),
+              by = c("name", "site", "seq")) %>%
+    left_join(bind_rows(seq_timeline_nsprt) %>%
+                mutate(temp = pmax(base_temp, interv_temp)) %>%
+                select(-c(base_temp, interv_temp)) %>%
+                pivot_longer(-c(name, site), names_to = "seq", values_to = "n_weeks"),
+              by = c("name", "site", "seq"))
+  
+  df_MD_nsprt <- bind_rows(MD_ref_nsprt) %>%
+    pivot_longer(-c(name, site), names_to = "type", values_to = "savings") %>%
+    separate(type, into = c("scenario", "method"), sep = "_")
+  
+  df_FS_nsprt <- bind_rows(FS_ref_nsprt) %>%
+    pivot_longer(-c(name, site), names_to = "type", values_to = "savings") %>%
+    separate(type, into = c("scenario", "method"), sep = "_")
+  
+  write_rds(df_seq_FS_nsprt, paste0(readfile_path, "df_seq_FS_nsprt.rds"), compress = "gz")
+  write_rds(df_nsprt_all, paste0(readfile_path, "df_nsprt_all.rds"), compress = "gz")
+  write_rds(df_FS_nsprt, paste0(readfile_path, "df_FS_nsprt.rds"), compress = 'gz')
+  write_rds(df_MD_nsprt, paste0(readfile_path, "df_MD_nsprt.rds"), compress = 'gz')
+  
+}
+ 
+  
 # store savings and timeline
 write_rds(df_sprt_all, paste0(readfile_path, "df_sprt_all.rds"), compress = "gz")
 write_rds(df_seq_FS, paste0(readfile_path, "df_seq_FS.rds"), compress = "gz")
 
-if (run_params$type == "tidy"){
-  
+if (run_params$nre_occ == T){
+
   write_rds(df_NRE_occ, paste0(readfile_path, "df_NRE_occ.rds"), compress = "gz")
-  
+
 }
 
 write_rds(df_MD, paste0(readfile_path, "df_MD.rds"), compress = "gz")
@@ -920,4 +1169,4 @@ write_rds(df_FS, paste0(readfile_path, "df_FS.rds"), compress = "gz")
 write_rds(df_eui, paste0(readfile_path, "df_eui.rds"), compress = "gz")
 write_rds(df_cont_MD, paste0(readfile_path, "df_cont_MD.rds"), compress = "gz")
 write_rds(df_cont_FS, paste0(readfile_path, "df_cont_FS.rds"), compress = "gz")
-
+write_rds(df_model_acc, paste0(readfile_path, "df_model_acc.rds"), compress = "gz")
