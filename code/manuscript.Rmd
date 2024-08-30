@@ -1,0 +1,42 @@
+---
+title: "Reliably estimating the impact of a new control strategy in a building"
+author:
+  - Aoyu Zou ^[Center for the Built Environment, University of California Berkeley, USA] ^[Correspondence to aoyuzou@berkeley.edu], Paul Raftery ^1^, Stefano Schiavon ^1^, Carlos Durate ^1^
+abstract: Conventional measurement and verification (M&V) methods for whole-building energy savings estimation are both time-consuming and unreliable, especially when non-routine events occur during the M&V process. Those events are unrelated to the proposed intervention strategy but have substaintial impacts on the building energy consumption. In this study, we argue that for switchable interventions (e.g. most of the control retrofits) can benefit from random sampling where the analyst randomly decide which strategy (i.e. baseline or intervention) to implement each day. We tested the novel randomized M&V method on a large public dataset which covers multiple climate zones and types of commercial buildings. We applied a virtual chilled water supply temperature reset based on outdoor weather as a control retrofit intervention. Our study shows that the new M&V method can estimate the savings accurately much quicker than the conventional method and most importantly, the estimation results are much more robust compared to the conventional method when non-routine events are present. 
+
+output:
+  bookdown::word_document2:
+    reference_docx: "../paper/template.docx"
+editor_options: 
+  markdown: 
+    wrap: 72
+# bibliography: references.bib
+# biblio-style: apalike
+
+knit: (function(input, ...) {
+    rmarkdown::render(
+      input,
+      output_dir = "../paper"
+    )
+  })
+---
+
+```{r setup, include = FALSE, cache = FALSE}
+
+# knitr setup
+knitr::opts_chunk$set(echo = F, 
+                      message = F,
+                      warning = F,
+                      dev = "jpeg",
+                      cache = T,
+                      dpi = 300,
+                      fig.path = "figs",
+                      fig.show = "hold",
+                      fig.pos = "b", 
+                      fig.path = "../figs/results/manuscript")
+
+# str(knitr::opts_chunk$get()) # see for all options
+
+```
+
+```{r libraries, include = FALSE, cache = FALSE}

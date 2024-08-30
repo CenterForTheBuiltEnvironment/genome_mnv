@@ -2,7 +2,7 @@ library(tidyverse)
 library(lubridate)
 library(nmecr)
 library(dplyr)
-source("./functions/saving_norm.R")
+source("../functions/saving_norm.R")
 
 seq_run <- function(param, dataframe, tmy){
   

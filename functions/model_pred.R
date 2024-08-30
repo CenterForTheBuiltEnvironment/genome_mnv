@@ -2,7 +2,7 @@ library(tidyverse)
 library(lubridate)
 library(stats)
 library(dplyr)
-source("./functions/create_temp_matrix.R")
+source("../functions/create_temp_matrix.R")
 
 model_pred <- function(dataframe, model){
   

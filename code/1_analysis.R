@@ -40,7 +40,7 @@ ls_colors <- c("Baseline" = "#99d8c9",
                "True normalized savings" = "black")
 
 # load functions
-function_path <- "./functions/"
+function_path <- "../functions/"
 source(paste0(function_path, "blocking.R"))
 source(paste0(function_path, "model_fit.R"))
 source(paste0(function_path, "model_pred.R"))
@@ -289,9 +289,9 @@ get_frsaving <- function(timeline, dataframe){
 
 
 #### READ DATA ####
-readfile_path <- str_glue("./readfiles/{run_params$type}/")
-summaryfigs_path <- str_glue("./figs/{run_params$type}/site_summary/")
-combifigs_path <- str_glue("./figs/{run_params$type}/comb_analysis/")
+readfile_path <- str_glue("../readfiles/{run_params$type}/")
+summaryfigs_path <- str_glue("../figs/{run_params$type}/site_summary/")
+combifigs_path <- str_glue("../figs/{run_params$type}/comb_analysis/")
 
 df_energy <- read_rds(paste0(readfile_path, "df_energy.rds"))
 df_meta <- read_rds(paste0(readfile_path, "df_meta.rds"))
@@ -345,8 +345,8 @@ for (n in 1:(nrow(all_names))){
   
   site <- site_info$site
   
-  ifelse(!dir.exists(file.path(str_glue("./figs/{run_params$type}/site_analysis/{site}/{name}"))), dir.create(file.path(str_glue("./figs/{run_params$type}/site_analysis/{site}/{name}"))), FALSE)
-  sitefigs_path <- str_glue("./figs/{run_params$type}/site_analysis/{site}/{name}")
+  ifelse(!dir.exists(file.path(str_glue("../figs/{run_params$type}/site_analysis/{site}/{name}"))), dir.create(file.path(str_glue("../figs/{run_params$type}/site_analysis/{site}/{name}"))), FALSE)
+  sitefigs_path <- str_glue("../figs/{run_params$type}/site_analysis/{site}/{name}")
   
   site_weather <- df_weather %>%
     filter(site == site_info$site) %>%
@@ -887,8 +887,8 @@ if (run_params$nsprt) {
     
     site <- site_info$site
     
-    ifelse(!dir.exists(file.path(str_glue("./figs/{run_params$type}/site_analysis/{site}/{name}"))), dir.create(file.path(str_glue("./figs/{run_params$type}/site_analysis/{site}/{name}"))), FALSE)
-    sitefigs_path <- str_glue("./figs/{run_params$type}/site_analysis/{site}/{name}")
+    ifelse(!dir.exists(file.path(str_glue("../figs/{run_params$type}/site_analysis/{site}/{name}"))), dir.create(file.path(str_glue("../figs/{run_params$type}/site_analysis/{site}/{name}"))), FALSE)
+    sitefigs_path <- str_glue("../figs/{run_params$type}/site_analysis/{site}/{name}")
     
     site_weather <- df_weather %>%
       filter(site == site_info$site) %>%

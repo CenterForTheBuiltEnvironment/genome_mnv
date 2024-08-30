@@ -2,8 +2,8 @@ library(tidyverse)
 library(lubridate)
 library(nmecr)
 library(dplyr)
-source("./functions/resample.R")
-source("./functions/find_occ_unocc.R")
+source("../functions/resample.R")
+source("../functions/find_occ_unocc.R")
 
 model_fit <- function(train_data){
   

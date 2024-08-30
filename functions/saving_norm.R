@@ -1,9 +1,9 @@
 library(tidyverse)
 library(lubridate)
 library(dplyr)
-source("./functions/model_fit.R")
-source("./functions/model_pred.R")
-source("./functions/resample.R")
+source("../functions/model_fit.R")
+source("../functions/model_pred.R")
+source("../functions/resample.R")
 
 saving_norm <- function(dataframe, tmy, method){
   
