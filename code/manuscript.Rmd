@@ -6,7 +6,7 @@ abstract: Conventional measurement and verification (M&V) methods for whole-buil
 
 output:
   bookdown::word_document2:
-    reference_docx: "../paper/template.docx"
+    reference_docx: "../paper/TF_Template_Word_Mac_2011.dotx"
 editor_options: 
   markdown: 
     wrap: 72
@@ -28,15 +28,232 @@ knitr::opts_chunk$set(echo = F,
                       message = F,
                       warning = F,
                       dev = "jpeg",
-                      cache = T,
+                      # cache = T,
                       dpi = 300,
                       fig.path = "figs",
                       fig.show = "hold",
                       fig.pos = "b", 
-                      fig.path = "../figs/results/manuscript")
+                      fig.path = "../figs/manuscript")
 
 # str(knitr::opts_chunk$get()) # see for all options
 
 ```
 
-```{r libraries, include = FALSE, cache = FALSE}
+```{r prep, include = FALSE, cache = FALSE}
+#### LIBRARIES ####
+require(pacman)
+
+# load packages using pacman
+pacman::p_load(tidyverse, lubridate, here) #effect size
+
+# turn off scientific notation
+options(scipen = 999, digits = 15)
+
+# set directory
+here::i_am("manuscript.rmd")
+
+# set default theme for ggplot
+theme_set(theme_minimal())
+
+# define base ggplot theme
+theme_update(plot.title = element_text(size = 14, colour = "grey20", face = "bold", hjust = 0.5),
+             plot.subtitle = element_text(size = 10, colour = "grey20", face = "italic", hjust = 0.5, margin = margin(b = 10)),
+             plot.caption = element_text(size = 10, colour = "grey20", face = "italic", hjust = 0.5),
+             plot.background = element_rect(fill = "white", colour = NA),
+             panel.grid.minor = element_blank(),
+             panel.grid.major = element_blank(),
+             axis.text = element_text(size = 10),
+             strip.text = element_text(size = 10, color = "grey20", face = "bold"),
+             strip.background = element_blank())
+
+ls_colors <- c("Baseline" = "#99d8c9",
+               "Measured baseline" = "#99d8c9",
+               "Adjusted baseline" = "#99d8c9",
+               "Projected baseline\n(no change)" = "#1b9e77",
+               "Intervention" = "#fdbb84",
+               "Measured interv" = "#fdbb84",
+               "True savings" = "black",
+               "True normalized savings" = "black")
+
+
+
+
+
+#### FUNCTIONS ####
+# Function defined to read downloaded tmy files
+get_tmy <- function(all_sites, readfile_path){
+  
+  df_tmy <- data.frame()
+  
+  for (site in all_sites){
+    df <- read_csv(paste0(readfile_path, "tmy/", str_glue("{site}.epw")),
+                   skip = 8, col_types = "ddddd-d---------------------------------",
+                   col_names = c("year", "month", "day", "hour", "min", "tmy")) %>%
+      mutate(year = 2017,
+             time = ymd_h(paste(paste(year, month, day, sep = "-"), hour, sep = " ")),
+             temp = tmy) %>%
+      dplyr::select(time, temp) %>% 
+      mutate(site = site)
+    
+    df_tmy <- rbind(df_tmy, df)
+  }
+  
+  return(df_tmy)
+}
+
+# define parameters
+sprt_param <- list(baseline = "Baseline",
+                   strategy = "Intervention",
+                   parameter = "power_ave",
+                   label = "power",
+                   n_weeks = 48)
+
+block_params <- list(start_date = "2016-01-01",
+                     n_weeks = 108,
+                     n_seasons = 9, 
+                     block_unit = 12)
+```
+
+```{r readdata, include=FALSE}
+
+#### READ DATA ####
+# Tidy dataset
+readfile_tidy <- str_glue("../readfiles/tidy/")
+
+df_energy_tidy <- read_rds(paste0(readfile_tidy, "df_energy.rds"))
+df_meta_tidy <- read_rds(paste0(readfile_tidy, "df_meta.rds"))
+df_weather_tidy <- read_rds(paste0(readfile_tidy, "df_weather.rds"))
+df_sprt_all_tidy <- read_rds(paste0(readfile_tidy, "df_sprt_all.rds"))
+df_seq_FS_tidy <- read_rds(paste0(readfile_tidy, "df_seq_FS.rds"))
+df_NRE_occ <- read_rds(paste0(readfile_tidy, "df_NRE_occ.rds"))
+df_MD_tidy <- read_rds(paste0(readfile_tidy, "df_MD.rds"))
+df_FS_tidy <- read_rds(paste0(readfile_tidy, "df_FS.rds"))
+df_eui_tidy <- read_rds(paste0(readfile_tidy, "df_eui.rds"))
+df_cont_MD_tidy <- read_rds(paste0(readfile_tidy, "df_cont_MD.rds"))
+df_cont_FS_tidy <- read_rds(paste0(readfile_tidy, "df_cont_FS.rds"))
+
+all_sites_tidy <- df_energy_tidy %>%
+  select(site) %>%
+  distinct() %>%
+  arrange(site)
+
+all_types_tidy <- df_energy_tidy %>%
+  select(type) %>%
+  mutate(type = as.factor(type)) %>%
+  distinct()
+
+all_names_tidy <- df_energy_tidy %>%
+  select(name) %>%
+  distinct(name)
+
+# Messy dataset
+readfile_messy <- str_glue("../readfiles/messy/")
+
+df_energy_messy <- read_rds(paste0(readfile_messy, "df_energy.rds"))
+df_meta_messy <- read_rds(paste0(readfile_messy, "df_meta.rds"))
+df_weather_messy <- read_rds(paste0(readfile_messy, "df_weather.rds"))
+df_sprt_all_messy <- read_rds(paste0(readfile_messy, "df_sprt_all.rds"))
+df_seq_FS_messy <- read_rds(paste0(readfile_messy, "df_seq_FS.rds"))
+df_MD_messy <- read_rds(paste0(readfile_messy, "df_MD.rds"))
+df_FS_messy <- read_rds(paste0(readfile_messy, "df_FS.rds"))
+df_eui_messy <- read_rds(paste0(readfile_messy, "df_eui.rds"))
+df_cont_MD_messy <- read_rds(paste0(readfile_messy, "df_cont_MD.rds"))
+df_cont_FS_messy <- read_rds(paste0(readfile_messy, "df_cont_FS.rds"))
+df_FS_nsprt <- read_rds(paste0(readfile_messy, "df_FS_nsprt.rds"))
+df_MD_nsprt <- read_rds(paste0(readfile_messy, "df_MD_nsprt.rds"))
+df_seq_FS_nsprt <- read_rds(paste0(readfile_messy, "df_seq_FS_nsprt.rds"))
+
+all_sites_messy <- df_energy_messy %>%
+  select(site) %>%
+  distinct() %>%
+  arrange(site)
+
+all_types <- df_energy_messy %>%
+  select(type) %>%
+  mutate(type = as.factor(type)) %>%
+  distinct()
+
+all_names <- df_energy_messy %>%
+  select(name) %>%
+  distinct(name)
+```
+
+# Introduction
+
+## Background
+
+### Conventional M&V
+
+### Randomized (rapid) M&V
+
+### Non-routine events
+
+## Literature review
+
+## Objectives
+
+The objectives of this paper include:
+
+1.  Demonstrate the implementation of the proposed randomized rapid M&V
+    method using a public available dataset. We ensured the
+    reproducibility of the M&V method by making the analysis code open
+    source including randomized schedule generation, sequential
+    statistical analysis, energy modeling and normalized saving
+    calculation. Using the available open resources, building analysts
+    should be able to seamlessly integrate and apply them in their own
+    M&V projects.
+
+2.  Compare the energy saving estimation accuracy between the
+    conventional and the randomized method. In particular, this study
+    extends the comparison to large samples of buildings of various
+    types and across multiple climate zones.
+
+3.  Verify the superior robustness of the randomized method over the
+    conventional method. By using the realistic measurements from
+    real-world buildings, which contains various sources of noises,
+    could largely reflect the challenges that a building analyst would
+    be facing in any real project. Particularly, as we will demonstrate
+    in the following sections, non-routine events (i.e. 'noises' in the
+    measurements) have less impact in the energy saving estimation when
+    the analyst uses the randomized approach.
+
+# Method
+
+As mentioned, this study leverages a large public dataset to demonstrate
+the energy saving estimation results of a novel M&V method inspired by
+other scientific research fields. We outlined the methodology of the
+study in figure and outlined several key steps in this section.
+
+```{r flowchart}
+
+```
+
+## Data filtering process
+
+### 'Tidy' dataset - buildings with the same two-year electricity usage
+
+### 'Messy' dataset - buildings with reasonable change
+
+## Control intervention - chilled water supply temperature reset
+
+## Building Energy modeling
+
+# Results
+
+## Randomized M&V results
+
+### Saving estimation accuracy comparison ('tidy' dataset results)
+
+### Required estimation time
+
+### Continue sampling results
+
+## Influence of non-routine events
+
+### Example non-routine event: occupancy change
+
+### Saving estimation accuracy comparison ('messy' dataset results)
+
+# Discussion
+
+# Conclusion
