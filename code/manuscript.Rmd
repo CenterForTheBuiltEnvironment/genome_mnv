@@ -369,7 +369,7 @@ measurements. Figure \@ref(fig:tidysite) shows in total, the subset
 contains `r nrow(all_names_tidy)` buildings in `r nrow(all_types_tidy)`
 types from `r nrow(all_sites_tidy)` different climate zones.
 
-```{r tidysite, fig.cap = "Site summary of the tidy building subset", fig.width=8, fig.height=8}
+```{r tidysite, fig.cap = "Site summary of the tidy building subset", fig.width=8, fig.height=6}
 
 set3 <- colorRampPalette(brewer.pal('Set3',n=12))
 type_colors <- setNames(set3(13), all_types_messy$type)
@@ -527,7 +527,7 @@ which assumed to be the existing measurements from the dataset, runs at
 a constant water supply temperature. The intervention as the figure
 shows reset from 7 °C to 12 °C.
 
-```{r chwst, fig.cap = "Proposed chilled water supply temperature reset based on outdoor temperature", fig.width=6, fig.height=4}
+```{r chwst, fig.cap = "Proposed chilled water supply temperature reset based on outdoor temperature", fig.width=8, fig.height=4}
 
 data.frame(
   OAT = c(10, 15, 25, 30),  
@@ -591,7 +591,7 @@ calibration process should be included, it is considered tangential to
 the study scope outlined in this paper.
 
 | Parameter              | Description                                                      | Value |
-|----------------|----------------------------------------|----------------|
+|-----------------|--------------------------------------|-----------------|
 | $\beta_{temp}$         | \% savings from setting $T_{interv}$ 1 °C higher than $T_{base}$ | 0.08  |
 | $\beta_{occ}$          | \% savings adjustment during occupied hours                      | 1.2   |
 | $\beta_{\text{unocc}}$ | \% savings adjustment during unoccupied hours                    | 0.8   |
@@ -1111,7 +1111,18 @@ target building, a floor of tenants moved out leaving the space
 unoccupied for four months before new tenants moved in and this led to a
 20% electricity decrease as a result. The M&V protocol only requires the
 M&V analyst to fit a TOWT model so he/she only measures outdoor
-temperature. Figure \@ref(fig:occchange) shows one example
+temperature. We showed one example in Figure \@ref(fig:occchange) where
+from May 1st 2016 to August 31st 2016, the target building electricity
+decreased 20% due to reduced occupancy. Thus subplot (a) shows measured
+baseline with such change, which are then used for TOWT model fitting.
+Starting from 2017, the occupancy returns normal and only intervention
+strategy was measured and the projected baseline is the prediction
+results from the fitted model. To demonstrate, we also plotted the
+original measurements before adding the intervention effect as 'adjusted
+baseline'. This assumes that we can accurately adjust the baseline in
+the post-retrofit period on back-to-normal occupancy. Subplot (b) shows
+that the fitted regression underestimate the true baseline condition
+leading to underestimated savings.
 
 ```{r occ}
 
@@ -1265,6 +1276,75 @@ ggarrange(p1, p2,
           align = "v",
           legend="bottom") +
   plot_annotation(title = "Building energy consumption with added occupancy change")
+```
+
+Figure \@ref(fig:occsavings) shows the normalized fractional savings
+estimation accuracy comparison between the two M&V methods. To compare
+which method is more robust to the applied occupancy change, a
+difference-in-difference value is plotted in the figure. Each bar in the
+plot represent the difference in the deviation of savings estimated by
+the convention method and the randomized method:
+
+$$
+|S_{conv} - S_{true}| - |S_{rand} - S_{true}|
+$$
+
+In other words, a positive value indicate the randomized method provides
+an estimation more aligned to the true target saving. Thus the plot
+shows the randomized method shows uniformly superior robustness for all
+sites. The red-dotted line shows the absolute deviation in savings
+estimation by the randomized method as a reference for scaling. The
+deviation is consistent with the distribution shown in Figure
+\@ref(fig:tidysite) and thus further reinforce its robustness to
+non-routine events.
+
+```{r occsavings, fig.cap="Savings estimation accuracy comparison between two M&V methods with added occupancy change (with the site average difference-in-difference displayed at the bottom of each site).", fig.width=8, fig.height=4}
+s <- 'S4'
+dev_conv <- df_NRE_occ %>%
+  filter(scenario == s) %>%
+  filter(method != "rand") %>%
+  group_by(name, site, scenario) %>%
+  summarise(conv = abs(diff(savings))) %>%
+  ungroup()
+
+dev_rand <- df_NRE_occ %>%
+  filter(scenario == s) %>%
+  filter(method != "conv") %>%
+  group_by(name, site, scenario) %>%
+  summarise(rand = abs(diff(savings))) %>%
+  ungroup()
+
+dev_FS <- dev_rand %>%
+  left_join(dev_conv, by = c("name", "site", "scenario")) %>% 
+  mutate(diff_in_diff = conv - rand)
+
+mean_diff <- dev_FS %>%
+  group_by(site) %>%
+  summarise(mean = round(mean(diff_in_diff), digits = 1),
+            pos = round(n() / 2) + 1,
+            .groups = 'keep')
+
+dev_FS %>%
+  ggplot(aes(group = site)) +
+  geom_col(aes(x = name, y = diff_in_diff), position = "identity", alpha = 0.3) +
+  facet_wrap(~site, nrow = 1, scales = "free_x") +
+  scale_y_continuous(expand = c(0.1, 0),
+                     breaks = breaks_pretty(n = 4), 
+                     labels = number_format(suffix = "%")) +
+  geom_text(data = mean_diff,
+            aes(x = pos, y = -.5, group = site, label = paste0(mean, "%"))) +
+  geom_line(aes(x = name, y = rand, color = "Absolute deviation of randomized method"), alpha = 0.5) +
+  geom_point(aes(x = name, y = rand, color = "Absolute deviation of randomized method"), alpha = 0.5) +
+  labs(x = NULL,
+       fill = NULL,
+       y = NULL,
+       color = NULL, 
+       title = "Difference-in-difference of fractional savings") +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        axis.text.x = element_blank(),
+        legend.direction = "horizontal",
+        legend.position = "bottom",
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 ```
 
 ### No-saving detection
