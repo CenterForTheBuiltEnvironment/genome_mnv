@@ -40,7 +40,7 @@ ls_colors <- c("Baseline" = "#99d8c9",
 
 # define parameters
 run_params <- list(type = "tidy", 
-                   site = T)
+                   site = F)
 
 sprt_param <- list(baseline = "Baseline",
                    strategy = "Intervention",

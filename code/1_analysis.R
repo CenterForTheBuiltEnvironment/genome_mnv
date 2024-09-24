@@ -56,9 +56,9 @@ source(paste0(function_path, "cont_plot.R"))
 # section run control
 run_params <- list(type = "tidy", 
                    sprt = T, 
-                   sprt_cont = F, 
+                   sprt_cont = T, 
                    nre_occ = F, 
-                   nsprt = F)
+                   nsprt = T)
 
 # Adding intervention effect as advanced chiller operation
 ctr_params <- list(peak_hours = 10:16,                      # accounts for peak hours
