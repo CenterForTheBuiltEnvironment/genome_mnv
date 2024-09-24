@@ -6,7 +6,7 @@ abstract: Conventional measurement and verification (M&V) methods for whole-buil
 
 output:
   bookdown::word_document2:
-    reference_docx: "../paper/TF_Template_Word_Mac_2011.dotx"
+    reference_docx: "../paper/template.docx"
 editor_options: 
   markdown: 
     wrap: 72
@@ -193,6 +193,7 @@ df_FS_tidy <- read_rds(paste0(readfile_tidy, "df_FS.rds"))
 df_eui_tidy <- read_rds(paste0(readfile_tidy, "df_eui.rds"))
 df_cont_MD_tidy <- read_rds(paste0(readfile_tidy, "df_cont_MD.rds"))
 df_cont_FS_tidy <- read_rds(paste0(readfile_tidy, "df_cont_FS.rds"))
+df_model_acc_tidy <- read_rds(paste0(readfile_tidy, "df_model_acc.rds"))
 
 all_sites_tidy <- df_energy_tidy %>%
   select(site) %>%
@@ -224,6 +225,7 @@ df_cont_FS_messy <- read_rds(paste0(readfile_messy, "df_cont_FS.rds"))
 df_FS_nsprt <- read_rds(paste0(readfile_messy, "df_FS_nsprt.rds"))
 df_MD_nsprt <- read_rds(paste0(readfile_messy, "df_MD_nsprt.rds"))
 df_seq_FS_nsprt <- read_rds(paste0(readfile_messy, "df_seq_FS_nsprt.rds"))
+df_model_acc_messy <- read_rds(paste0(readfile_messy, "df_model_acc.rds"))
 
 all_sites_messy <- df_energy_messy %>%
   select(site) %>%
@@ -280,6 +282,10 @@ Temperature model).
 ### BDG2 dataset
 
 ## Literature review
+
+### Measurement and verification
+
+### Randomized experimental design
 
 ## Objectives
 
@@ -591,7 +597,7 @@ calibration process should be included, it is considered tangential to
 the study scope outlined in this paper.
 
 | Parameter              | Description                                                      | Value |
-|-----------------|--------------------------------------|-----------------|
+|------------------|------------------------------------|------------------|
 | $\beta_{temp}$         | \% savings from setting $T_{interv}$ 1 °C higher than $T_{base}$ | 0.08  |
 | $\beta_{occ}$          | \% savings adjustment during occupied hours                      | 1.2   |
 | $\beta_{\text{unocc}}$ | \% savings adjustment during unoccupied hours                    | 0.8   |
@@ -1349,12 +1355,275 @@ dev_FS %>%
 
 ### No-saving detection
 
+The outbreak of pandemic in 2020 followed by working-from-home policy is
+a practical example of building energy consumption influenced by
+non-routine events. During unoccupied months, building energy
+consumption dropped compared to the same time period in the previous
+years. If an energy-efficient intervention was deployed onsite starting
+at 2020, given by the whole-building electricity measurements, the large
+difference in measured electricity usage in 2020 and projected baseline
+usage in 2019 can hardly indicate the retrofit intervention effect.
+
+In other words, if there is no intervention applied or the intervention
+effect is known to be null (e.g. constantly being overriden by the
+baseline), an ideal M&V method should detect no savings. To test this,
+we kept the randomized schedule as sampled earlier but removed added
+chilled water plant intervention effect. Therefore, all sampled
+intervention days are considered additional sampled baseline days.
+Earlier we mentioned the 'messy' dataset contains some change in the
+two-year electricity measurement, which is purely due to various
+non-routine events such as occupancy change or even other measures
+implemented by the building manager but irrelevant to the chilled water
+set point reset intervention. Thus, when the proposed chilled water
+reset intervention was removed, a more reliable M&V method should
+overcome the influence of those confounding factors and inform no
+savings.
+
+```{r nosavings, fig.cap="Distribution of savings estimation results by the convention M&V method and randomized method.", fig.width=8, fig.height=4}
+
+df_FS_nsprt %>% 
+  pivot_wider(names_from = method, values_from = savings) %>% 
+  left_join(df_seq_FS_nsprt %>% filter(seq == "eob"), by = c("name", "site")) %>% 
+  pivot_longer(c(true, conv, rand, FS), names_to = "parameter", values_to = "value") %>% 
+  filter(parameter != "true") %>% 
+  mutate(parameter = as.factor(parameter), 
+         parameter = recode_factor(parameter, 
+                                   "conv" = "Conventional M&V", 
+                                   "rand" = "Randomized M&V", 
+                                   "FS" = "Randomized M&V at early stop")) %>% 
+  ggplot(aes(x = parameter, y = value, fill = parameter)) +
+  stat_boxplot(geom ='errorbar', width = 0.2) +
+  geom_boxplot(outlier.shape = NA, width = 0.5) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red", linewidth = 1.2) +
+  annotate(geom = "text", 
+           x = 0.5, 
+           y = 0.5, 
+           color = 'red',
+           label = "True savings = 0") +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 5), 
+                     limits = c(0, 16), 
+                     labels = number_format(suffix = "%")) +
+  labs(x = NULL, 
+       y = NULL, 
+       fill = NULL, 
+       title = "Savings estimation comparison", 
+       subtitle = "between convention and randomized M&V (with early stop)") +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.direction = "horizontal",
+        legend.position = "bottom",
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+```
+
+Figure \@ref(fig:nosavings) shows that the conventional M&V method in
+average detected 5% savings when there should be none. The randomized
+method even when stops right after satisfying all criteria, the savings
+estimation is much closer to 0%. This is mostly because when there is a
+change or disturbance applied to the target building such as lighting
+retrofit or thermal leakage in the envelope, randomly sample the two
+strategies at 50%/50% ensures the resulting effect either as a decrease
+in lighting electricity or an increase in reheat electricity is balanced
+between the two implemented strategies.
+
 # Discussion
 
 ## TOWT modeling accuracy
 
+Although this paper argues that regression model prediction results can
+be largely biased by various non-routine events, we further clarify that
+this is not related to regression model fitting accuracy. Time-of-week
+temperature model is used here for its simplicity and convenience since
+the model only requires outdoor temperature measurements and time of
+week as independent variables. The model assumes a linear composition of
+building energy consumption as temperature-dependent and time-dependent
+load. The time-dependent component accounts for day-to-day variations
+and the temperature dependent component considers a piecewise linear
+relationship across a range of temperature intervals.
+<!--# TODO: add reference -->
+
+To assess modeling accuracy, we used the Coefficient of Variation of
+Root-Mean Squared Error, or CV(RMSE) as the error metric. Since this
+metric is calculated as a normalized value, it is useful to compare
+different model fitting results. Guideline 14 requires that
+whole-building baseline model fitting accuracy should maintain a
+CV(RMSE) lower than 30%. In addition One study focusing on the baseline
+energy data-driven model fitting indicates that TOWT performs as
+accurate as other more advanced machine learning models
+<!--# TODO: reference --> and the calculated CV(RMSE) distribution for a
+large sample of commercial buildings indicates a median of 20%. Figure
+\@ref(fig:towtacc) plots the distribution of the model fitting accuracy
+calculated separately for the two measurement sets. The result shows
+that the TOWT model performance is even better in this study compared to
+the literature and no significant difference between the two subsets.
+This is mostly related to low-quality measurement sets filtering in the
+pre-processing mentioned in Section \@ref(method).
+
+```{r towtacc, fig.cap="TOWT model fitting accuracy distribution on filtered measurement set", fig.width=8, fig.height=4}
+
+df_model_acc_messy %>% 
+  mutate(group = "messy") %>% 
+  rbind(df_model_acc_tidy %>% mutate(group = "tidy")) %>% 
+  mutate(group = as.factor(group)) %>% 
+  ggplot(aes(x = group, y = cvrmse, fill = group)) +
+  stat_boxplot(geom ='errorbar', width = 0.5) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_text(aes(x = group, y = median, label = paste0(round(median, digits = 0), " %")), 
+            data = . %>% 
+              group_by(group) %>% 
+              summarise(median = median(cvrmse)) %>% 
+              ungroup(), 
+            position = position_nudge(y = 1)) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 3), 
+                     labels = number_format(suffix = " %")) +
+  coord_cartesian(ylim = c(0, 38)) +
+  labs(x = NULL, 
+       y = NULL, 
+       fill = NULL, 
+       title = "TOWT model accuracy", 
+       subtitle = "CV(RMSE)") +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.direction = "horizontal",
+        legend.position = "bottom",
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+```
+
+In general, the limitation is that despite the regression model tends to
+capture well on the mean building energy consumption but can
+underestimate and peak or overestimate the lower base load
+<!--# TODO: reference -->, which is not useful for assessing demand
+response. Additionally, a data-driven model can learn the training
+dataset very efficiently with high accuracy, but the well-trained model
+is challenging to generalize prediction outside the range of training
+set.
+
 ## Sampling ratio for randomized M&V
 
+Another advantage of using randomized M&V is the flexibility of changing
+sampling ratio after the M&V. For example, the building owner can
+continue sampling at 50%/50% between the baseline and the intervention
+to further reduce the uncertainty range associated with the savings. Or
+he/she can switch to 100% intervention to optimize energy savings, but
+whether the existing baseline becomes outdated is unknown. A compromised
+approach is to continue sampling at 80%/20% between the baseline and the
+intervention. Figure \@ref(fig:cont) shows after the analyst reports the
+randomized M&V results, a new schedule sampling at 80%/20% was
+implemented for another 36 weeks.
+
+```{r cont, fig.cap="Savings estimation accuracy for continue sampling at 80%/20% for 36 weeks after all stopping criteria are satisfied", fig.width=8, fig.height=4}
+
+plot_data <- df_cont_FS_tidy %>% 
+  rename(cont = FS) %>% 
+  left_join(df_FS_tidy %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(abs_diff = abs(savings - cont), 
+         plot_max = max(abs_diff))
+
+median_rand <- median(plot_data$abs_diff)
+upper_rand <- quantile(plot_data$abs_diff, probs = 0.95)
+
+p1 <- plot_data %>% 
+  arrange(abs_diff) %>% 
+  ggplot() +
+  geom_bar(aes(x = seq(1, nrow(all_names_tidy), by = 1), y = abs_diff), 
+           stat = "identity", alpha = 0.5) +
+  geom_hline(yintercept = median_rand, 
+             linetype = "dashed", 
+             color = "red") +
+  annotate(y = median_rand + 0.5, 
+           x = 20, 
+           geom = "text", 
+           label = paste0("(", "50% buildings: < ", round(median_rand, digits = 1), " %)"),
+           size = 4) +
+  geom_hline(yintercept = upper_rand, 
+             linetype = "dashed", 
+             color = "red") +
+  annotate(y = upper_rand + 0.5, 
+           x = 20, 
+           geom = "text", 
+           label = paste0("(", "95% buildings: < ", round(upper_rand, digits = 1), " %)"),
+           size = 4) +
+  scale_x_continuous(expand = c(0.02, 0), 
+                     breaks = breaks_pretty(n = 3)) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 3), 
+                     labels = number_format(suffix = " %"),
+                     limits = c(0, max(plot_data$plot_max) + 0.5)) +
+  labs(x = "Number of buildings", 
+       y = "Absolute difference in measured savings", 
+       subtitle = "Tidy subset") +
+  coord_cartesian(ylim = c(0, 25)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.direction = "horizontal",
+        legend.position = "bottom",
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+
+plot_data <- df_cont_FS_messy %>% 
+  rename(cont = FS) %>% 
+  left_join(df_FS_messy %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(abs_diff = abs(savings - cont), 
+         plot_max = max(abs_diff))
+
+median_rand <- median(plot_data$abs_diff)
+upper_rand <- quantile(plot_data$abs_diff, probs = 0.95)
+
+p2 <- plot_data %>% 
+  arrange(abs_diff) %>% 
+  ggplot() +
+  geom_bar(aes(x = seq(1, nrow(all_names_messy), by = 1), y = abs_diff), 
+           stat = "identity", alpha = 0.5) +
+  geom_hline(yintercept = median_rand, 
+             linetype = "dashed", 
+             color = "red") +
+  annotate(y = median_rand + 0.5, 
+           x = 220, 
+           geom = "text", 
+           label = paste0("(", "50% buildings: < ", round(median_rand, digits = 1), " %)"),
+           size = 4) +
+  geom_hline(yintercept = upper_rand, 
+             linetype = "dashed", 
+             color = "red") +
+  annotate(y = upper_rand + 0.5, 
+           x = 220, 
+           geom = "text", 
+           label = paste0("(", "95% buildings: < ", round(upper_rand, digits = 1), " %)"),
+           size = 4) +
+  scale_x_continuous(expand = c(0.02, 0), 
+                     breaks = breaks_pretty(n = 3)) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 3), 
+                     labels = number_format(suffix = " %"),
+                     limits = c(0, max(plot_data$plot_max) + 0.1)) +
+  labs(x = "Number of buildings", 
+       y = NULL, 
+       subtitle = "Messy subset") +
+  coord_cartesian(ylim = c(0, 25)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.direction = "horizontal",
+        legend.position = "bottom",
+        axis.text.y = element_blank(),
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 0, unit = "mm"))
+
+ggarrange(p1, p2,
+          ncol=2, nrow=1,
+          labels = c("a)", "b)"),
+          align = "hv",
+          legend="bottom") +
+  plot_annotation(title = str_glue("Continue sampling accuracy comparison"), 
+                  subtitle = "with 80%/20% intervention/baseline")
+```
+
+The deviation remains consistent in the tidy subset but increases
+slightly in the messy subset, suggesting that changes in energy usage in
+the target building create a trade-off between measured savings and
+estimation accuracy when down-sampling the baseline. In this scenario,
+opting for an early stop at 24 or 36 weeks with 50% intervention and
+resampling 80% of the data for 36 weeks still allows the building owner
+to capture 65% of the full-range savings.
+
 ## Limitations and future study
+
+Considering the diversity of the measurement sets, the assumption made
+in this study is relative general. For example,
 
 # Conclusion
