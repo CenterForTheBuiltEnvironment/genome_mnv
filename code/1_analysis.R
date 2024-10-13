@@ -56,9 +56,9 @@ source(paste0(function_path, "cont_plot.R"))
 # section run control
 run_params <- list(type = "tidy", 
                    sprt = T, 
-                   sprt_cont = T, 
-                   nre_occ = F, 
-                   nsprt = T)
+                   sprt_cont = F, 
+                   nre_occ = T, 
+                   nsprt = F)
 
 # Adding intervention effect as advanced chiller operation
 ctr_params <- list(peak_hours = 10:16,                      # accounts for peak hours
@@ -95,7 +95,7 @@ cont_param <- list(baseline = "Baseline",
 # NRE: Occupancy change
 occ_params <- list(change_start = c(1, 5, 9),
                    change_end = c(4, 8, 12),
-                   change = c(10, 20))
+                   change = 20)
 
 
 
@@ -380,75 +380,75 @@ for (n in 1:(nrow(all_names))){
     run_reset()
   
   # power-temp plot
-  p1 <- df_hourly_conv %>%
-    pivot_longer(c(base_eload, interv_eload), names_to = "strategy", values_to = "eload") %>%
-    mutate(strategy = as.factor(strategy),
-           strategy = recode_factor(strategy, "base_eload" = "Baseline", "interv_eload" = "Intervention")) %>%
-    ggplot(aes(x = t_out, y = eload, color = strategy)) +
-    geom_point(data= .%>%
-                 group_by(strategy) %>%
-                 slice_sample(n = 1000),
-               size = 0.7,
-               alpha = 0.4,
-               shape = 16) +
-    geom_smooth(formula = y ~ x, method = "loess", linewidth = 1.25, alpha = 0.15) +
-    scale_x_continuous(expand = c(0, 0),
-                       breaks = breaks_pretty(n = 4),
-                       labels = number_format(suffix = " °C")) +
-    scale_y_continuous(expand = c(0, 0),
-                       breaks = breaks_pretty(n = 4),
-                       labels = number_format(suffix = " kW")) +
-    scale_color_manual(values = ls_colors) +
-    coord_cartesian(ylim = plot_scale) +
-    labs(x = NULL,
-         y = NULL,
-         color = NULL,
-         subtitle = "by outdoor drybulb temperature") +
-    theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-          legend.direction = "horizontal",
-          legend.position = "bottom",
-          plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-  
-  # hour-of-day visualization
-  p2 <- df_hourly_conv %>%
-    pivot_longer(c(base_eload, interv_eload), names_to = "strategy", values_to = "eload") %>%
-    mutate(strategy = as.factor(strategy),
-           strategy = recode_factor(strategy, "base_eload" = "Baseline", "interv_eload" = "Intervention")) %>%
-    ggplot(aes(x = hour(datetime), y = eload, color = strategy)) +
-    geom_point(data= .%>%
-                 group_by(strategy) %>%
-                 slice_sample(n = 1000),
-               size = 0.7,
-               alpha = 0.4,
-               shape = 16) +
-    geom_smooth(formula = y ~ x, method = "loess", linewidth = 1.25, alpha = 0.15) +
-    scale_x_continuous(breaks = c(0, 6, 12, 18),
-                       labels = c("12 AM", "6 AM", "12 PM", "6 PM")) +
-    scale_y_continuous(expand = c(0, 0),
-                       breaks = breaks_pretty(n = 4),
-                       labels = number_format(suffix = " kW")) +
-    scale_color_manual(values = ls_colors) +
-    coord_cartesian(ylim = plot_scale) +
-    labs(x = NULL,
-         y = NULL,
-         color = NULL,
-         subtitle = "by each hour of the day") +
-    theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-          axis.text.y = element_blank(),
-          legend.direction = "horizontal",
-          legend.position = "bottom",
-          plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-  
-  ggarrange(p1, p2,
-            ncol=2, nrow=1,
-            labels = c("a)", "b)"),
-            widths = c(1, 1),
-            align = "v",
-            common.legend = TRUE,
-            legend="bottom") +
-    plot_annotation(title = "Case study building power consumption (hourly average)")
-  
-  ggsave(filename = "temp_time_power.png", path = sitefigs_path, units = "in", height = 5, width = 10, dpi = 300)
+  # p1 <- df_hourly_conv %>%
+  #   pivot_longer(c(base_eload, interv_eload), names_to = "strategy", values_to = "eload") %>%
+  #   mutate(strategy = as.factor(strategy),
+  #          strategy = recode_factor(strategy, "base_eload" = "Baseline", "interv_eload" = "Intervention")) %>%
+  #   ggplot(aes(x = t_out, y = eload, color = strategy)) +
+  #   geom_point(data= .%>%
+  #                group_by(strategy) %>%
+  #                slice_sample(n = 1000),
+  #              size = 0.7,
+  #              alpha = 0.4,
+  #              shape = 16) +
+  #   geom_smooth(formula = y ~ x, method = "loess", linewidth = 1.25, alpha = 0.15) +
+  #   scale_x_continuous(expand = c(0, 0),
+  #                      breaks = breaks_pretty(n = 4),
+  #                      labels = number_format(suffix = " °C")) +
+  #   scale_y_continuous(expand = c(0, 0),
+  #                      breaks = breaks_pretty(n = 4),
+  #                      labels = number_format(suffix = " kW")) +
+  #   scale_color_manual(values = ls_colors) +
+  #   coord_cartesian(ylim = plot_scale) +
+  #   labs(x = NULL,
+  #        y = NULL,
+  #        color = NULL,
+  #        subtitle = "by outdoor drybulb temperature") +
+  #   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+  #         legend.direction = "horizontal",
+  #         legend.position = "bottom",
+  #         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+  # 
+  # # hour-of-day visualization
+  # p2 <- df_hourly_conv %>%
+  #   pivot_longer(c(base_eload, interv_eload), names_to = "strategy", values_to = "eload") %>%
+  #   mutate(strategy = as.factor(strategy),
+  #          strategy = recode_factor(strategy, "base_eload" = "Baseline", "interv_eload" = "Intervention")) %>%
+  #   ggplot(aes(x = hour(datetime), y = eload, color = strategy)) +
+  #   geom_point(data= .%>%
+  #                group_by(strategy) %>%
+  #                slice_sample(n = 1000),
+  #              size = 0.7,
+  #              alpha = 0.4,
+  #              shape = 16) +
+  #   geom_smooth(formula = y ~ x, method = "loess", linewidth = 1.25, alpha = 0.15) +
+  #   scale_x_continuous(breaks = c(0, 6, 12, 18),
+  #                      labels = c("12 AM", "6 AM", "12 PM", "6 PM")) +
+  #   scale_y_continuous(expand = c(0, 0),
+  #                      breaks = breaks_pretty(n = 4),
+  #                      labels = number_format(suffix = " kW")) +
+  #   scale_color_manual(values = ls_colors) +
+  #   coord_cartesian(ylim = plot_scale) +
+  #   labs(x = NULL,
+  #        y = NULL,
+  #        color = NULL,
+  #        subtitle = "by each hour of the day") +
+  #   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+  #         axis.text.y = element_blank(),
+  #         legend.direction = "horizontal",
+  #         legend.position = "bottom",
+  #         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+  # 
+  # ggarrange(p1, p2,
+  #           ncol=2, nrow=1,
+  #           labels = c("a)", "b)"),
+  #           widths = c(1, 1),
+  #           align = "v",
+  #           common.legend = TRUE,
+  #           legend="bottom") +
+  #   plot_annotation(title = "Case study building power consumption (hourly average)")
+  # 
+  # ggsave(filename = "temp_time_power.png", path = sitefigs_path, units = "in", height = 5, width = 10, dpi = 300)
   
   # separate baseline and intervention
   df_base_conv <- df_hourly_conv %>%
@@ -783,18 +783,18 @@ for (n in 1:(nrow(all_names))){
                               "site" = site)
     
     for (time in 1:length(occ_params$change_start)){
-      for (change in occ_params$change){
-        
+
+        change <- mean(df_base_conv$eload) * occ_params$change / 100
         change_start <- occ_params$change_start[time]
         change_end <- occ_params$change_end[time]
         
         base_pre_meas <- df_base_conv %>%
           filter(datetime < as.Date("2017-01-01")) %>%
-          mutate(eload = ifelse(month(datetime) >= month(change_start) & month(datetime) <= month(change_end), eload * (1 - change / 100), eload))
+          mutate(eload = ifelse(month(datetime) >= month(change_start) & month(datetime) <= month(change_end), eload - change, eload))
         
         interv_pre_true <- df_interv_conv %>%
           filter(datetime < as.Date("2017-01-01")) %>%
-          mutate(eload = ifelse(month(datetime) >= month(change_start) & month(datetime) <= month(change_end), eload * (1 - change / 100), eload))
+          mutate(eload = ifelse(month(datetime) >= month(change_start) & month(datetime) <= month(change_end), eload - change, eload))
         
         # Baseline projection
         towt_base <- base_pre_meas %>%
@@ -818,7 +818,7 @@ for (n in 1:(nrow(all_names))){
         
         rand <- df_rand %>%
           filter(datetime < as.Date("2017-01-01")) %>%
-          mutate(eload = ifelse(month(datetime) >= month(change_start) & month(datetime) <= month(change_end), eload * (1 - change / 100), eload)) %>%
+          mutate(eload = ifelse(month(datetime) >= month(change_start) & month(datetime) <= month(change_end), eload - change, eload)) %>%
           rbind(df_rand %>% filter(datetime >= as.Date("2017-01-01")))
         
         prepost_plot(base_pre_meas,  
@@ -848,7 +848,6 @@ for (n in 1:(nrow(all_names))){
         
         scenario <- scenario + 1
         
-      }
       
     }
     

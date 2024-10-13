@@ -731,7 +731,7 @@ below. For simplicity, those parameters were not rigorously calibrated
 for each building, and were used uniformly across the dataset.
 
 |                        |                                                                  |       |
-|------------------|------------------------------------|------------------|
+|------------------|-----------------------------------|------------------|
 | Parameter              | Description                                                      | Value |
 | $\beta_{temp}$         | \% savings from setting $T_{interv}$ 1 °C higher than $T_{base}$ | 0.08  |
 | $\beta_{occ}$          | \% savings adjustment during occupied hours                      | 1.2   |
@@ -1217,14 +1217,15 @@ ggarrange(p1, p2,
 
 ## Non-routine events impact on savings estimation
 
-In this section, we demonstrate the influence of non-routine events
-through two scenarios. In the first scenario, we quantified how much
-occupancy would influence the electricity usage and added to the tidy
-measurement set as they originally indicates no such change. In the
-second scenario, we simply run the two M&V methods on the messy
-measurement sets before adding the chilled water supply temperature
-reset. Since no intervention is added, the more reliable method should
-detect a 'saving' closer to 0.
+We included two examples in this section to demonstrate the influence of
+non-routine events on M&V savings. In the first scenario, we manually
+subtracted a certain amount of electricity usage for a period of time
+quantified how much occupancy would influence the electricity usage and
+added to the tidy measurement set as they originally indicates no such
+change. In the second scenario, we simply run the two M&V methods on the
+messy measurement sets before adding the chilled water supply
+temperature reset. Since no intervention is added, the more reliable
+method should detect a 'saving' closer to 0.
 
 ### Occupancy change
 
