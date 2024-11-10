@@ -54,10 +54,9 @@ source(paste0(function_path, "cont_plot.R"))
 
 # define parameters
 # section run control
-run_params <- list(type = "tidy", 
+run_params <- list(type = "stable", 
                    sprt = T, 
                    sprt_cont = F, 
-                   nre_occ = T, 
                    nsprt = F)
 
 # Adding intervention effect as advanced chiller operation
@@ -91,11 +90,6 @@ cont_param <- list(baseline = "Baseline",
                    label = "power",
                    resamp = c(2, 8), 
                    cont_weeks = 36)
-
-# NRE: Occupancy change
-occ_params <- list(change_start = c(1, 5, 9),
-                   change_end = c(4, 8, 12),
-                   change = 20)
 
 
 
@@ -321,7 +315,6 @@ df_tmy <- get_tmy(all_sites$site)
 
 # storing results
 FS_ref <- list()
-FS_occ <- list()
 MD_ref <- list()
 model_acc <- list()
 seq_timeline <- list()
@@ -330,7 +323,7 @@ seq_nmsaving <- list()
 seq_frsaving <- list()
 cont_mdsaving <- list()
 cont_frsaving <- list()
-energy <- list()
+FS_tmy <- list()
 
 # get site information
 # for (n in 1:2){
@@ -658,7 +651,7 @@ for (n in 1:(nrow(all_names))){
     
     true_saving <- list()
     
-    for (i in 2:sprt_param$n_weeks){
+    for (i in c(2:sprt_param$n_weeks)){
       saving <- df_week %>% 
         filter(week <= i)
       
@@ -762,102 +755,31 @@ for (n in 1:(nrow(all_names))){
                                "site" = site, 
                                "cont" = fs_rand)
     
-    energy[[n]] <- list("name" = name, 
+  }
+  
+  
+  
+  #### TMY ####
+  rand_tmy <- saving_norm(df_rand %>% mutate(week = NA), site_tmy)
+  
+  df_conv_tmy <- df_hourly_conv %>% 
+    mutate(strategy = ifelse(year(datetime) == "2016", 1, 2), 
+           eload = ifelse(year(datetime) == "2016", base_eload, interv_eload), 
+           week = NA) %>% 
+    select(datetime, eload, strategy, week)
+  
+  conv_tmy <- saving_norm(df_rand %>% mutate(week = NA), site_tmy)
+    
+  
+  FS_tmy[[n]] <- tibble("name" = name,
                         "site" = site, 
-                        "ref" = sum(df_base_conv %>% filter(datetime < as.Date("2017-01-01")) %>% .$eload), 
-                        "rand" = sum(df_rand_cont %>% filter(datetime < as.Date("2017-01-01")) %>% .$eload), 
-                        "interv" = sum(df_interv_conv %>% filter(datetime < as.Date("2017-01-01")) %>% .$eload))
-    
-  }
-  
-  
-  
-  
-  #### NRE ####
-  if (run_params$nre_occ) {
-    
-    # Occupancy change
-    scenario <- 1
-    tibble_occ <- list()
-    tibble_occ[[n]] <- tibble("name" = name, 
-                              "site" = site)
-    
-    for (time in 1:length(occ_params$change_start)){
-
-        change <- mean(df_base_conv$eload) * occ_params$change / 100
-        change_start <- occ_params$change_start[time]
-        change_end <- occ_params$change_end[time]
-        
-        base_pre_meas <- df_base_conv %>%
-          filter(datetime < as.Date("2017-01-01")) %>%
-          mutate(eload = ifelse(month(datetime) >= month(change_start) & month(datetime) <= month(change_end), eload - change, eload))
-        
-        interv_pre_true <- df_interv_conv %>%
-          filter(datetime < as.Date("2017-01-01")) %>%
-          mutate(eload = ifelse(month(datetime) >= month(change_start) & month(datetime) <= month(change_end), eload - change, eload))
-        
-        # Baseline projection
-        towt_base <- base_pre_meas %>%
-          model_fit()
-        
-        df_towt <- df_interv_conv %>%
-          filter(datetime >= as.Date("2017-01-01")) %>%
-          select(time = datetime,
-                 temp = t_out,
-                 eload)
-        
-        base_pos_proj <- model_pred(df_towt, towt_base) %>%
-          rename("datetime" = "time") %>%
-          select(datetime, towt, eload)
-        
-        base_pos_true <- df_base_conv %>%
-          filter(datetime >= as.Date("2017-01-01"))
-        
-        interv_pos_meas <- df_interv_conv %>%
-          filter(datetime >= as.Date("2017-01-01"))
-        
-        rand <- df_rand %>%
-          filter(datetime < as.Date("2017-01-01")) %>%
-          mutate(eload = ifelse(month(datetime) >= month(change_start) & month(datetime) <= month(change_end), eload - change, eload)) %>%
-          rbind(df_rand %>% filter(datetime >= as.Date("2017-01-01")))
-        
-        prepost_plot(base_pre_meas,  
-                     base_pos_proj, 
-                     base_pos_true, 
-                     interv_pos_meas, 
-                     str_glue("Building energy consumption over a 2-year period\n(2016-{change_start}-1 ~ 2016-{change_end}-30: {change}% change)"))
-        
-        ggsave(filename = str_glue("occ_change_conv_S{scenario}.png"), path = sitefigs_path, units = "in", height = 5, width = 10, dpi = 300)
-        
-        # saving calculation as mean difference
-        base_true <- rbind(base_pre_meas, base_pos_true)
-        interv_true <- rbind(interv_pre_true, interv_pos_meas)
-        
-        FS_true <- (mean(base_true$eload) - mean(interv_true$eload)) / mean(base_true$eload) * 100
-        FS_conv <- (mean(base_pos_proj$towt) - mean(interv_pos_meas$eload)) / mean(base_pos_proj$towt) * 100
-        FS_rand <- (mean(rand %>% filter(strategy == 1) %>% .$eload) -
-                      mean(rand %>% filter(strategy == 2) %>% .$eload)) /
-          mean(rand %>% filter(strategy == 1) %>% .$eload) * 100
-        
-        new_tibble <- as_tibble(setNames(list(FS_true, FS_conv, FS_rand),
-                                         c(str_glue("S{scenario}_true"),
-                                           str_glue("S{scenario}_conv"),
-                                           str_glue("S{scenario}_rand"))))
-        
-        tibble_occ[[n]] <- bind_cols(tibble_occ[[n]], new_tibble)
-        
-        scenario <- scenario + 1
-        
-      
-    }
-    
-    FS_occ <- bind_rows(FS_occ, tibble_occ)
-    
-  }
+                        "rand" = rand_tmy, 
+                        "conv" = conv_tmy)
   
   print(paste0("Finished: ", n, "/", nrow(all_names)))
   
-}
+} 
+  
 
 
 
@@ -1101,27 +1023,33 @@ df_sprt_all <- bind_rows(seq_mdsaving) %>%
               pivot_longer(-c(name, site), names_to = "seq", values_to = "n_weeks"),
             by = c("name", "site", "seq"))
 
-if (run_params$nre_occ == T){
-
-  df_NRE_occ <- df_FS %>%
-    rbind(FS_occ %>%
-            pivot_longer(-c(name, site), names_to = "type", values_to = "savings") %>%
-            separate(type, into = c("scenario", "method"), sep = "_"))
-
-}
-
 df_model_acc <- bind_rows(model_acc) 
 
-df_eui <- bind_rows(energy) %>%
-  left_join(df_meta, by = c("name", "site"))
+df_FS_tmy <- bind_rows(FS_tmy)
 
-df_cont_FS <- bind_rows(cont_frsaving) %>%
-  pivot_longer(-c(name, site), names_to = "seq", values_to = "FS")
+# store savings and timeline
+write_rds(df_sprt_all, paste0(readfile_path, "df_sprt_all.rds"), compress = "gz")
+write_rds(df_seq_FS, paste0(readfile_path, "df_seq_FS.rds"), compress = "gz")
+write_rds(df_MD, paste0(readfile_path, "df_MD.rds"), compress = "gz")
+write_rds(df_FS, paste0(readfile_path, "df_FS.rds"), compress = "gz")
+write_rds(df_model_acc, paste0(readfile_path, "df_model_acc.rds"), compress = "gz")
+write_rds(df_FS_tmy, paste0(readfile_path, "df_FS_tmy.rds"), compress = "gz")
 
-df_cont_MD <- bind_rows(cont_mdsaving) %>%
-  pivot_longer(-c(name, site), names_to = "seq", values_to = "sprt")
 
-if (run_params$nsprt == T){
+if (run_params$sprt_cont){
+  
+  df_cont_FS <- bind_rows(cont_frsaving) %>%
+    pivot_longer(-c(name, site), names_to = "seq", values_to = "FS")
+  
+  df_cont_MD <- bind_rows(cont_mdsaving) %>%
+    pivot_longer(-c(name, site), names_to = "seq", values_to = "sprt")
+  
+  write_rds(df_cont_MD, paste0(readfile_path, "df_cont_MD.rds"), compress = "gz")
+  write_rds(df_cont_FS, paste0(readfile_path, "df_cont_FS.rds"), compress = "gz")
+  
+}
+
+if (run_params$nsprt){
   
   df_seq_FS_nsprt <- bind_rows(seq_frsaving_nsprt) %>%
     pivot_longer(-c(name, site), names_to = "seq", values_to = "FS")
@@ -1151,21 +1079,4 @@ if (run_params$nsprt == T){
   write_rds(df_MD_nsprt, paste0(readfile_path, "df_MD_nsprt.rds"), compress = 'gz')
   
 }
- 
-  
-# store savings and timeline
-write_rds(df_sprt_all, paste0(readfile_path, "df_sprt_all.rds"), compress = "gz")
-write_rds(df_seq_FS, paste0(readfile_path, "df_seq_FS.rds"), compress = "gz")
 
-if (run_params$nre_occ == T){
-
-  write_rds(df_NRE_occ, paste0(readfile_path, "df_NRE_occ.rds"), compress = "gz")
-
-}
-
-write_rds(df_MD, paste0(readfile_path, "df_MD.rds"), compress = "gz")
-write_rds(df_FS, paste0(readfile_path, "df_FS.rds"), compress = "gz")
-write_rds(df_eui, paste0(readfile_path, "df_eui.rds"), compress = "gz")
-write_rds(df_cont_MD, paste0(readfile_path, "df_cont_MD.rds"), compress = "gz")
-write_rds(df_cont_FS, paste0(readfile_path, "df_cont_FS.rds"), compress = "gz")
-write_rds(df_model_acc, paste0(readfile_path, "df_model_acc.rds"), compress = "gz")
