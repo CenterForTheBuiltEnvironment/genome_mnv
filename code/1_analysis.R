@@ -54,7 +54,7 @@ source(paste0(function_path, "cont_plot.R"))
 
 # define parameters
 # section run control
-run_params <- list(type = "stable", 
+run_params <- list(type = "variable", 
                    sprt = T, 
                    sprt_cont = F, 
                    nsprt = F)
