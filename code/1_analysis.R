@@ -766,9 +766,9 @@ for (n in 1:(nrow(all_names))){
     mutate(strategy = ifelse(year(datetime) == "2016", 1, 2), 
            eload = ifelse(year(datetime) == "2016", base_eload, interv_eload), 
            week = NA) %>% 
-    select(datetime, eload, strategy, week)
+    select(datetime, eload, strategy, t_out, week)
   
-  conv_tmy <- saving_norm(df_rand %>% mutate(week = NA), site_tmy)
+  conv_tmy <- saving_norm(df_conv_tmy %>% mutate(week = NA), site_tmy)
     
   
   FS_tmy[[n]] <- tibble("name" = name,
