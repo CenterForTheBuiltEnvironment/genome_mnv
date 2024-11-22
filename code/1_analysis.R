@@ -51,12 +51,14 @@ source(paste0(function_path, "seq_plot.R"))
 source(paste0(function_path, "err_plot.R"))
 source(paste0(function_path, "prepost_plot.R"))
 source(paste0(function_path, "cont_plot.R"))
+source(paste0(function_path, "rand_seq.R"))
 
 # define parameters
 # section run control
 run_params <- list(type = "variable", 
                    sprt = T, 
-                   sprt_cont = F, 
+                   sprt_cont = T, 
+                   interval = T, 
                    nsprt = F)
 
 # Adding intervention effect as advanced chiller operation
@@ -88,8 +90,7 @@ cont_param <- list(baseline = "Baseline",
                    strategy = "Intervention",
                    parameter = "power_ave",
                    label = "power",
-                   resamp = c(2, 8), 
-                   cont_weeks = 36)
+                   resamp = c(2, 8))
 
 
 
@@ -308,11 +309,41 @@ all_names <- df_energy %>%
 df_tmy <- get_tmy(all_sites$site)
 
 
+if (run_params$interval){
+  
+  exclude <- data.frame(date = NA)
+  
+  # 2-day consecutive sampling
+  schedule <- data.frame()
+  for (sample_start in as.list(seq(as.Date(block_params$start_date), as.Date(block_params$start_date) + weeks(block_params$n_weeks), by = block_params$block_unit * 7))){
+    
+    sample_end = sample_start + weeks(block_params$block_unit) - days(1)
+    block <- rand_seq(sample_start, sample_end, 2, 2, exclude)
+    schedule <- rbind(schedule, block$decision_data)
+  }
+  
+  df_schedule_2 <- schedule %>% 
+    rename(datetime = date)
+  
+  # 3-day consecutive sampling
+  schedule <- data.frame()
+  for (sample_start in as.list(seq(as.Date(block_params$start_date), as.Date(block_params$start_date) + weeks(block_params$n_weeks), by = block_params$block_unit * 7))){
+    
+    sample_end = sample_start + weeks(block_params$block_unit) - days(1)
+    block <- rand_seq(sample_start, sample_end, 2, 2, exclude)
+    schedule <- rbind(schedule, block$decision_data)
+  }
+  
+  df_schedule_3 <- schedule %>% 
+    rename(datetime = date)
+}
+
+
+
 
 
 
 #### INDIVIDUAL ####
-
 # storing results
 FS_ref <- list()
 MD_ref <- list()
@@ -321,8 +352,8 @@ seq_timeline <- list()
 seq_mdsaving <- list()
 seq_nmsaving <- list()
 seq_frsaving <- list()
-cont_mdsaving <- list()
-cont_frsaving <- list()
+cont_saving <- list()
+interval_saving <- list()
 FS_tmy <- list()
 
 # get site information
@@ -681,27 +712,21 @@ for (n in 1:(nrow(all_names))){
   
   if (run_params$sprt_cont){
     
-    cont_param$n_weeks <- cont_param$cont_weeks + eob
-    start_datetime <- as.Date("2016-01-01") + weeks(eob)
-    end_datetime <- start_datetime + weeks(cont_param$cont_weeks)  
-    
-    date_seq <- seq(from = start_datetime, by = "day", length.out = cont_param$cont_weeks * 7)
+    cont_param$last_weeks <- block_params$n_weeks - eob
+    cont_param$n_weeks <- block_params$n_weeks
+    cont_param$start_date <- as.Date("2016-01-01") + weeks(eob)
+    cont_param$n_seasons <- round(cont_param$last_weeks / block_params$block_unit)
+    date_seq <- seq(from = cont_param$start_date, by = "day", length.out = cont_param$last_weeks * 7)
     strategy <- sample(c(1, 2), size = length(date_seq), replace = TRUE, prob = cont_param$resamp)
     
     df_schedule_cont <- data.frame(datetime = date_seq,
                                    strategy = strategy)
     
     df_rand_old <- df_rand %>% 
-      filter(datetime < start_datetime)
-    
-    df_rand_new <- df_rand %>% 
-      filter(datetime >= start_datetime & datetime < end_datetime) %>% 
-      select(-strategy) %>% 
-      left_join(df_schedule_cont, by = "datetime") %>% 
-      fill(strategy, .direction = "down")
+      filter(datetime < cont_param$start_date)
     
     df_rand_new <- df_hourly_conv %>%
-      filter(datetime >= start_datetime & datetime < end_datetime) %>% 
+      filter(datetime >= cont_param$start_date) %>% 
       left_join(df_schedule_cont, by = "datetime") %>%
       fill(strategy, .direction = "down") %>%
       pivot_longer(c(base_eload, interv_eload), names_to = "eload_type", values_to = "eload") %>%
@@ -711,51 +736,25 @@ for (n in 1:(nrow(all_names))){
     
     df_rand_cont <- rbind(df_rand_old, df_rand_new)
     
-    seq_res <- seq_run(cont_param, df_rand_cont, site_tmy)
-    annual_saving <- seq_res$annual_saving
-    df_means <- seq_res$df_means
-    sprt_res <- seq_res$sprt_res
-    
-    # get true savings
-    df_week <- df_base_conv %>% 
-      select(datetime, 
-             base_eload = eload) %>% 
-      left_join(df_interv_conv, by = "datetime") %>% 
-      mutate(savings = eload - base_eload) %>% 
-      mutate(week = interval(min(datetime), datetime) %>% as.numeric('weeks') %>% floor()) %>% 
-      filter(week <= cont_param$n_weeks)
-    
-    true_saving <- list()
-    
-    for (i in 2:cont_param$n_weeks){
-      saving <- df_week %>% 
-        filter(week <= i)
-      
-      true_saving[[i]] <- tibble("n_weeks" = i, 
-                                 savings = mean(saving %>% .$savings))
-    }
-    
-    true_saving <- bind_rows(true_saving)
-    
-    # plot overall results
-    cont_plot(df_means, sprt_res, annual_saving, true_saving, eob)
-    ggsave(filename = "cont_seq.png", path = sitefigs_path, units = "in", height = 8, width = 8, dpi = 300)
-    
-    # savings at timeline
-    cont_mdsaving[[n]] <- list("name" = name, 
-                               "site" = site, 
-                               "cont" = sprt_res %>% filter(n_weeks == cont_param$n_weeks) %>% .$ns_stat)
+    rand_tmy <- saving_norm(df_rand_cont %>% mutate(week = NA), site_tmy)
     
     # saving calculation as mean difference
-    fs_rand <- (mean(df_rand_cont %>% filter(strategy == 1) %>% .$eload) -
+    rand_fs <- (mean(df_rand_cont %>% filter(strategy == 1) %>% .$eload) -
                   mean(df_rand_cont %>% filter(strategy == 2) %>% .$eload)) /
       mean(df_rand_cont %>% filter(strategy == 1) %>% .$eload) * 100
     
-    cont_frsaving[[n]] <- list("name" = name, 
-                               "site" = site, 
-                               "cont" = fs_rand)
+    # savings at timeline
+    rand_md <- mean(df_rand_cont %>% filter(strategy == 1) %>% .$eload) - mean(df_rand_cont %>% filter(strategy == 2) %>% .$eload)
+    
+    cont_saving[[n]] <- list("name" = name, 
+                             "site" = site, 
+                             "cont_md" = rand_md, 
+                             "cont_fs" = rand_fs, 
+                             "cont_tmy" = rand_tmy)
     
   }
+  
+  
   
   
   
@@ -769,12 +768,69 @@ for (n in 1:(nrow(all_names))){
     select(datetime, eload, strategy, t_out, week)
   
   conv_tmy <- saving_norm(df_conv_tmy %>% mutate(week = NA), site_tmy)
-    
+  
   
   FS_tmy[[n]] <- tibble("name" = name,
                         "site" = site, 
                         "rand" = rand_tmy, 
                         "conv" = conv_tmy)
+  
+  
+  
+  
+  
+  #### INTERVAL ####
+  if (run_params$interval){
+    
+    # running on 2-day sampling interval 
+    df_rand_new <- df_hourly_conv %>%
+      left_join(df_schedule_2, by = "datetime") %>%
+      fill(strategy, .direction = "down") %>%
+      filter(datetime <= as.Date("2016-01-01") + weeks(block_params$n_weeks)) %>%
+      pivot_longer(c(base_eload, interv_eload), names_to = "eload_type", values_to = "eload") %>%
+      filter((strategy == 1 & eload_type == "base_eload") | (strategy == 2 & eload_type == "interv_eload")) %>%
+      select(-eload_type) %>% 
+      drop_na()
+    
+    # saving calculation as mean difference
+    rand_fs_2 <- (mean(df_rand_new %>% filter(strategy == 1) %>% .$eload) -
+                  mean(df_rand_new %>% filter(strategy == 2) %>% .$eload)) /
+      mean(df_rand_new %>% filter(strategy == 1) %>% .$eload) * 100
+    
+    # savings at timeline
+    rand_md_2 <- mean(df_rand_new %>% filter(strategy == 1) %>% .$eload) - mean(df_rand_new %>% filter(strategy == 2) %>% .$eload)
+    
+    rand_tmy_2 <- saving_norm(df_rand_new %>% mutate(week = NA), site_tmy)
+    
+    # running on 3-day sampling interval 
+    df_rand_new <- df_hourly_conv %>%
+      left_join(df_schedule_3, by = "datetime") %>%
+      fill(strategy, .direction = "down") %>%
+      filter(datetime <= as.Date("2016-01-01") + weeks(block_params$n_weeks)) %>%
+      pivot_longer(c(base_eload, interv_eload), names_to = "eload_type", values_to = "eload") %>%
+      filter((strategy == 1 & eload_type == "base_eload") | (strategy == 2 & eload_type == "interv_eload")) %>%
+      select(-eload_type) %>% 
+      drop_na()
+    
+    # saving calculation as mean difference
+    rand_fs_3 <- (mean(df_rand_new %>% filter(strategy == 1) %>% .$eload) -
+                    mean(df_rand_new %>% filter(strategy == 2) %>% .$eload)) /
+      mean(df_rand_new %>% filter(strategy == 1) %>% .$eload) * 100
+    
+    # savings at timeline
+    rand_md_3 <- mean(df_rand_new %>% filter(strategy == 1) %>% .$eload) - mean(df_rand_new %>% filter(strategy == 2) %>% .$eload)
+    
+    rand_tmy_3 <- saving_norm(df_rand_new %>% mutate(week = NA), site_tmy)
+    
+    interval_saving[[n]] <- list("name" = name,
+                                 "site" = site,
+                                 "cont_md_2" = rand_md_2, 
+                                 "cont_fs_2" = rand_fs_2, 
+                                 "cont_tmy_2" = rand_tmy_2, 
+                                 "cont_md_3" = rand_md_3, 
+                                 "cont_fs_3" = rand_fs_3, 
+                                 "cont_tmy_3" = rand_tmy_3)
+  }
   
   print(paste0("Finished: ", n, "/", nrow(all_names)))
   
@@ -1038,15 +1094,15 @@ write_rds(df_FS_tmy, paste0(readfile_path, "df_FS_tmy.rds"), compress = "gz")
 
 if (run_params$sprt_cont){
   
-  df_cont_FS <- bind_rows(cont_frsaving) %>%
-    pivot_longer(-c(name, site), names_to = "seq", values_to = "FS")
+  df_cont <- bind_rows(cont_saving)
+  write_rds(df_cont, paste0(readfile_path, "df_cont.rds"), compress = "gz")
   
-  df_cont_MD <- bind_rows(cont_mdsaving) %>%
-    pivot_longer(-c(name, site), names_to = "seq", values_to = "sprt")
+}
+
+if (run_params$interval){
   
-  write_rds(df_cont_MD, paste0(readfile_path, "df_cont_MD.rds"), compress = "gz")
-  write_rds(df_cont_FS, paste0(readfile_path, "df_cont_FS.rds"), compress = "gz")
-  
+  df_interval <- bind_rows(interval_saving)
+  write_rds(df_interval, paste0(readfile_path, "df_interval.rds"), compress = "gz")
 }
 
 if (run_params$nsprt){
