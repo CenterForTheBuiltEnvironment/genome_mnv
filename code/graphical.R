@@ -155,13 +155,13 @@ df_sprt_all_stable <- read_rds(paste0(readfile_stable, "df_sprt_all.rds"))
 df_seq_FS_stable <- read_rds(paste0(readfile_stable, "df_seq_FS.rds"))
 df_MD_stable <- read_rds(paste0(readfile_stable, "df_MD.rds"))
 df_FS_stable <- read_rds(paste0(readfile_stable, "df_FS.rds"))
-df_cont_MD_stable <- read_rds(paste0(readfile_stable, "df_cont_MD.rds"))
-df_cont_FS_stable <- read_rds(paste0(readfile_stable, "df_cont_FS.rds"))
+df_cont_stable <- read_rds(paste0(readfile_stable, "df_cont.rds"))
 df_FS_nsprt_stable <- read_rds(paste0(readfile_stable, "df_FS_nsprt.rds"))
 df_MD_nsprt_stable <- read_rds(paste0(readfile_stable, "df_MD_nsprt.rds"))
 df_seq_FS_nsprt_stable <- read_rds(paste0(readfile_stable, "df_seq_FS_nsprt.rds"))
 df_model_acc_stable <- read_rds(paste0(readfile_stable, "df_model_acc.rds"))
 df_FS_tmy_stable <- read_rds(paste0(readfile_stable, "df_FS_tmy.rds"))
+df_interval_stable <- read_rds(paste0(readfile_stable, "df_interval.rds"))
 
 all_sites_stable <- df_energy_stable %>%
   select(site) %>%
@@ -187,13 +187,13 @@ df_sprt_all_variable <- read_rds(paste0(readfile_variable, "df_sprt_all.rds"))
 df_seq_FS_variable <- read_rds(paste0(readfile_variable, "df_seq_FS.rds"))
 df_MD_variable <- read_rds(paste0(readfile_variable, "df_MD.rds"))
 df_FS_variable <- read_rds(paste0(readfile_variable, "df_FS.rds"))
-df_cont_MD_variable <- read_rds(paste0(readfile_variable, "df_cont_MD.rds"))
-df_cont_FS_variable <- read_rds(paste0(readfile_variable, "df_cont_FS.rds"))
+df_cont_variable <- read_rds(paste0(readfile_variable, "df_cont.rds"))
 df_FS_nsprt_variable <- read_rds(paste0(readfile_variable, "df_FS_nsprt.rds"))
 df_MD_nsprt_variable <- read_rds(paste0(readfile_variable, "df_MD_nsprt.rds"))
 df_seq_FS_nsprt_variable <- read_rds(paste0(readfile_variable, "df_seq_FS_nsprt.rds"))
 df_model_acc_variable <- read_rds(paste0(readfile_variable, "df_model_acc.rds"))
 df_FS_tmy_variable <- read_rds(paste0(readfile_variable, "df_FS_tmy.rds"))
+df_interval_variable <- read_rds(paste0(readfile_stable, "df_interval.rds"))
 
 all_sites_variable <- df_energy_variable %>%
   select(site) %>%
@@ -894,7 +894,7 @@ p3 <- df_acc_A %>%
   scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
   labs(fill = NULL, 
        x = NULL, 
-       y = "Error in fractional savings", 
+       y = "Absolute error in fractional savings", 
        subtitle = str_glue("All ({A_building} buildings)")) +
   coord_cartesian(ylim = c(0, 23)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
@@ -1040,7 +1040,7 @@ p3 <- df_acc_A %>%
   scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
   labs(fill = NULL, 
        x = NULL, 
-       y = "Error in fractional savings", 
+       y = "Absoluet error in fractional savings", 
        subtitle = str_glue("All ({A_building} buildings)")) +
   coord_cartesian(ylim = c(0, 23)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
@@ -1186,7 +1186,7 @@ p3 <- df_acc_A %>%
   scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
   labs(fill = NULL, 
        x = NULL, 
-       y = "Error in fractional savings", 
+       y = "Absolute error in fractional savings", 
        subtitle = str_glue("All ({A_building} buildings)")) +
   coord_cartesian(ylim = c(0, 23)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
@@ -1202,3 +1202,159 @@ ggarrange(p3, p1, p2,
                   subtitle = "with measured weather")
 
 ggsave(filename = "abs_NULL.png", path = fig_path, units = "in", height = 6, width = 12, dpi = 300)
+
+
+
+
+#### CONTINUE ####
+rand_cont_S <- df_cont_stable %>% 
+  select(name, site, cont_fs) %>% 
+  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - cont_fs,
+         method = "rand_fs") %>% 
+  select(name, method, diff)
+  
+conv_S <- df_FS_stable %>% 
+  filter(method != "rand") %>% 
+  pivot_wider(names_from = method, values_from = savings) %>% 
+  mutate(diff = true - conv, 
+         method = "conv") %>% 
+  select(name, method, diff)
+
+rand_final_S <- df_FS_stable %>% 
+  filter(method != "conv") %>% 
+  pivot_wider(names_from = method, values_from = savings) %>% 
+  mutate(diff = true - rand, 
+         method = "rand_final") %>% 
+  select(name, method, diff)
+
+df_acc_S <- rbind(rand_cont_S, conv_S, rand_final_S)
+
+p1 <- df_acc_S %>% 
+  mutate(method = as.factor(method), 
+         method = recode_factor(method, "conv" = "Conventional", "rand_fs" = "Randomized\n(24 months 20/80)", "rand_final" = "Randomized\n(24 months 50/50)")) %>% 
+  ggplot(aes(x = method, y = diff, fill = method)) +
+  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
+  geom_lv(k = 4, outlier.shape = NA) +
+  geom_boxplot(outlier.shape = NA, coef = 0, fill = "#00000000", aes(color = method)) +
+  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
+  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
+            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 4), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
+  labs(fill = NULL, 
+       x = NULL, 
+       y = NULL, 
+       subtitle = str_glue("stable set ({S_building} buildings)")) +
+  coord_cartesian(ylim = c(-18, 18)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "none",
+        axis.text.y = element_blank(), 
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+# plot for the variable subset
+rand_cont_V <- df_cont_variable %>% 
+  select(name, site, cont_fs) %>% 
+  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - cont_fs,
+         method = "rand_fs") %>% 
+  select(name, method, diff)
+
+conv_V <- df_FS_variable %>% 
+  filter(method != "rand") %>% 
+  pivot_wider(names_from = method, values_from = savings) %>% 
+  mutate(diff = true - conv, 
+         method = "conv") %>% 
+  select(name, method, diff)
+
+rand_final_V <- df_FS_variable %>% 
+  filter(method != "conv") %>% 
+  pivot_wider(names_from = method, values_from = savings) %>% 
+  mutate(diff = true - rand, 
+         method = "rand_final") %>% 
+  select(name, method, diff)
+
+df_acc_V <- rbind(rand_cont_V, conv_V, rand_final_V)
+
+p2 <- df_acc_V %>% 
+  mutate(method = as.factor(method), 
+         method = recode_factor(method, "conv" = "Conventional", "rand_fs" = "Randomized\n(24 months 20/80)", "rand_final" = "Randomized\n(24 months 50/50)")) %>%  
+  ggplot(aes(x = method, y = diff, fill = method)) +
+  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
+  geom_lv(k = 4, outlier.shape = NA) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
+  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
+  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
+            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 4), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
+  labs(fill = NULL, 
+       x = NULL, 
+       y = NULL, 
+       subtitle = str_glue("variable set ({V_building} buildings)")) +
+  coord_cartesian(ylim = c(-18, 18)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "none",
+        axis.text.y = element_blank(), 
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+
+# plot for combined dataset
+rand_cont_A <- bind_rows(rand_cont_V, rand_cont_S) %>% 
+  select(name, rand_cont_diff = diff)
+
+conv_A <- bind_rows(conv_V, conv_S) %>% 
+  select(name, conv_diff = diff)
+
+rand_final_A <- bind_rows(rand_final_V, rand_final_S) %>% 
+  select(name, rand_final_diff = diff)
+
+df_acc_A <- rand_cont_A %>% 
+  left_join(conv_A, by = "name") %>% 
+  left_join(rand_final_A, by = "name") %>% 
+  pivot_longer(c(rand_cont_diff, conv_diff, rand_final_diff), names_to = "method", values_to = "diff")
+
+p3 <- df_acc_A %>% 
+  mutate(method = as.factor(method), 
+         method = recode_factor(method, "conv_diff" = "Conventional", "rand_cont_diff" = "Randomized\n(24 months 20/80)", "rand_final_diff" = "Randomized\n(24 months 50/50)")) %>% 
+  ggplot(aes(x = method, y = diff, fill = method)) +
+  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
+  geom_lv(k = 4, outlier.shape = NA) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
+  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
+  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
+            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 4), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
+  labs(fill = NULL, 
+       x = NULL, 
+       y = "Error in fractional savings", 
+       subtitle = str_glue("All ({A_building} buildings)")) +
+  coord_cartesian(ylim = c(-18, 18)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "none",
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+
+ggarrange(p3, p1, p2,
+          ncol = 3, nrow = 1,
+          labels = c("a)", "b)", "c)"),
+          align = "hv",
+          legend="none") +
+  plot_annotation(title = "M&V accuracy comparison", 
+                  subtitle = "with measured weather conditions")
+
+
+
+
+
+#### INTERVAL ####
