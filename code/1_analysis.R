@@ -56,10 +56,10 @@ source(paste0(function_path, "rand_seq.R"))
 # define parameters
 # section run control
 run_params <- list(type = "variable", 
-                   sprt = T, 
-                   sprt_cont = T, 
+                   sprt = F, 
+                   sprt_cont = F, 
                    interval = T, 
-                   nsprt = T)
+                   null = T)
 
 # Adding intervention effect as advanced chiller operation
 ctr_params <- list(peak_hours = 10:16,                      # accounts for peak hours
@@ -352,6 +352,8 @@ seq_timeline <- list()
 seq_mdsaving <- list()
 seq_nmsaving <- list()
 seq_frsaving <- list()
+seq_timeline_interval_2 <- list()
+seq_timeline_interval_3 <- list()
 cont_saving <- list()
 interval_saving <- list()
 FS_tmy <- list()
@@ -403,77 +405,6 @@ for (n in 1:(nrow(all_names))){
   df_hourly_conv <- df_all %>%
     run_reset()
   
-  # power-temp plot
-  # p1 <- df_hourly_conv %>%
-  #   pivot_longer(c(base_eload, interv_eload), names_to = "strategy", values_to = "eload") %>%
-  #   mutate(strategy = as.factor(strategy),
-  #          strategy = recode_factor(strategy, "base_eload" = "Baseline", "interv_eload" = "Intervention")) %>%
-  #   ggplot(aes(x = t_out, y = eload, color = strategy)) +
-  #   geom_point(data= .%>%
-  #                group_by(strategy) %>%
-  #                slice_sample(n = 1000),
-  #              size = 0.7,
-  #              alpha = 0.4,
-  #              shape = 16) +
-  #   geom_smooth(formula = y ~ x, method = "loess", linewidth = 1.25, alpha = 0.15) +
-  #   scale_x_continuous(expand = c(0, 0),
-  #                      breaks = breaks_pretty(n = 4),
-  #                      labels = number_format(suffix = " °C")) +
-  #   scale_y_continuous(expand = c(0, 0),
-  #                      breaks = breaks_pretty(n = 4),
-  #                      labels = number_format(suffix = " kW")) +
-  #   scale_color_manual(values = ls_colors) +
-  #   coord_cartesian(ylim = plot_scale) +
-  #   labs(x = NULL,
-  #        y = NULL,
-  #        color = NULL,
-  #        subtitle = "by outdoor drybulb temperature") +
-  #   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-  #         legend.direction = "horizontal",
-  #         legend.position = "bottom",
-  #         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-  # 
-  # # hour-of-day visualization
-  # p2 <- df_hourly_conv %>%
-  #   pivot_longer(c(base_eload, interv_eload), names_to = "strategy", values_to = "eload") %>%
-  #   mutate(strategy = as.factor(strategy),
-  #          strategy = recode_factor(strategy, "base_eload" = "Baseline", "interv_eload" = "Intervention")) %>%
-  #   ggplot(aes(x = hour(datetime), y = eload, color = strategy)) +
-  #   geom_point(data= .%>%
-  #                group_by(strategy) %>%
-  #                slice_sample(n = 1000),
-  #              size = 0.7,
-  #              alpha = 0.4,
-  #              shape = 16) +
-  #   geom_smooth(formula = y ~ x, method = "loess", linewidth = 1.25, alpha = 0.15) +
-  #   scale_x_continuous(breaks = c(0, 6, 12, 18),
-  #                      labels = c("12 AM", "6 AM", "12 PM", "6 PM")) +
-  #   scale_y_continuous(expand = c(0, 0),
-  #                      breaks = breaks_pretty(n = 4),
-  #                      labels = number_format(suffix = " kW")) +
-  #   scale_color_manual(values = ls_colors) +
-  #   coord_cartesian(ylim = plot_scale) +
-  #   labs(x = NULL,
-  #        y = NULL,
-  #        color = NULL,
-  #        subtitle = "by each hour of the day") +
-  #   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-  #         axis.text.y = element_blank(),
-  #         legend.direction = "horizontal",
-  #         legend.position = "bottom",
-  #         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-  # 
-  # ggarrange(p1, p2,
-  #           ncol=2, nrow=1,
-  #           labels = c("a)", "b)"),
-  #           widths = c(1, 1),
-  #           align = "v",
-  #           common.legend = TRUE,
-  #           legend="bottom") +
-  #   plot_annotation(title = "Case study building power consumption (hourly average)")
-  # 
-  # ggsave(filename = "temp_time_power.png", path = sitefigs_path, units = "in", height = 5, width = 10, dpi = 300)
-  
   # separate baseline and intervention
   df_base_conv <- df_hourly_conv %>%
     select(datetime,
@@ -508,32 +439,32 @@ for (n in 1:(nrow(all_names))){
                            "site" = site, 
                            "cvrmse" = cv_rmse)
   
-  base_proj %>%
-    ggplot() +
-    geom_point(aes(x = datetime, y = eload, color = "Measurement"), alpha = 0.2, size = 0.2) +
-    geom_point(aes(x = datetime, y = towt, color = "Prediction"), alpha = 0.2, size = 0.2) +
-    geom_smooth(aes(x = datetime, y = eload, color = "Measurement"), formula = y ~ x, method = "loess", linewidth = 0.7) +
-    geom_smooth(aes(x = datetime, y = towt, color = "Prediction"), formula = y ~ x, method = "loess", linewidth = 0.7) +
-    annotate(geom = "text",
-             x = median(base_proj$datetime),
-             y = median(base_proj$eload) + 2 * sd(base_proj$eload),
-             label = paste0("CV(RMSE): ", round(cv_rmse, digits = 2), "%")) +
-    scale_color_brewer(palette = "Set1") +
-    scale_x_datetime(date_breaks = "2 months",
-                     date_labels = "%b")  +
-    scale_y_continuous(expand = c(0, 0),
-                       breaks = breaks_pretty(n = 3),
-                       labels = number_format(suffix = " kW")) +
-    labs(x = NULL,
-         y = NULL,
-         color = NULL,
-         title = "TOWT model prediction results") +
-    theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-          legend.direction = "horizontal",
-          legend.position = "bottom",
-          plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-  
-  ggsave(filename = "towt_acc.png", path = sitefigs_path, units = "in", height = 6, width = 10, dpi = 300)
+  # base_proj %>%
+  #   ggplot() +
+  #   geom_point(aes(x = datetime, y = eload, color = "Measurement"), alpha = 0.2, size = 0.2) +
+  #   geom_point(aes(x = datetime, y = towt, color = "Prediction"), alpha = 0.2, size = 0.2) +
+  #   geom_smooth(aes(x = datetime, y = eload, color = "Measurement"), formula = y ~ x, method = "loess", linewidth = 0.7) +
+  #   geom_smooth(aes(x = datetime, y = towt, color = "Prediction"), formula = y ~ x, method = "loess", linewidth = 0.7) +
+  #   annotate(geom = "text",
+  #            x = median(base_proj$datetime),
+  #            y = median(base_proj$eload) + 2 * sd(base_proj$eload),
+  #            label = paste0("CV(RMSE): ", round(cv_rmse, digits = 2), "%")) +
+  #   scale_color_brewer(palette = "Set1") +
+  #   scale_x_datetime(date_breaks = "2 months",
+  #                    date_labels = "%b")  +
+  #   scale_y_continuous(expand = c(0, 0),
+  #                      breaks = breaks_pretty(n = 3),
+  #                      labels = number_format(suffix = " kW")) +
+  #   labs(x = NULL,
+  #        y = NULL,
+  #        color = NULL,
+  #        title = "TOWT model prediction results") +
+  #   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+  #         legend.direction = "horizontal",
+  #         legend.position = "bottom",
+  #         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+  # 
+  # ggsave(filename = "towt_acc.png", path = sitefigs_path, units = "in", height = 6, width = 10, dpi = 300)
   
   # TOWT baseline project for post retrofit period
   towt_base <- df_base_conv %>%
@@ -802,6 +733,12 @@ for (n in 1:(nrow(all_names))){
     
     rand_tmy_2 <- saving_norm(df_rand_new %>% mutate(week = NA), site_tmy)
     
+    seq_res <- seq_run(sprt_param, df_rand_new, site_tmy)
+    sprt_res <- seq_res$sprt_res
+    sprt_overlap_base <- seq_res$sprt_overlap_base
+    sprt_overlap_interv <- seq_res$sprt_overlap_interv
+    seq_timeline_interval_2[[n]] <- get_timeline(sprt_res, sprt_overlap_base, sprt_overlap_interv)
+    
     # running on 3-day sampling interval 
     df_rand_new <- df_hourly_conv %>%
       left_join(df_schedule_3, by = "datetime") %>%
@@ -822,6 +759,12 @@ for (n in 1:(nrow(all_names))){
     
     rand_tmy_3 <- saving_norm(df_rand_new %>% mutate(week = NA), site_tmy)
     
+    seq_res <- seq_run(sprt_param, df_rand_new, site_tmy)
+    sprt_res <- seq_res$sprt_res
+    sprt_overlap_base <- seq_res$sprt_overlap_base
+    sprt_overlap_interv <- seq_res$sprt_overlap_interv
+    seq_timeline_interval_3[[n]] <- get_timeline(sprt_res, sprt_overlap_base, sprt_overlap_interv)
+    
     interval_saving[[n]] <- list("name" = name,
                                  "site" = site,
                                  "cont_md_2" = rand_md_2, 
@@ -840,16 +783,17 @@ for (n in 1:(nrow(all_names))){
 
 
 
-#### NSPRT ####
-if (run_params$nsprt) {
+#### null ####
+if (run_params$null) {
   
-  FS_ref_nsprt <- list()
-  MD_ref_nsprt <- list()
-  seq_timeline_nsprt <- list()
-  seq_mdsaving_nsprt <- list()
-  seq_nmsaving_nsprt <- list()
-  seq_frsaving_nsprt <- list()
-  interval_nsprt <- list()
+  FS_ref_null <- list()
+  MD_ref_null <- list()
+  FS_tmy_null <- list()
+  seq_timeline_null <- list()
+  seq_mdsaving_null <- list()
+  seq_nmsaving_null <- list()
+  seq_frsaving_null <- list()
+  interval_null <- list()
   
   failed_sprt <- 0
   
@@ -968,7 +912,7 @@ if (run_params$nsprt) {
       drop_na()
     
     err_plot(df_rand, df_base_conv, df_interv_conv)
-    ggsave(filename = "sampling_err_nsprt.png", path = sitefigs_path, units = "in", height = 9, width = 8, dpi = 300)
+    ggsave(filename = "sampling_err_null.png", path = sitefigs_path, units = "in", height = 9, width = 8, dpi = 300)
     
     # saving calculation as mean difference
     FS_true <- (mean(df_base_conv$eload) - mean(df_interv_conv$eload)) / mean(df_base_conv$eload) * 100
@@ -982,13 +926,13 @@ if (run_params$nsprt) {
     MD_rand <- mean(df_rand %>% filter(strategy == 1) %>% .$eload) -
       mean(df_rand %>% filter(strategy == 2) %>% .$eload)
     
-    FS_ref_nsprt[[n]] <- tibble("name" = name,
+    FS_ref_null[[n]] <- tibble("name" = name,
                           "site" = site, 
                           "ref_true" = FS_true,
                           "ref_conv" = FS_conv,
                           "ref_rand" = FS_rand)
     
-    MD_ref_nsprt[[n]] <- tibble("name" = name,
+    MD_ref_null[[n]] <- tibble("name" = name,
                           "site" = site, 
                           "ref_true" = MD_true,
                           "ref_conv" = MD_conv,
@@ -1003,17 +947,17 @@ if (run_params$nsprt) {
       mutate(week = interval(min(datetime), datetime) %>% as.numeric('weeks') %>% floor()) %>% 
       filter(week <= sprt_param$n_weeks)
     
-    true_saving_nsprt <- list()
+    true_saving_null <- list()
     
     for (i in 2:sprt_param$n_weeks){
       saving <- df_week %>% 
         filter(week <= i)
       
-      true_saving_nsprt[[i]] <- tibble("n_weeks" = i, 
+      true_saving_null[[i]] <- tibble("n_weeks" = i, 
                                        savings = mean(saving %>% .$savings))
     }
     
-    true_saving_nsprt <- bind_rows(true_saving_nsprt)
+    true_saving_null <- bind_rows(true_saving_null)
     
     seq_res <- try(seq_run(sprt_param, df_rand, site_tmy), silent = TRUE)  
     
@@ -1032,18 +976,35 @@ if (run_params$nsprt) {
       
       # get sequential test timeline
       eob <- get_eob(sprt_res, sprt_overlap_base, sprt_overlap_interv)
-      seq_timeline_nsprt[[n]] <- get_timeline(sprt_res, sprt_overlap_base, sprt_overlap_interv)
+      seq_timeline_null[[n]] <- get_timeline(sprt_res, sprt_overlap_base, sprt_overlap_interv)
       
       # plot overall results
-      seq_plot(df_means, sprt_res, sprt_overlap_base, sprt_overlap_interv, annual_saving, true_saving_nsprt, eob)
-      ggsave(filename = "overall_seq_nsprt.png", path = sitefigs_path, units = "in", height = 9, width = 8, dpi = 300)
+      seq_plot(df_means, sprt_res, sprt_overlap_base, sprt_overlap_interv, annual_saving, true_saving_null, eob)
+      ggsave(filename = "overall_seq_null.png", path = sitefigs_path, units = "in", height = 9, width = 8, dpi = 300)
       
       # savings at timeline
-      seq_mdsaving_nsprt[[n]] <- get_mdsaving(seq_timeline_nsprt[[n]], sprt_res)
-      seq_nmsaving_nsprt[[n]] <- get_nmsaving(seq_timeline_nsprt[[n]], sprt_res)
-      seq_frsaving_nsprt[[n]] <- get_frsaving(seq_timeline_nsprt[[n]], df_rand)
+      seq_mdsaving_null[[n]] <- get_mdsaving(seq_timeline_null[[n]], sprt_res)
+      seq_nmsaving_null[[n]] <- get_nmsaving(seq_timeline_null[[n]], sprt_res)
+      seq_frsaving_null[[n]] <- get_frsaving(seq_timeline_null[[n]], df_rand)
       
     }
+    
+    # TMY
+    rand_tmy <- saving_norm(df_rand %>% mutate(week = NA), site_tmy)
+    
+    df_conv_tmy <- df_hourly_conv %>% 
+      mutate(strategy = ifelse(year(datetime) == "2016", 1, 2), 
+             eload = ifelse(year(datetime) == "2016", base_eload, interv_eload), 
+             week = NA) %>% 
+      select(datetime, eload, strategy, t_out, week)
+    
+    conv_tmy <- saving_norm(df_conv_tmy %>% mutate(week = NA), site_tmy)
+    
+    
+    FS_tmy_null[[n]] <- tibble("name" = name,
+                                "site" = site, 
+                                "rand" = rand_tmy, 
+                                "conv" = conv_tmy)
     
     # running on 2-day sampling interval 
     df_rand_new <- df_hourly_conv %>%
@@ -1085,7 +1046,7 @@ if (run_params$nsprt) {
     
     rand_tmy_3 <- saving_norm(df_rand_new %>% mutate(week = NA), site_tmy)
     
-    interval_nsprt[[n]] <- list("name" = name,
+    interval_null[[n]] <- list("name" = name,
                                  "site" = site,
                                  "cont_md_2" = rand_md_2, 
                                  "cont_fs_2" = rand_fs_2, 
@@ -1151,41 +1112,54 @@ if (run_params$sprt_cont){
 
 if (run_params$interval){
   
+  df_timeline_interval <- bind_rows(seq_timeline_interval_2) %>% 
+    mutate(interval = 2) %>% 
+    pivot_longer(c(sprt, base_temp, interv_temp, eob, final), names_to = "seq", values_to = "weeks") %>% 
+    left_join(bind_rows(seq_timeline_interval_3) %>% 
+                mutate(interval = 3) %>% 
+                pivot_longer(c(sprt, base_temp, interv_temp, eob, final), names_to = "seq", values_to = "weeks"), 
+              by = c("name", "site", "interval", "seq", "weeks"))
+  
   df_interval <- bind_rows(interval_saving)
+  
+  write_rds(df_timeline_interval, paste0(readfile_path, "df_timeline_interval.rds"), compress = "gz")
   write_rds(df_interval, paste0(readfile_path, "df_interval.rds"), compress = "gz")
+  
 }
 
-if (run_params$nsprt){
+if (run_params$null){
   
-  df_seq_FS_nsprt <- bind_rows(seq_frsaving_nsprt) %>%
+  df_seq_FS_null <- bind_rows(seq_frsaving_null) %>%
     pivot_longer(-c(name, site), names_to = "seq", values_to = "FS")
   
-  df_nsprt_all <- bind_rows(seq_mdsaving_nsprt) %>%
+  df_null_all <- bind_rows(seq_mdsaving_null) %>%
     pivot_longer(-c(name, site), names_to = "seq", values_to = "sprt") %>%
-    left_join(bind_rows(seq_nmsaving_nsprt) %>%
+    left_join(bind_rows(seq_nmsaving_null) %>%
                 pivot_longer(-c(name, site), names_to = "seq", values_to = "annual"),
               by = c("name", "site", "seq")) %>%
-    left_join(bind_rows(seq_timeline_nsprt) %>%
+    left_join(bind_rows(seq_timeline_null) %>%
                 mutate(temp = pmax(base_temp, interv_temp)) %>%
                 select(-c(base_temp, interv_temp)) %>%
                 pivot_longer(-c(name, site), names_to = "seq", values_to = "n_weeks"),
               by = c("name", "site", "seq"))
   
-  df_MD_nsprt <- bind_rows(MD_ref_nsprt) %>%
+  df_MD_null <- bind_rows(MD_ref_null) %>%
     pivot_longer(-c(name, site), names_to = "type", values_to = "savings") %>%
     separate(type, into = c("scenario", "method"), sep = "_")
   
-  df_FS_nsprt <- bind_rows(FS_ref_nsprt) %>%
+  df_FS_null <- bind_rows(FS_ref_null) %>%
     pivot_longer(-c(name, site), names_to = "type", values_to = "savings") %>%
     separate(type, into = c("scenario", "method"), sep = "_")
   
-  df_interval_nsprt <- bind_rows(interval_nsprt)
+  df_interval_null <- bind_rows(interval_null)
+  df_FS_tmy_null <- bind_rows(FS_tmy_null)
   
-  write_rds(df_seq_FS_nsprt, paste0(readfile_path, "df_seq_FS_nsprt.rds"), compress = "gz")
-  write_rds(df_nsprt_all, paste0(readfile_path, "df_nsprt_all.rds"), compress = "gz")
-  write_rds(df_FS_nsprt, paste0(readfile_path, "df_FS_nsprt.rds"), compress = 'gz')
-  write_rds(df_MD_nsprt, paste0(readfile_path, "df_MD_nsprt.rds"), compress = 'gz')
-  write_rds(df_interval_nsprt, paste0(readfile_path, "df_interval_nsprt.rds"), compress = "gz")
+  write_rds(df_seq_FS_null, paste0(readfile_path, "df_seq_FS_null.rds"), compress = "gz")
+  write_rds(df_null_all, paste0(readfile_path, "df_null_all.rds"), compress = "gz")
+  write_rds(df_FS_null, paste0(readfile_path, "df_FS_null.rds"), compress = 'gz')
+  write_rds(df_MD_null, paste0(readfile_path, "df_MD_null.rds"), compress = 'gz')
+  write_rds(df_interval_null, paste0(readfile_path, "df_interval_null.rds"), compress = "gz")
+  write_rds(df_FS_tmy_null, paste0(readfile_path, "df_FS_tmy_null.rds"), compress = "gz")
   
 }
 

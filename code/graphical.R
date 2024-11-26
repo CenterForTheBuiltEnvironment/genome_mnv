@@ -161,13 +161,15 @@ df_seq_FS_stable <- read_rds(paste0(readfile_stable, "df_seq_FS.rds"))
 df_MD_stable <- read_rds(paste0(readfile_stable, "df_MD.rds"))
 df_FS_stable <- read_rds(paste0(readfile_stable, "df_FS.rds"))
 df_cont_stable <- read_rds(paste0(readfile_stable, "df_cont.rds"))
-df_FS_nsprt_stable <- read_rds(paste0(readfile_stable, "df_FS_nsprt.rds"))
-df_MD_nsprt_stable <- read_rds(paste0(readfile_stable, "df_MD_nsprt.rds"))
-df_seq_FS_nsprt_stable <- read_rds(paste0(readfile_stable, "df_seq_FS_nsprt.rds"))
+df_FS_null_stable <- read_rds(paste0(readfile_stable, "df_FS_null.rds"))
+df_MD_null_stable <- read_rds(paste0(readfile_stable, "df_MD_null.rds"))
+df_seq_FS_null_stable <- read_rds(paste0(readfile_stable, "df_seq_FS_null.rds"))
 df_model_acc_stable <- read_rds(paste0(readfile_stable, "df_model_acc.rds"))
 df_FS_tmy_stable <- read_rds(paste0(readfile_stable, "df_FS_tmy.rds"))
+df_FS_tmy_null_stable <- read_rds(paste0(readfile_stable, "df_FS_tmy_null.rds"))
 df_interval_stable <- read_rds(paste0(readfile_stable, "df_interval.rds"))
-df_interval_nsprt_stable <- read_rds(paste0(readfile_stable, "df_interval_nsprt.rds"))
+df_interval_null_stable <- read_rds(paste0(readfile_stable, "df_interval_null.rds"))
+df_timeline_interval_stable <- read_rds(paste0(readfile_stable, "df_timeline_interval.rds"))
 
 all_sites_stable <- df_energy_stable %>%
   select(site) %>%
@@ -194,13 +196,15 @@ df_seq_FS_variable <- read_rds(paste0(readfile_variable, "df_seq_FS.rds"))
 df_MD_variable <- read_rds(paste0(readfile_variable, "df_MD.rds"))
 df_FS_variable <- read_rds(paste0(readfile_variable, "df_FS.rds"))
 df_cont_variable <- read_rds(paste0(readfile_variable, "df_cont.rds"))
-df_FS_nsprt_variable <- read_rds(paste0(readfile_variable, "df_FS_nsprt.rds"))
-df_MD_nsprt_variable <- read_rds(paste0(readfile_variable, "df_MD_nsprt.rds"))
-df_seq_FS_nsprt_variable <- read_rds(paste0(readfile_variable, "df_seq_FS_nsprt.rds"))
+df_FS_null_variable <- read_rds(paste0(readfile_variable, "df_FS_null.rds"))
+df_MD_null_variable <- read_rds(paste0(readfile_variable, "df_MD_null.rds"))
+df_seq_FS_null_variable <- read_rds(paste0(readfile_variable, "df_seq_FS_null.rds"))
 df_model_acc_variable <- read_rds(paste0(readfile_variable, "df_model_acc.rds"))
 df_FS_tmy_variable <- read_rds(paste0(readfile_variable, "df_FS_tmy.rds"))
+df_FS_tmy_null_variable <- read_rds(paste0(readfile_variable, "df_FS_tmy_null.rds"))
 df_interval_variable <- read_rds(paste0(readfile_variable, "df_interval.rds"))
-df_interval_nsprt_variable <- read_rds(paste0(readfile_variable, "df_interval_nsprt.rds"))
+df_interval_null_variable <- read_rds(paste0(readfile_variable, "df_interval_null.rds"))
+df_timeline_interval_variable <- read_rds(paste0(readfile_variable, "df_timeline_interval.rds"))
 
 all_sites_variable <- df_energy_variable %>%
   select(site) %>%
@@ -518,7 +522,7 @@ p_middle <- ggarrange(p3, p1, p2,
                       labels = c("d)", "e)", "f)"),
                       align = "hv",
                       legend="none") +
-  plot_annotation(subtitle = "Accuracy comparison with typical meterological weather")
+  plot_annotation(subtitle = "Accuracy comparison with typical meteorological weather")
 
 # Timeline plot
 df_time <- df_sprt_all_variable %>% 
@@ -616,20 +620,20 @@ ggsave(filename = "graphical_abs.png", path = fig_path, units = "in", height = 1
 
 
 #### NULL ####
-rand_eob_S <- df_seq_FS_nsprt_stable %>% 
+rand_eob_S <- df_seq_FS_null_stable %>% 
   filter(seq == "eob") %>% 
   mutate(diff = 0 - FS, 
          method = "rand_eob") %>% 
   select(name, method, diff)
 
-conv_S <- df_FS_nsprt_stable %>% 
+conv_S <- df_FS_null_stable %>% 
   filter(method != "rand") %>% 
   pivot_wider(names_from = method, values_from = savings) %>% 
   mutate(diff = true - conv, 
          method = "conv") %>% 
   select(name, method, diff)
 
-rand_final_S <- df_FS_nsprt_stable %>% 
+rand_final_S <- df_FS_null_stable %>% 
   filter(method != "conv") %>% 
   pivot_wider(names_from = method, values_from = savings) %>% 
   mutate(diff = true - rand, 
@@ -660,24 +664,24 @@ p1 <- df_acc_S %>%
   coord_cartesian(ylim = c(-18, 18)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
         legend.position = "none",
-        axis.text.y = element_blank(), 
+        axis.text = element_blank(), 
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 
 # plot for the variable subset
-rand_eob_V <- df_seq_FS_nsprt_variable %>% 
+rand_eob_V <- df_seq_FS_null_variable %>% 
   filter(seq == "eob") %>% 
   mutate(diff = 0 - FS, 
          method = "rand_eob") %>% 
   select(name, method, diff)
 
-conv_V <- df_FS_nsprt_variable %>% 
+conv_V <- df_FS_null_variable %>% 
   filter(method != "rand") %>% 
   pivot_wider(names_from = method, values_from = savings) %>% 
   mutate(diff = true - conv, 
          method = "conv") %>% 
   select(name, method, diff)
 
-rand_final_V <- df_FS_nsprt_variable %>% 
+rand_final_V <- df_FS_null_variable %>% 
   filter(method != "conv") %>% 
   pivot_wider(names_from = method, values_from = savings) %>% 
   mutate(diff = true - rand, 
@@ -708,7 +712,7 @@ p2 <- df_acc_V %>%
   coord_cartesian(ylim = c(-18, 18)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
         legend.position = "none",
-        axis.text.y = element_blank(), 
+        axis.text = element_blank(), 
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 
 
@@ -749,17 +753,160 @@ p3 <- df_acc_A %>%
   coord_cartesian(ylim = c(-18, 18)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
         legend.position = "none",
+        axis.text.x = element_blank(),
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 
-ggarrange(p3, p1, p2,
-          ncol = 3, nrow = 1,
-          labels = c("a)", "b)", "c)"),
-          align = "hv",
-          legend="none") +
-  plot_annotation(title = "No-saving M&V accuracy comparison", 
-                  subtitle = "with measured weather")
+p_top <- ggarrange(p3, p1, p2,
+                   ncol = 3, nrow = 1,
+                   labels = c("a)", "b)", "c)"),
+                   align = "hv",
+                   legend="none") +
+  plot_annotation(subtitle = "with measured weather")
 
-ggsave(filename = "NULL.png", path = fig_path, units = "in", height = 6, width = 12, dpi = 300)
+rand_eob_S <- df_FS_tmy_null_stable %>% 
+  left_join(df_FS_null_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - rand, 
+         method = "rand_eob") %>% 
+  select(name, method, diff)
+
+conv_S <- df_FS_tmy_null_stable %>% 
+  mutate(diff = 0 - conv, 
+         method = "conv") %>% 
+  select(name, method, diff)
+
+rand_final_S <- df_FS_tmy_null_stable %>% 
+  mutate(diff = 0 - rand, 
+         method = "rand_final") %>% 
+  select(name, method, diff)
+
+df_acc_S <- rbind(rand_eob_S, conv_S, rand_final_S)
+
+p1 <- df_acc_S %>% 
+  mutate(method = as.factor(method), 
+         method = recode_factor(method, "conv" = "Conventional", "rand_eob" = "Randomized", "rand_final" = "Randomized\n(24 months)")) %>% 
+  ggplot(aes(x = method, y = diff, fill = method)) +
+  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
+  geom_lv(k = 4, outlier.shape = NA) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
+  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
+  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
+            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 4), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
+  labs(fill = NULL, 
+       x = NULL, 
+       y = NULL, 
+       subtitle = str_glue("{S_building} stable buildings")) +
+  coord_cartesian(ylim = c(-18, 18)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "none",
+        axis.text.y = element_blank(), 
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+# plot for variable set
+rand_eob_V <- df_FS_tmy_null_variable %>% 
+  left_join(df_FS_null_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - rand, 
+         method = "rand_eob") %>% 
+  select(name, method, diff)
+
+conv_V <- df_FS_tmy_null_variable %>% 
+  mutate(diff = 0 - conv, 
+         method = "conv") %>% 
+  select(name, method, diff)
+
+rand_final_V <- df_FS_tmy_null_variable %>% 
+  mutate(diff = 0 - rand, 
+         method = "rand_final") %>% 
+  select(name, method, diff)
+
+df_acc_V <- rbind(rand_eob_V, conv_V, rand_final_V)
+
+p2 <- df_acc_V %>% 
+  mutate(method = as.factor(method), 
+         method = recode_factor(method, "conv" = "Conventional", "rand_eob" = "Randomized", "rand_final" = "Randomized\n(24 months)")) %>% 
+  ggplot(aes(x = method, y = diff, fill = method)) +
+  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
+  geom_lv(k = 4, outlier.shape = NA) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
+  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
+  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
+            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 4), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
+  labs(fill = NULL, 
+       x = NULL, 
+       y = NULL, 
+       subtitle = str_glue("{V_building} stable buildings")) +
+  coord_cartesian(ylim = c(-18, 18)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "none",
+        axis.text.y = element_blank(), 
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+# plot for combined dataset
+rand_eob_A <- bind_rows(rand_eob_V, rand_eob_S) %>% 
+  select(name, rand_eob_diff = diff)
+
+conv_A <- bind_rows(conv_V, conv_S) %>% 
+  select(name, conv_diff = diff)
+
+rand_final_A <- bind_rows(rand_final_V, rand_final_S) %>% 
+  select(name, rand_final_diff = diff)
+
+df_acc_A <- rand_eob_A %>% 
+  left_join(conv_A, by = "name") %>% 
+  left_join(rand_final_A, by = "name") %>% 
+  pivot_longer(c(rand_eob_diff, conv_diff, rand_final_diff), names_to = "method", values_to = "diff")
+
+p3 <- df_acc_A %>% 
+  mutate(method = as.factor(method), 
+         method = recode_factor(method, "conv_diff" = "Conventional", "rand_eob_diff" = "Randomized", "rand_final_diff" = "Randomized\n(24 months)")) %>% 
+  ggplot(aes(x = method, y = diff, fill = method)) +
+  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
+  geom_lv(k = 4, outlier.shape = NA) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
+  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
+  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
+            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 4), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
+  labs(fill = NULL, 
+       x = NULL, 
+       y = "Error in fractional savings", 
+       subtitle = str_glue("All {A_building} buildings")) +
+  coord_cartesian(ylim = c(-18, 18)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "none",
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+p_bottom <- ggarrange(p3, p1, p2,
+                      ncol = 3, nrow = 1,
+                      labels = c("d)", "e)", "f)"),
+                      align = "hv",
+                      legend="none") +
+  plot_annotation(subtitle = "with typical meteorological weather")
+
+ggarrange(p_top, p_bottom, 
+          nrow = 2, 
+          align = "hv", 
+          common.legend = T, 
+          legend = "bottom") +
+  plot_annotation(title = "No-saving M&V accuracy comparison")
+
+ggsave(filename = "null.png", path = fig_path, units = "in", height = 9, width = 12, dpi = 300)
+
+
+
 
 
 
@@ -811,7 +958,7 @@ p1 <- df_acc_S %>%
   coord_cartesian(ylim = c(0, 23)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
         legend.position = "none",
-        axis.text.y = element_blank(), 
+        axis.text = element_blank(),
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 
 # plot for the variable subset
@@ -860,7 +1007,7 @@ p2 <- df_acc_V %>%
   coord_cartesian(ylim = c(0, 23)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
         legend.position = "none",
-        axis.text.y = element_blank(), 
+        axis.text = element_blank(),
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 
 
@@ -901,17 +1048,15 @@ p3 <- df_acc_A %>%
   coord_cartesian(ylim = c(0, 23)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
         legend.position = "none",
+        axis.text.x = element_blank(),
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 
-ggarrange(p3, p1, p2,
-          ncol = 3, nrow = 1,
-          labels = c("a)", "b)", "c)"),
-          align = "hv",
-          legend="none") +
-  plot_annotation(title = "M&V accuracy comparison", 
-                  subtitle = "with measured weather conditions")
-
-ggsave(filename = "abs_dev.png", path = fig_path, units = "in", height = 6, width = 12, dpi = 300)
+p_top <- ggarrange(p3, p1, p2,
+                   ncol = 3, nrow = 1,
+                   labels = c("a)", "b)", "c)"),
+                   align = "hv",
+                   legend="none") +
+  plot_annotation(subtitle = "with measured weather conditions")
 
 # TMY
 # plot for the stable subset
@@ -1049,31 +1194,37 @@ p3 <- df_acc_A %>%
         legend.position = "none",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 
-ggarrange(p3, p1, p2,
-          ncol = 3, nrow = 1,
-          labels = c("a)", "b)", "c)"),
-          align = "hv",
-          legend="none") +
-  plot_annotation(title = "M&V accuracy comparison", 
-                  subtitle = "with typical meterological weather")
+p_bottom <- ggarrange(p3, p1, p2,
+                      ncol = 3, nrow = 1,
+                      labels = c("d)", "e)", "f)"),
+                      align = "hv",
+                      legend="none") +
+  plot_annotation(subtitle = "with typical meteorological weather")
 
-ggsave(filename = "abs_TMY.png", path = fig_path, units = "in", height = 6, width = 12, dpi = 300)
+ggarrange(p_top, p_bottom, 
+          nrow = 2, 
+          align = "hv", 
+          common.legend = T, 
+          legend = "bottom") +
+  plot_annotation(title = "M&V accuracy comparison")
+
+ggsave(filename = "abs.png", path = fig_path, units = "in", height = 9, width = 12, dpi = 300)
 
 # NULL
-rand_eob_S <- df_seq_FS_nsprt_stable %>% 
+rand_eob_S <- df_seq_FS_null_stable %>% 
   filter(seq == "eob") %>% 
   mutate(diff = abs(0 - FS), 
          method = "rand_eob") %>% 
   select(name, method, diff)
 
-conv_S <- df_FS_nsprt_stable %>% 
+conv_S <- df_FS_null_stable %>% 
   filter(method != "rand") %>% 
   pivot_wider(names_from = method, values_from = savings) %>% 
   mutate(diff = abs(true - conv), 
          method = "conv") %>% 
   select(name, method, diff)
 
-rand_final_S <- df_FS_nsprt_stable %>% 
+rand_final_S <- df_FS_null_stable %>% 
   filter(method != "conv") %>% 
   pivot_wider(names_from = method, values_from = savings) %>% 
   mutate(diff = abs(true - rand), 
@@ -1108,20 +1259,20 @@ p1 <- df_acc_S %>%
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 
 # plot for the variable subset
-rand_eob_V <- df_seq_FS_nsprt_variable %>% 
+rand_eob_V <- df_seq_FS_null_variable %>% 
   filter(seq == "eob") %>% 
   mutate(diff = abs(0 - FS), 
          method = "rand_eob") %>% 
   select(name, method, diff)
 
-conv_V <- df_FS_nsprt_variable %>% 
+conv_V <- df_FS_null_variable %>% 
   filter(method != "rand") %>% 
   pivot_wider(names_from = method, values_from = savings) %>% 
   mutate(diff = abs(true - conv), 
          method = "conv") %>% 
   select(name, method, diff)
 
-rand_final_V <- df_FS_nsprt_variable %>% 
+rand_final_V <- df_FS_null_variable %>% 
   filter(method != "conv") %>% 
   pivot_wider(names_from = method, values_from = savings) %>% 
   mutate(diff = abs(true - rand), 
@@ -1203,7 +1354,8 @@ ggarrange(p3, p1, p2,
   plot_annotation(title = "No-saving M&V accuracy comparison", 
                   subtitle = "with measured weather")
 
-ggsave(filename = "abs_NULL.png", path = fig_path, units = "in", height = 6, width = 12, dpi = 300)
+ggsave(filename = "abs_null.png", path = fig_path, units = "in", height = 6, width = 12, dpi = 300)
+
 
 
 
@@ -1644,7 +1796,7 @@ p_bottom <- ggarrange(p3, p1, p2,
                       labels = c("d)", "e)", "f)"),
                       align = "hv",
                       legend="none") +
-  plot_annotation(subtitle = "with typical meterological weather")
+  plot_annotation(subtitle = "with typical meteorological weather")
 
 ggarrange(p_top, p_bottom, 
           ncol = 1, nrow = 2, 
@@ -1654,24 +1806,24 @@ ggarrange(p_top, p_bottom,
 
 ggsave(filename = "interval.png", path = fig_path, units = "in", height = 9, width = 12, dpi = 300)
 
-# nsprt results
-interval_1_S <- df_FS_nsprt_stable %>% 
+# null results
+interval_1_S <- df_FS_null_stable %>% 
   filter(method != "conv") %>% 
   pivot_wider(names_from = method, values_from = savings) %>% 
   mutate(diff = true - rand, 
          method = "rand_interval_1") %>% 
   select(name, method, diff)
 
-interval_2_S <- df_interval_nsprt_stable %>% 
+interval_2_S <- df_interval_null_stable %>% 
   select(c(name, site, cont_fs_2)) %>% 
-  left_join(df_FS_nsprt_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  left_join(df_FS_null_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
   mutate(diff = savings - cont_fs_2, 
          method = "rand_interval_2") %>% 
   select(name, method, diff)
 
-interval_3_S <- df_interval_nsprt_stable %>% 
+interval_3_S <- df_interval_null_stable %>% 
   select(c(name, site, cont_fs_3)) %>% 
-  left_join(df_FS_nsprt_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  left_join(df_FS_null_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
   mutate(diff = savings - cont_fs_3, 
          method = "rand_interval_3") %>% 
   select(name, method, diff)
@@ -1703,23 +1855,23 @@ p1 <- df_acc_S %>%
         axis.text.y = element_blank(),
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 
-interval_1_V <- df_FS_nsprt_variable %>% 
+interval_1_V <- df_FS_null_variable %>% 
   filter(method != "conv") %>% 
   pivot_wider(names_from = method, values_from = savings) %>% 
   mutate(diff = true - rand, 
          method = "rand_interval_1") %>% 
   select(name, method, diff)
 
-interval_2_V <- df_interval_nsprt_variable %>% 
+interval_2_V <- df_interval_null_variable %>% 
   select(c(name, site, cont_fs_2)) %>% 
-  left_join(df_FS_nsprt_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  left_join(df_FS_null_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
   mutate(diff = savings - cont_fs_2, 
          method = "rand_interval_2") %>% 
   select(name, method, diff)
 
-interval_3_V <- df_interval_nsprt_variable %>% 
+interval_3_V <- df_interval_null_variable %>% 
   select(c(name, site, cont_fs_3)) %>% 
-  left_join(df_FS_nsprt_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  left_join(df_FS_null_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
   mutate(diff = savings - cont_fs_3, 
          method = "rand_interval_3") %>% 
   select(name, method, diff)
@@ -1798,4 +1950,4 @@ ggarrange(p3, p1, p2,
   plot_annotation(title = "No-saving M&V accuracy comparison", 
                   subtitle = "with measured weather conditions")
 
-ggsave(filename = "interval_nsprt.png", path = fig_path, units = "in", height = 9, width = 12, dpi = 300)
+ggsave(filename = "interval_null.png", path = fig_path, units = "in", height = 6, width = 12, dpi = 300)
