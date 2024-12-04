@@ -59,7 +59,7 @@ run_params <- list(type = "variable",
                    sprt = F, 
                    sprt_cont = F, 
                    interval = T, 
-                   null = T)
+                   null = F)
 
 # Adding intervention effect as advanced chiller operation
 ctr_params <- list(peak_hours = 10:16,                      # accounts for peak hours
@@ -291,6 +291,8 @@ combifigs_path <- str_glue("../figs/{run_params$type}/comb_analysis/")
 df_energy <- read_rds(paste0(readfile_path, "df_energy.rds"))
 df_meta <- read_rds(paste0(readfile_path, "df_meta.rds"))
 df_weather <- read_rds(paste0(readfile_path, "df_weather.rds"))
+schedule_2_design <- read_csv(paste0(readfile_path, "../schedule_2.csv"))
+schedule_3_design <- read_csv(paste0(readfile_path, "../schedule_3.csv"))
 
 all_sites <- df_energy %>%
   select(site) %>%
@@ -309,36 +311,6 @@ all_names <- df_energy %>%
 df_tmy <- get_tmy(all_sites$site)
 
 
-if (run_params$interval){
-  
-  exclude <- data.frame(date = NA)
-  
-  # 2-day consecutive sampling
-  schedule <- data.frame()
-  for (sample_start in as.list(seq(as.Date(block_params$start_date), as.Date(block_params$start_date) + weeks(block_params$n_weeks), by = block_params$block_unit * 7))){
-    
-    sample_end = sample_start + weeks(block_params$block_unit) - days(1)
-    block <- rand_seq(sample_start, sample_end, 2, 2, exclude)
-    schedule <- rbind(schedule, block$decision_data)
-  }
-  
-  df_schedule_2 <- schedule %>% 
-    rename(datetime = date)
-  
-  # 3-day consecutive sampling
-  schedule <- data.frame()
-  for (sample_start in as.list(seq(as.Date(block_params$start_date), as.Date(block_params$start_date) + weeks(block_params$n_weeks), by = block_params$block_unit * 7))){
-    
-    sample_end = sample_start + weeks(block_params$block_unit) - days(1)
-    block <- rand_seq(sample_start, sample_end, 2, 2, exclude)
-    schedule <- rbind(schedule, block$decision_data)
-  }
-  
-  df_schedule_3 <- schedule %>% 
-    rename(datetime = date)
-}
-
-
 
 
 
@@ -354,6 +326,10 @@ seq_nmsaving <- list()
 seq_frsaving <- list()
 seq_timeline_interval_2 <- list()
 seq_timeline_interval_3 <- list()
+seq_nmsaving_interval_2 <- list()
+seq_frsaving_interval_2 <- list()
+seq_nmsaving_interval_3 <- list()
+seq_frsaving_interval_3 <- list()
 cont_saving <- list()
 interval_saving <- list()
 FS_tmy <- list()
@@ -536,58 +512,58 @@ for (n in 1:(nrow(all_names))){
                         "ref_conv" = MD_conv,
                         "ref_rand" = MD_rand)
   
-  p1 <- df_hourly_conv %>%
-    mutate(savings = base_eload - interv_eload,
-           year = as.factor(year(datetime))) %>%
-    ggplot(aes(x = datetime, y = savings)) +
-    geom_point(alpha = 0.2, size = 0.2) +
-    geom_smooth(formula = y ~ x, method = "loess", linewidth = 0.7) +
-    facet_wrap(~year, scales = "free_x") +
-    scale_x_datetime(date_breaks = "2 months",
-                     date_labels = "%b")  +
-    scale_y_continuous(expand = c(0, 0),
-                       breaks = breaks_pretty(n = 3),
-                       labels = number_format(suffix = " kW")) +
-    labs(x = NULL,
-         y = NULL,
-         color = NULL,
-         subtitle = "Calculated savings") +
-    theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-          legend.direction = "horizontal",
-          axis.text.x = element_blank(),
-          legend.position = "bottom",
-          plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-  
-  p2 <- df_hourly_conv %>%
-    mutate(year = as.factor(year(datetime))) %>%
-    ggplot(aes(x = datetime, y = t_out)) +
-    geom_point(alpha = 0.2, size = 0.2) +
-    geom_smooth(formula = y ~ x, method = "loess", linewidth = 0.7) +
-    facet_wrap(~year, scales = "free_x") +
-    scale_x_datetime(date_breaks = "2 months",
-                     date_labels = "%b")  +
-    scale_y_continuous(expand = c(0, 0),
-                       breaks = breaks_pretty(n = 3),
-                       labels = number_format(suffix = " °C")) +
-    labs(x = NULL,
-         y = NULL,
-         color = NULL,
-         subtitle = "Measured outdoor weather") +
-    theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-          legend.direction = "horizontal",
-          legend.position = "bottom",
-          plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-  
-  ggarrange(p1, p2,
-            ncol=1, nrow=2,
-            labels = c("a)", "b)"),
-            widths = c(1, 1),
-            align = "h",
-            common.legend = TRUE,
-            legend="bottom") +
-    plot_annotation(title = "Case study building intervention savings")
-  
-  ggsave(filename = "savings_true.png", path = sitefigs_path, units = "in", height = 8, width = 10, dpi = 300)
+  # p1 <- df_hourly_conv %>%
+  #   mutate(savings = base_eload - interv_eload,
+  #          year = as.factor(year(datetime))) %>%
+  #   ggplot(aes(x = datetime, y = savings)) +
+  #   geom_point(alpha = 0.2, size = 0.2) +
+  #   geom_smooth(formula = y ~ x, method = "loess", linewidth = 0.7) +
+  #   facet_wrap(~year, scales = "free_x") +
+  #   scale_x_datetime(date_breaks = "2 months",
+  #                    date_labels = "%b")  +
+  #   scale_y_continuous(expand = c(0, 0),
+  #                      breaks = breaks_pretty(n = 3),
+  #                      labels = number_format(suffix = " kW")) +
+  #   labs(x = NULL,
+  #        y = NULL,
+  #        color = NULL,
+  #        subtitle = "Calculated savings") +
+  #   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+  #         legend.direction = "horizontal",
+  #         axis.text.x = element_blank(),
+  #         legend.position = "bottom",
+  #         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+  # 
+  # p2 <- df_hourly_conv %>%
+  #   mutate(year = as.factor(year(datetime))) %>%
+  #   ggplot(aes(x = datetime, y = t_out)) +
+  #   geom_point(alpha = 0.2, size = 0.2) +
+  #   geom_smooth(formula = y ~ x, method = "loess", linewidth = 0.7) +
+  #   facet_wrap(~year, scales = "free_x") +
+  #   scale_x_datetime(date_breaks = "2 months",
+  #                    date_labels = "%b")  +
+  #   scale_y_continuous(expand = c(0, 0),
+  #                      breaks = breaks_pretty(n = 3),
+  #                      labels = number_format(suffix = " °C")) +
+  #   labs(x = NULL,
+  #        y = NULL,
+  #        color = NULL,
+  #        subtitle = "Measured outdoor weather") +
+  #   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+  #         legend.direction = "horizontal",
+  #         legend.position = "bottom",
+  #         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+  # 
+  # ggarrange(p1, p2,
+  #           ncol=1, nrow=2,
+  #           labels = c("a)", "b)"),
+  #           widths = c(1, 1),
+  #           align = "h",
+  #           common.legend = TRUE,
+  #           legend="bottom") +
+  #   plot_annotation(title = "Case study building intervention savings")
+  # 
+  # ggsave(filename = "savings_true.png", path = sitefigs_path, units = "in", height = 8, width = 10, dpi = 300)
   
   
   
@@ -713,14 +689,23 @@ for (n in 1:(nrow(all_names))){
   #### INTERVAL ####
   if (run_params$interval){
     
+    seed <- sample(c(1:20), 1)
+    
     # running on 2-day sampling interval 
+    df_schedule_2 <- schedule_2_design %>% 
+      select(datetime, 
+             strategy = str_glue("strategy_{seed}")) %>% 
+      mutate(switch = ifelse(strategy != lag(strategy), T, F)) %>% 
+      mutate(switch = ifelse(row_number() == 1, F, switch)) 
+    
     df_rand_new <- df_hourly_conv %>%
       left_join(df_schedule_2, by = "datetime") %>%
-      fill(strategy, .direction = "down") %>%
+      fill(c(strategy, switch), .direction = "down") %>%
       filter(datetime <= as.Date("2016-01-01") + weeks(block_params$n_weeks)) %>%
       pivot_longer(c(base_eload, interv_eload), names_to = "eload_type", values_to = "eload") %>%
       filter((strategy == 1 & eload_type == "base_eload") | (strategy == 2 & eload_type == "interv_eload")) %>%
-      select(-eload_type) %>% 
+      filter(switch == 0) %>% 
+      select(-c(eload_type, switch)) %>% 
       drop_na()
     
     # saving calculation as mean difference
@@ -738,15 +723,24 @@ for (n in 1:(nrow(all_names))){
     sprt_overlap_base <- seq_res$sprt_overlap_base
     sprt_overlap_interv <- seq_res$sprt_overlap_interv
     seq_timeline_interval_2[[n]] <- get_timeline(sprt_res, sprt_overlap_base, sprt_overlap_interv)
+    seq_nmsaving_interval_2[[n]] <- get_nmsaving(seq_timeline_interval_2[[n]], sprt_res)
+    seq_frsaving_interval_2[[n]] <- get_frsaving(seq_timeline_interval_2[[n]], df_rand_new)
     
     # running on 3-day sampling interval 
+    df_schedule_3 <- schedule_3_design %>% 
+      select(datetime, 
+             strategy = str_glue("strategy_{seed}")) %>% 
+      mutate(switch = ifelse(strategy != lag(strategy), T, F)) %>% 
+      mutate(switch = ifelse(row_number() == 1, F, switch))
+    
     df_rand_new <- df_hourly_conv %>%
       left_join(df_schedule_3, by = "datetime") %>%
-      fill(strategy, .direction = "down") %>%
+      fill(c(strategy, switch), .direction = "down") %>%
       filter(datetime <= as.Date("2016-01-01") + weeks(block_params$n_weeks)) %>%
       pivot_longer(c(base_eload, interv_eload), names_to = "eload_type", values_to = "eload") %>%
       filter((strategy == 1 & eload_type == "base_eload") | (strategy == 2 & eload_type == "interv_eload")) %>%
-      select(-eload_type) %>% 
+      filter(switch == 0) %>% 
+      select(-c(eload_type, switch)) %>% 
       drop_na()
     
     # saving calculation as mean difference
@@ -764,6 +758,8 @@ for (n in 1:(nrow(all_names))){
     sprt_overlap_base <- seq_res$sprt_overlap_base
     sprt_overlap_interv <- seq_res$sprt_overlap_interv
     seq_timeline_interval_3[[n]] <- get_timeline(sprt_res, sprt_overlap_base, sprt_overlap_interv)
+    seq_nmsaving_interval_3[[n]] <- get_nmsaving(seq_timeline_interval_3[[n]], sprt_res)
+    seq_frsaving_interval_3[[n]] <- get_frsaving(seq_timeline_interval_3[[n]], df_rand_new)
     
     interval_saving[[n]] <- list("name" = name,
                                  "site" = site,
@@ -783,7 +779,7 @@ for (n in 1:(nrow(all_names))){
 
 
 
-#### null ####
+#### NULL ####
 if (run_params$null) {
   
   FS_ref_null <- list()
@@ -1112,18 +1108,50 @@ if (run_params$sprt_cont){
 
 if (run_params$interval){
   
-  df_timeline_interval <- bind_rows(seq_timeline_interval_2) %>% 
-    mutate(interval = 2) %>% 
-    pivot_longer(c(sprt, base_temp, interv_temp, eob, final), names_to = "seq", values_to = "weeks") %>% 
-    left_join(bind_rows(seq_timeline_interval_3) %>% 
-                mutate(interval = 3) %>% 
-                pivot_longer(c(sprt, base_temp, interv_temp, eob, final), names_to = "seq", values_to = "weeks"), 
-              by = c("name", "site", "interval", "seq", "weeks"))
+  seq_FS_interval_2 <- bind_rows(seq_frsaving_interval_2) %>%
+    pivot_longer(-c(name, site), names_to = "seq", values_to = "FS") %>% 
+    left_join(bind_rows(seq_timeline_interval_2) %>%
+                mutate(temp = pmax(base_temp, interv_temp)) %>%
+                select(-c(base_temp, interv_temp)) %>%
+                pivot_longer(-c(name, site), names_to = "seq", values_to = "n_weeks"),
+              by = c("name", "site", "seq")) %>% 
+    mutate(interval = 2)
+  
+  seq_FS_interval_3 <- bind_rows(seq_frsaving_interval_3) %>%
+    pivot_longer(-c(name, site), names_to = "seq", values_to = "FS") %>% 
+    left_join(bind_rows(seq_timeline_interval_3) %>%
+                mutate(temp = pmax(base_temp, interv_temp)) %>%
+                select(-c(base_temp, interv_temp)) %>%
+                pivot_longer(-c(name, site), names_to = "seq", values_to = "n_weeks"),
+              by = c("name", "site", "seq")) %>% 
+    mutate(interval = 3)
+  
+  seq_nm_interval_2 <- bind_rows(seq_nmsaving_interval_2) %>%
+    pivot_longer(-c(name, site), names_to = "seq", values_to = "annual") %>% 
+    left_join(bind_rows(seq_timeline_interval_2) %>%
+                mutate(temp = pmax(base_temp, interv_temp)) %>%
+                select(-c(base_temp, interv_temp)) %>%
+                pivot_longer(-c(name, site), names_to = "seq", values_to = "n_weeks"),
+              by = c("name", "site", "seq")) %>% 
+    mutate(interval = 2)
+  
+  seq_nm_interval_3 <- bind_rows(seq_nmsaving_interval_3) %>%
+    pivot_longer(-c(name, site), names_to = "seq", values_to = "annual") %>% 
+    left_join(bind_rows(seq_timeline_interval_3) %>%
+                mutate(temp = pmax(base_temp, interv_temp)) %>%
+                select(-c(base_temp, interv_temp)) %>%
+                pivot_longer(-c(name, site), names_to = "seq", values_to = "n_weeks"),
+              by = c("name", "site", "seq")) %>% 
+    mutate(interval = 3)
+  
+  df_seq_interval_FS <- bind_rows(seq_FS_interval_2, seq_FS_interval_3)
+  df_seq_interval_nm <- bind_rows(seq_nm_interval_2, seq_nm_interval_3)
   
   df_interval <- bind_rows(interval_saving)
   
-  write_rds(df_timeline_interval, paste0(readfile_path, "df_timeline_interval.rds"), compress = "gz")
   write_rds(df_interval, paste0(readfile_path, "df_interval.rds"), compress = "gz")
+  write_rds(df_seq_interval_FS, paste0(readfile_path, "df_seq_interval_FS.rds"), compress = "gz")
+  write_rds(df_seq_interval_nm, paste0(readfile_path, "df_seq_interval_nm.rds"), compress = "gz")
   
 }
 

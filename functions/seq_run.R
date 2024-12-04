@@ -94,7 +94,7 @@ seq_run <- function(param, dataframe, tmy){
                                     ol_est(., quantile_tmy))
     
     # start estimation after 2 months for complete ftow profile
-    if (i / 4 >= 2 & i %% 4 == 0) {
+    if (i / 4 > 2 & i %% 4 == 0) {
       
       # Update user on the week of update
       # print(paste0("updating TOWT model in week ", i))
@@ -104,41 +104,79 @@ seq_run <- function(param, dataframe, tmy){
     }
     
     # do test
-    results_seq <- seq_ttest(x = value ~ strategy, 
+    results_seq <- try(seq_ttest(x = value ~ strategy, 
                              data = df_seq,
                              d = 0.5, 
                              power = 0.9, 
                              alternative = "less", # greater
                              paired = FALSE,
-                             verbose = TRUE)
+                             verbose = TRUE), silent = T)
+    
+    if (inherits(results_seq, "try-error")) {
+      
+      message("An error occurred. Skipping this part...")
+      skip <- T
+      
+    } else {
+      
+      skip <- F
+    }
     
     # calculate effect size
-    results_ci <- effsize::cohen.d(d = df_seq$value,
+    results_ci <- try(effsize::cohen.d(d = df_seq$value,
                                    f = df_seq$strategy,
                                    conf.level = 0.90,
                                    paired = FALSE,
-                                   na.rm = TRUE)
+                                   na.rm = TRUE), silent = T)
+    
+    if (inherits(results_ci, "try-error")) {
+      
+      message("An error occurred. Skipping this part...")
+      skip <- T
+      
+    } else {
+      
+      skip <- F
+    }
     
     # update user
     # print(paste0("Calculating effect size for week ", i))
     
     # bootstrap effect size
-    results_bs <- bootES::bootES(data = df_seq, R = 1000, 
+    results_bs <- try(bootES::bootES(data = df_seq, R = 1000, 
                                  contrast = c(param$baseline, param$strategy),
-                                 data.col = "value", group.col = "strategy")
+                                 data.col = "value", group.col = "strategy"), silent = T)
+    
+    if (inherits(results_bs, "try-error")) {
+      
+      message("An error occurred. Skipping this part...")
+      skip <- T
+      
+    } else {
+      
+      skip <- F
+    }
     
     # extract test statistic
-    sprt_res[[i]] <- tibble("n_weeks" = i, 
-                            "threshold_lower" = exp(results_seq@B_boundary_log),
-                            "threshold_upper" = exp(results_seq@A_boundary_log),
-                            "statistic" = results_seq@likelihood_ratio,
-                            "decision" = results_seq@decision,
-                            "cohens_d" = round(results_ci$estimate, digits = 2),
-                            "ci_low" = round(results_ci$conf.int[[1]], digits = 2),
-                            "ci_high" = round(results_ci$conf.int[[2]], digits = 2),
-                            "ns_stat" = round(results_bs$t0, digits = 2),
-                            "ns_ci_low" = round(results_bs$bounds[[1]], digits = 2),
-                            "ns_ci_high" = round(results_bs$bounds[[2]], digits = 2))
+    if (skip){
+      
+      sprt_res[[i]] <- NULL
+      
+    } else {
+      sprt_res[[i]] <- tibble("n_weeks" = i, 
+                              "threshold_lower" = exp(results_seq@B_boundary_log),
+                              "threshold_upper" = exp(results_seq@A_boundary_log),
+                              "statistic" = results_seq@likelihood_ratio,
+                              "decision" = results_seq@decision,
+                              "cohens_d" = round(results_ci$estimate, digits = 2),
+                              "ci_low" = round(results_ci$conf.int[[1]], digits = 2),
+                              "ci_high" = round(results_ci$conf.int[[2]], digits = 2),
+                              "ns_stat" = round(results_bs$t0, digits = 2),
+                              "ns_ci_low" = round(results_bs$bounds[[1]], digits = 2),
+                              "ns_ci_high" = round(results_bs$bounds[[2]], digits = 2))
+      
+      
+    }
     
   }    
   
