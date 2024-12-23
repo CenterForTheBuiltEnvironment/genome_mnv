@@ -58,8 +58,8 @@ source(paste0(function_path, "rand_seq.R"))
 run_params <- list(type = "variable", 
                    sprt = F, 
                    sprt_cont = F, 
-                   interval = T, 
-                   null = F)
+                   interval = F, 
+                   null = T)
 
 # Adding intervention effect as advanced chiller operation
 ctr_params <- list(peak_hours = 10:16,                      # accounts for peak hours
@@ -293,6 +293,7 @@ df_meta <- read_rds(paste0(readfile_path, "df_meta.rds"))
 df_weather <- read_rds(paste0(readfile_path, "df_weather.rds"))
 schedule_2_design <- read_csv(paste0(readfile_path, "../schedule_2.csv"))
 schedule_3_design <- read_csv(paste0(readfile_path, "../schedule_3.csv"))
+schedule_7_design <- read_csv(paste0(readfile_path, "../schedule_7.csv"))
 
 all_sites <- df_energy %>%
   select(site) %>%
@@ -326,17 +327,20 @@ seq_nmsaving <- list()
 seq_frsaving <- list()
 seq_timeline_interval_2 <- list()
 seq_timeline_interval_3 <- list()
+seq_timeline_interval_7<- list()
 seq_nmsaving_interval_2 <- list()
 seq_frsaving_interval_2 <- list()
 seq_nmsaving_interval_3 <- list()
 seq_frsaving_interval_3 <- list()
+seq_nmsaving_interval_7<- list()
+seq_frsaving_interval_7<- list()
 cont_saving <- list()
 interval_saving <- list()
 FS_tmy <- list()
 
 # get site information
-# for (n in 1:2){
-for (n in 1:(nrow(all_names))){
+for (n in 1:2){
+# for (n in 1:(nrow(all_names))){
   
   name <- all_names$name[n]
   
@@ -769,6 +773,42 @@ for (n in 1:(nrow(all_names))){
                                  "cont_md_3" = rand_md_3, 
                                  "cont_fs_3" = rand_fs_3, 
                                  "cont_tmy_3" = rand_tmy_3)
+    
+    # running with weekly interval
+    
+    df_schedule_week <- schedule_week_design %>% 
+      select(datetime, 
+             strategy = str_glue("strategy_{seed}")) %>% 
+      mutate(switch = ifelse(strategy != lag(strategy), T, F)) %>% 
+      mutate(switch = ifelse(row_number() == 1, F, switch))
+    
+    df_rand_new <- df_hourly_conv %>%
+      left_join(df_schedule_week, by = "datetime") %>%
+      fill(c(strategy, switch), .direction = "down") %>%
+      filter(datetime <= as.Date("2016-01-01") + weeks(block_params$n_weeks)) %>%
+      pivot_longer(c(base_eload, interv_eload), names_to = "eload_type", values_to = "eload") %>%
+      filter((strategy == 1 & eload_type == "base_eload") | (strategy == 2 & eload_type == "interv_eload")) %>%
+      filter(switch == 0) %>% 
+      select(-c(eload_type, switch)) %>% 
+      drop_na()
+    
+    # saving calculation as mean difference
+    rand_fs_week <- (mean(df_rand_new %>% filter(strategy == 1) %>% .$eload) -
+                    mean(df_rand_new %>% filter(strategy == 2) %>% .$eload)) /
+      mean(df_rand_new %>% filter(strategy == 1) %>% .$eload) * 100
+    
+    # savings at timeline
+    rand_md_week <- mean(df_rand_new %>% filter(strategy == 1) %>% .$eload) - mean(df_rand_new %>% filter(strategy == 2) %>% .$eload)
+    
+    rand_tmy_week <- saving_norm(df_rand_new %>% mutate(week = NA), site_tmy)
+    
+    seq_res <- seq_run(sprt_param, df_rand_new, site_tmy)
+    sprt_res <- seq_res$sprt_res
+    sprt_overlap_base <- seq_res$sprt_overlap_base
+    sprt_overlap_interv <- seq_res$sprt_overlap_interv
+    seq_timeline_interval_7[[n]] <- get_timeline(sprt_res, sprt_overlap_base, sprt_overlap_interv)
+    seq_nmsaving_interval_7[[n]] <- get_nmsaving(seq_timeline_interval_7[[n]], sprt_res)
+    seq_frsaving_interval_7[[n]] <- get_frsaving(seq_timeline_interval_7[[n]], df_rand_new)
   }
   
   print(paste0("Finished: ", n, "/", nrow(all_names)))
@@ -1003,13 +1043,23 @@ if (run_params$null) {
                                 "conv" = conv_tmy)
     
     # running on 2-day sampling interval 
+    seed <- sample(c(1:20), 1)
+    
+    # running on 2-day sampling interval 
+    df_schedule_2 <- schedule_2_design %>% 
+      select(datetime, 
+             strategy = str_glue("strategy_{seed}")) %>% 
+      mutate(switch = ifelse(strategy != lag(strategy), T, F)) %>% 
+      mutate(switch = ifelse(row_number() == 1, F, switch))
+    
     df_rand_new <- df_hourly_conv %>%
       left_join(df_schedule_2, by = "datetime") %>%
-      fill(strategy, .direction = "down") %>%
+      fill(c(strategy, switch), .direction = "down") %>%
       filter(datetime <= as.Date("2016-01-01") + weeks(block_params$n_weeks)) %>%
       pivot_longer(c(base_eload, interv_eload), names_to = "eload_type", values_to = "eload") %>%
       filter((strategy == 1 & eload_type == "base_eload") | (strategy == 2 & eload_type == "interv_eload")) %>%
-      select(-eload_type) %>% 
+      filter(switch == 0) %>% 
+      select(-c(eload_type, switch)) %>% 
       drop_na()
     
     # saving calculation as mean difference
@@ -1023,13 +1073,20 @@ if (run_params$null) {
     rand_tmy_2 <- saving_norm(df_rand_new %>% mutate(week = NA), site_tmy)
     
     # running on 3-day sampling interval 
+    df_schedule_3 <- schedule_3_design %>% 
+      select(datetime, 
+             strategy = str_glue("strategy_{seed}")) %>% 
+      mutate(switch = ifelse(strategy != lag(strategy), T, F)) %>% 
+      mutate(switch = ifelse(row_number() == 1, F, switch))
+    
     df_rand_new <- df_hourly_conv %>%
       left_join(df_schedule_3, by = "datetime") %>%
-      fill(strategy, .direction = "down") %>%
+      fill(c(strategy, switch), .direction = "down") %>%
       filter(datetime <= as.Date("2016-01-01") + weeks(block_params$n_weeks)) %>%
       pivot_longer(c(base_eload, interv_eload), names_to = "eload_type", values_to = "eload") %>%
       filter((strategy == 1 & eload_type == "base_eload") | (strategy == 2 & eload_type == "interv_eload")) %>%
-      select(-eload_type) %>% 
+      filter(switch == 0) %>% 
+      select(-c(eload_type, switch)) %>% 
       drop_na()
     
     # saving calculation as mean difference
@@ -1126,6 +1183,15 @@ if (run_params$interval){
               by = c("name", "site", "seq")) %>% 
     mutate(interval = 3)
   
+  seq_FS_interval_7 <- bind_rows(seq_frsaving_interval_7) %>%
+    pivot_longer(-c(name, site), names_to = "seq", values_to = "FS") %>% 
+    left_join(bind_rows(seq_timeline_interval_7) %>%
+                mutate(temp = pmax(base_temp, interv_temp)) %>%
+                select(-c(base_temp, interv_temp)) %>%
+                pivot_longer(-c(name, site), names_to = "seq", values_to = "n_weeks"),
+              by = c("name", "site", "seq")) %>% 
+    mutate(interval = 7)
+  
   seq_nm_interval_2 <- bind_rows(seq_nmsaving_interval_2) %>%
     pivot_longer(-c(name, site), names_to = "seq", values_to = "annual") %>% 
     left_join(bind_rows(seq_timeline_interval_2) %>%
@@ -1144,8 +1210,17 @@ if (run_params$interval){
               by = c("name", "site", "seq")) %>% 
     mutate(interval = 3)
   
-  df_seq_interval_FS <- bind_rows(seq_FS_interval_2, seq_FS_interval_3)
-  df_seq_interval_nm <- bind_rows(seq_nm_interval_2, seq_nm_interval_3)
+  seq_nm_interval_7 <- bind_rows(seq_nmsaving_interval_7) %>%
+    pivot_longer(-c(name, site), names_to = "seq", values_to = "annual") %>% 
+    left_join(bind_rows(seq_timeline_interval_7) %>%
+                mutate(temp = pmax(base_temp, interv_temp)) %>%
+                select(-c(base_temp, interv_temp)) %>%
+                pivot_longer(-c(name, site), names_to = "seq", values_to = "n_weeks"),
+              by = c("name", "site", "seq")) %>% 
+    mutate(interval = 7)
+  
+  df_seq_interval_FS <- bind_rows(seq_FS_interval_2, seq_FS_interval_3, seq_FS_interval_7)
+  df_seq_interval_nm <- bind_rows(seq_nm_interval_2, seq_nm_interval_3, seq_nm_interval_7)
   
   df_interval <- bind_rows(interval_saving)
   
