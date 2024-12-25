@@ -109,7 +109,7 @@ rand_seq <- function(start_date, end_date, interval, threshold, exclude){
     } else {
       regenerate <- F
       success <- T
-      print("success!")
+      # print("success!")
     }
   }
   
@@ -126,7 +126,7 @@ rand_seq <- function(start_date, end_date, interval, threshold, exclude){
       } else {
         regenerate <- F
         success <- T
-        print("success in loose!")
+        # print("success in loose!")
       }
     }
   }

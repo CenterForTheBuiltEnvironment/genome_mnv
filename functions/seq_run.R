@@ -83,15 +83,35 @@ seq_run <- function(param, dataframe, tmy){
       droplevels()
     
     # Calculate overlapping temperature range
-    overlap_base[[i]] <- tibble("n_weeks" = i, 
+    overlap <- try(tibble("n_weeks" = i, 
                                 overlap_base = sprt_hourly %>%
                                   filter(week <= i & strategy == 1) %>% 
-                                  ol_est(., quantile_tmy))
+                                  ol_est(., quantile_tmy)), silent = T)
+    if (inherits(overlap, "try-error")) {
+      
+      message("An error occurred. Skipping this part...")
+      overlap_base[[i]] <- NULL
+      
+    } else {
+      overlap_base[[i]] <- overlap
+      
+    }
     
-    overlap_interv[[i]] <- tibble("n_weeks" = i, 
+    
+    overlap <- try(tibble("n_weeks" = i, 
                                   overlap_interv = sprt_hourly %>%
                                     filter(week <= i & strategy == 2) %>% 
-                                    ol_est(., quantile_tmy))
+                                    ol_est(., quantile_tmy)), silent = T)
+    
+    if (inherits(overlap, "try-error")) {
+      
+      message("An error occurred. Skipping this part...")
+      overlap_interv[[i]] <- NULL
+      
+    } else {
+      overlap_interv[[i]] <- overlap
+      
+    }
     
     # start estimation after 2 months for complete ftow profile
     if (i / 4 > 2 & i %% 4 == 0) {

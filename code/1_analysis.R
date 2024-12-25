@@ -58,7 +58,7 @@ source(paste0(function_path, "rand_seq.R"))
 run_params <- list(type = "variable", 
                    sprt = F, 
                    sprt_cont = F, 
-                   interval = F, 
+                   interval = T, 
                    null = T)
 
 # Adding intervention effect as advanced chiller operation
@@ -339,8 +339,8 @@ interval_saving <- list()
 FS_tmy <- list()
 
 # get site information
-for (n in 1:2){
-# for (n in 1:(nrow(all_names))){
+# for (n in 1:2){
+for (n in 1:(nrow(all_names))){
   
   name <- all_names$name[n]
   
@@ -764,26 +764,17 @@ for (n in 1:2){
     seq_timeline_interval_3[[n]] <- get_timeline(sprt_res, sprt_overlap_base, sprt_overlap_interv)
     seq_nmsaving_interval_3[[n]] <- get_nmsaving(seq_timeline_interval_3[[n]], sprt_res)
     seq_frsaving_interval_3[[n]] <- get_frsaving(seq_timeline_interval_3[[n]], df_rand_new)
-    
-    interval_saving[[n]] <- list("name" = name,
-                                 "site" = site,
-                                 "cont_md_2" = rand_md_2, 
-                                 "cont_fs_2" = rand_fs_2, 
-                                 "cont_tmy_2" = rand_tmy_2, 
-                                 "cont_md_3" = rand_md_3, 
-                                 "cont_fs_3" = rand_fs_3, 
-                                 "cont_tmy_3" = rand_tmy_3)
+  
     
     # running with weekly interval
-    
-    df_schedule_week <- schedule_week_design %>% 
+    df_schedule_7 <- schedule_7_design %>% 
       select(datetime, 
              strategy = str_glue("strategy_{seed}")) %>% 
       mutate(switch = ifelse(strategy != lag(strategy), T, F)) %>% 
       mutate(switch = ifelse(row_number() == 1, F, switch))
     
     df_rand_new <- df_hourly_conv %>%
-      left_join(df_schedule_week, by = "datetime") %>%
+      left_join(df_schedule_7, by = "datetime") %>%
       fill(c(strategy, switch), .direction = "down") %>%
       filter(datetime <= as.Date("2016-01-01") + weeks(block_params$n_weeks)) %>%
       pivot_longer(c(base_eload, interv_eload), names_to = "eload_type", values_to = "eload") %>%
@@ -793,14 +784,14 @@ for (n in 1:2){
       drop_na()
     
     # saving calculation as mean difference
-    rand_fs_week <- (mean(df_rand_new %>% filter(strategy == 1) %>% .$eload) -
+    rand_fs_7 <- (mean(df_rand_new %>% filter(strategy == 1) %>% .$eload) -
                     mean(df_rand_new %>% filter(strategy == 2) %>% .$eload)) /
       mean(df_rand_new %>% filter(strategy == 1) %>% .$eload) * 100
     
     # savings at timeline
-    rand_md_week <- mean(df_rand_new %>% filter(strategy == 1) %>% .$eload) - mean(df_rand_new %>% filter(strategy == 2) %>% .$eload)
+    rand_md_7 <- mean(df_rand_new %>% filter(strategy == 1) %>% .$eload) - mean(df_rand_new %>% filter(strategy == 2) %>% .$eload)
     
-    rand_tmy_week <- saving_norm(df_rand_new %>% mutate(week = NA), site_tmy)
+    rand_tmy_7 <- saving_norm(df_rand_new %>% mutate(week = NA), site_tmy)
     
     seq_res <- seq_run(sprt_param, df_rand_new, site_tmy)
     sprt_res <- seq_res$sprt_res
@@ -809,6 +800,18 @@ for (n in 1:2){
     seq_timeline_interval_7[[n]] <- get_timeline(sprt_res, sprt_overlap_base, sprt_overlap_interv)
     seq_nmsaving_interval_7[[n]] <- get_nmsaving(seq_timeline_interval_7[[n]], sprt_res)
     seq_frsaving_interval_7[[n]] <- get_frsaving(seq_timeline_interval_7[[n]], df_rand_new)
+    
+    interval_saving[[n]] <- list("name" = name,
+                                 "site" = site,
+                                 "interval_md_2" = rand_md_2, 
+                                 "interval_fs_2" = rand_fs_2, 
+                                 "interval_tmy_2" = rand_tmy_2, 
+                                 "interval_md_3" = rand_md_3, 
+                                 "interval_fs_3" = rand_fs_3, 
+                                 "interval_tmy_3" = rand_tmy_3, 
+                                 "interval_md_7" = rand_md_7, 
+                                 "interval_fs_7" = rand_fs_7, 
+                                 "interval_tmy_7" = rand_tmy_7)
   }
   
   print(paste0("Finished: ", n, "/", nrow(all_names)))
@@ -1099,14 +1102,44 @@ if (run_params$null) {
     
     rand_tmy_3 <- saving_norm(df_rand_new %>% mutate(week = NA), site_tmy)
     
+    # running with weekly interval
+    df_schedule_7 <- schedule_7_design %>% 
+      select(datetime, 
+             strategy = str_glue("strategy_{seed}")) %>% 
+      mutate(switch = ifelse(strategy != lag(strategy), T, F)) %>% 
+      mutate(switch = ifelse(row_number() == 1, F, switch))
+    
+    df_rand_new <- df_hourly_conv %>%
+      left_join(df_schedule_7, by = "datetime") %>%
+      fill(c(strategy, switch), .direction = "down") %>%
+      filter(datetime <= as.Date("2016-01-01") + weeks(block_params$n_weeks)) %>%
+      pivot_longer(c(base_eload, interv_eload), names_to = "eload_type", values_to = "eload") %>%
+      filter((strategy == 1 & eload_type == "base_eload") | (strategy == 2 & eload_type == "interv_eload")) %>%
+      filter(switch == 0) %>% 
+      select(-c(eload_type, switch)) %>% 
+      drop_na()
+    
+    # saving calculation as mean difference
+    rand_fs_7 <- (mean(df_rand_new %>% filter(strategy == 1) %>% .$eload) -
+                       mean(df_rand_new %>% filter(strategy == 2) %>% .$eload)) /
+      mean(df_rand_new %>% filter(strategy == 1) %>% .$eload) * 100
+    
+    # savings at timeline
+    rand_md_7 <- mean(df_rand_new %>% filter(strategy == 1) %>% .$eload) - mean(df_rand_new %>% filter(strategy == 2) %>% .$eload)
+    
+    rand_tmy_7 <- saving_norm(df_rand_new %>% mutate(week = NA), site_tmy)
+    
     interval_null[[n]] <- list("name" = name,
-                                 "site" = site,
-                                 "cont_md_2" = rand_md_2, 
-                                 "cont_fs_2" = rand_fs_2, 
-                                 "cont_tmy_2" = rand_tmy_2, 
-                                 "cont_md_3" = rand_md_3, 
-                                 "cont_fs_3" = rand_fs_3, 
-                                 "cont_tmy_3" = rand_tmy_3)
+                               "site" = site,
+                               "interval_md_2" = rand_md_2, 
+                               "interval_fs_2" = rand_fs_2, 
+                               "interval_tmy_2" = rand_tmy_2, 
+                               "interval_md_3" = rand_md_3, 
+                               "interval_fs_3" = rand_fs_3, 
+                               "interval_tmy_3" = rand_tmy_3, 
+                               "interval_md_7" = rand_md_7, 
+                               "interval_fs_7" = rand_fs_7, 
+                               "interval_tmy_7" = rand_tmy_7)
 
     print(paste0("Finished: ", n, "/", nrow(all_names)))
   

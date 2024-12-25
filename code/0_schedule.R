@@ -101,16 +101,25 @@ while (i <= block_params$pool){
   }
 
   # weekly switching schedules
-  df_schedule_7 <- data.frame(datetime = seq(as.Date(block_params$start_date), 
-                                                    as.Date(block_params$start_date) + weeks(block_params$n_weeks) - days(1), 
-                                                    by = "1 day")) %>% 
-    mutate(!!str_glue("strategy_{i}") := rep(sample(c(1, 2), block_params$n_weeks, replace = T), each = 7))
+  schedule <- data.frame()
+  for (sample_start in as.list(seq(as.Date(block_params$start_date), as.Date(block_params$start_date) + weeks(block_params$n_weeks), by = block_params$block_unit * 7))){
+    
+    sample_end = sample_start + weeks(block_params$block_unit) - days(1)
+    block <- rand_seq(sample_start, sample_end, 7, 10, exclude)
+    schedule <- rbind(schedule, block$decision_data)
+  }
+  
+  df_schedule_7 <- schedule %>%
+    rename(datetime = date,
+           !!str_glue("strategy_{i}") := strategy)
   
   if (nrow(schedule_7_design) == 0) {
     schedule_7_design <- df_schedule_7
   } else {
     schedule_7_design <- left_join(schedule_7_design, df_schedule_7, by = "datetime")
   }
+  
+  print(paste0("finished ", i))
   
   i <- i + 1
 }

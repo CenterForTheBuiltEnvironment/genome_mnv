@@ -38,6 +38,7 @@ ls_colors <- c("Baseline" = "#c6dbef",
                "Daily\nsampling" = "#66c2a4",
                "2-day\nsampling" = "#41ae76",
                "3-day\nsampling" = "#238b45",
+               "7-day\nsampling" = "#006d2c",
                "Randomized\n(20/80)" = "#ccece6",
                "Buildings finishing randomized M&V" =  "#99d8c9",
                "Buildings satisfying 80% TMY range" = "black", 
@@ -151,7 +152,7 @@ df_loc <- read.csv("../readfiles/loc_map.csv")
 
 # stable dataset
 readfile_stable <- str_glue("../readfiles/stable/")
-fig_path = "../figs/graphical_abs/"
+fig_path = "../figs/manuscript/"
 
 df_energy_stable <- read_rds(paste0(readfile_stable, "df_energy.rds"))
 df_meta_stable <- read_rds(paste0(readfile_stable, "df_meta.rds"))
@@ -202,6 +203,7 @@ df_FS_null_variable <- read_rds(paste0(readfile_variable, "df_FS_null.rds"))
 df_MD_null_variable <- read_rds(paste0(readfile_variable, "df_MD_null.rds"))
 df_seq_FS_null_variable <- read_rds(paste0(readfile_variable, "df_seq_FS_null.rds"))
 df_model_acc_variable <- read_rds(paste0(readfile_variable, "df_model_acc.rds"))
+
 df_FS_tmy_variable <- read_rds(paste0(readfile_variable, "df_FS_tmy.rds"))
 df_FS_tmy_null_variable <- read_rds(paste0(readfile_variable, "df_FS_tmy_null.rds"))
 df_interval_variable <- read_rds(paste0(readfile_variable, "df_interval.rds"))
@@ -236,105 +238,53 @@ A_building <- S_building + V_building
 
 
 
-#### ABSTRACT ####
-# plot for the stable subset
+#### GA ####
 rand_eob_S <- df_seq_FS_stable %>% 
   filter(seq == "eob") %>% 
   left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = savings - FS, 
+  mutate(diff = abs(savings - FS), 
          method = "rand_eob") %>% 
   select(name, method, diff)
 
 conv_S <- df_FS_stable %>% 
   filter(method != "rand") %>% 
   pivot_wider(names_from = method, values_from = savings) %>% 
-  mutate(diff = true - conv, 
+  mutate(diff = abs(true - conv), 
          method = "conv") %>% 
   select(name, method, diff)
 
 rand_final_S <- df_FS_stable %>% 
   filter(method != "conv") %>% 
   pivot_wider(names_from = method, values_from = savings) %>% 
-  mutate(diff = true - rand, 
+  mutate(diff = abs(true - rand), 
          method = "rand_final") %>% 
   select(name, method, diff)
 
-df_acc_S <- rbind(rand_eob_S, conv_S, rand_final_S)
-
-p1 <- df_acc_S %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "conv" = "Conventional", "rand_eob" = "Randomized", "rand_final" = "Randomized\n(24 months)")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.shape = NA, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = NULL, 
-       subtitle = str_glue("{S_building} stable buildings")) +
-  coord_cartesian(ylim = c(-18, 18)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text = element_blank(), 
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+df_MW_S <- rbind(rand_eob_S, conv_S, rand_final_S)
 
 # plot for the variable subset
 rand_eob_V <- df_seq_FS_variable %>% 
   filter(seq == "eob") %>% 
   left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site"))%>% 
-  mutate(diff = savings - FS, 
+  mutate(diff = abs(savings - FS), 
          method = "rand_eob") %>% 
   select(name, method, diff)
 
 conv_V <- df_FS_variable %>% 
   filter(method != "rand") %>% 
   pivot_wider(names_from = method, values_from = savings) %>% 
-  mutate(diff = true - conv, 
+  mutate(diff = abs(true - conv), 
          method = "conv") %>% 
   select(name, method, diff)
 
 rand_final_V <- df_FS_variable %>% 
   filter(method != "conv") %>% 
   pivot_wider(names_from = method, values_from = savings) %>% 
-  mutate(diff = true - rand, 
+  mutate(diff = abs(true - rand), 
          method = "rand_final") %>% 
   select(name, method, diff)
 
-df_acc_V <- rbind(rand_eob_V, conv_V, rand_final_V)
-
-p2 <- df_acc_V %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "conv" = "Conventional", "rand_eob" = "Randomized", "rand_final" = "Randomized\n(24 months)")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = NULL, 
-       subtitle = str_glue("{V_building} variable buildings")) +
-  coord_cartesian(ylim = c(-18, 18)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text = element_blank(), 
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
+df_MW_V <- rbind(rand_eob_V, conv_V, rand_final_V)
 
 # plot for combined dataset
 rand_eob_A <- bind_rows(rand_eob_V, rand_eob_S) %>% 
@@ -346,19 +296,19 @@ conv_A <- bind_rows(conv_V, conv_S) %>%
 rand_final_A <- bind_rows(rand_final_V, rand_final_S) %>% 
   select(name, rand_final_diff = diff)
 
-df_acc_A <- rand_eob_A %>% 
+df_MW_A <- rand_eob_A %>% 
   left_join(conv_A, by = "name") %>% 
   left_join(rand_final_A, by = "name") %>% 
   pivot_longer(c(rand_eob_diff, conv_diff, rand_final_diff), names_to = "method", values_to = "diff")
 
-p3 <- df_acc_A %>% 
+p_top <- df_MW_A %>% 
   mutate(method = as.factor(method), 
          method = recode_factor(method, "conv_diff" = "Conventional", "rand_eob_diff" = "Randomized", "rand_final_diff" = "Randomized\n(24 months)")) %>% 
   ggplot(aes(x = method, y = diff, fill = method)) +
   geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
   geom_lv(k = 4, outlier.shape = NA) +
   geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
+  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
   geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
             aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
   scale_y_continuous(expand = c(0, 0), 
@@ -367,119 +317,62 @@ p3 <- df_acc_A %>%
   scale_fill_manual(values = ls_colors) +
   scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
   labs(fill = NULL, 
+       color = NULL, 
        x = NULL, 
-       y = "Error in fractional savings", 
-       subtitle = str_glue("All {A_building} buildings")) +
-  coord_cartesian(ylim = c(-18, 18)) +
+       y = "Absolute error in fractional savings", 
+       subtitle = str_glue("All {A_building} buildings with measured weather")) +
+  coord_cartesian(ylim = c(0, 23)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
         legend.position = "none",
         axis.text.x = element_blank(),
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 
-p_top <- ggarrange(p3, p1, p2,
-          ncol = 3, nrow = 1,
-          labels = c("a)", "b)", "c)"),
-          align = "hv",
-          legend="none") +
-  plot_annotation(subtitle = "Accuracy comparison with measured weather conditions")
-
-# TMY 
+# TMY
 # plot for the stable subset
 rand_eob_S <- df_sprt_all_stable %>% 
   filter(seq == "eob") %>% 
   select(-c(seq, sprt, n_weeks)) %>% 
   left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = savings - annual, 
+  mutate(diff = abs(savings - annual), 
          method = "rand_eob") %>% 
   select(name, method, diff)
 
 conv_S <- df_FS_tmy_stable %>% 
   left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = savings - conv, 
+  mutate(diff = abs(savings - conv), 
          method = "conv") %>% 
   select(name, method, diff)
 
 rand_final_S <- df_FS_tmy_stable %>% 
   left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = savings - rand, 
+  mutate(diff = abs(savings - rand), 
          method = "rand_final") %>% 
   select(name, method, diff)
 
-df_acc_S <- rbind(rand_eob_S, conv_S, rand_final_S)
-
-p1 <- df_acc_S %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "conv" = "Conventional", "rand_eob" = "Randomized", "rand_final" = "Randomized\n(24 months)")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = NULL, 
-       subtitle = str_glue("{S_building} stable buildings")) +
-  coord_cartesian(ylim = c(-18, 18)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text.y = element_blank(), 
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+df_TW_S <- rbind(rand_eob_S, conv_S, rand_final_S)
 
 # plot for the variable subset
 rand_eob_V <- df_sprt_all_variable %>% 
   filter(seq == "eob") %>% 
   select(-c(seq, sprt, n_weeks)) %>% 
   left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = savings - annual, 
+  mutate(diff = abs(savings - annual), 
          method = "rand_eob") %>% 
   select(name, method, diff)
 
 conv_V <- df_FS_tmy_variable %>% 
   left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = savings - conv, 
+  mutate(diff = abs(savings - conv), 
          method = "conv") %>% 
   select(name, method, diff)
 
 rand_final_V <- df_FS_tmy_variable %>% 
   left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = savings - rand, 
+  mutate(diff = abs(savings - rand), 
          method = "rand_final") %>% 
   select(name, method, diff)
 
-df_acc_V <- rbind(rand_eob_V, conv_V, rand_final_V)
-
-p2 <- df_acc_V %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "conv" = "Conventional", "rand_eob" = "Randomized", "rand_final" = "Randomized\n(24 months)")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = NULL, 
-       subtitle = str_glue("{V_building} variable buildings")) +
-  coord_cartesian(ylim = c(-18, 18)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text.y = element_blank(), 
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
+df_TW_V <- rbind(rand_eob_V, conv_V, rand_final_V)
 
 # plot for combined dataset
 rand_eob_A <- bind_rows(rand_eob_V, rand_eob_S) %>% 
@@ -491,19 +384,19 @@ conv_A <- bind_rows(conv_V, conv_S) %>%
 rand_final_A <- bind_rows(rand_final_V, rand_final_S) %>% 
   select(name, rand_final_diff = diff)
 
-df_acc_A <- rand_eob_A %>% 
+df_TW_A <- rand_eob_A %>% 
   left_join(conv_A, by = "name") %>% 
   left_join(rand_final_A, by = "name") %>% 
   pivot_longer(c(rand_eob_diff, conv_diff, rand_final_diff), names_to = "method", values_to = "diff")
 
-p3 <- df_acc_A %>% 
+p_middle <- df_TW_A %>% 
   mutate(method = as.factor(method), 
          method = recode_factor(method, "conv_diff" = "Conventional", "rand_eob_diff" = "Randomized", "rand_final_diff" = "Randomized\n(24 months)")) %>% 
   ggplot(aes(x = method, y = diff, fill = method)) +
   geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
   geom_lv(k = 4, outlier.shape = NA) +
   geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
+  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
   geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
             aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
   scale_y_continuous(expand = c(0, 0), 
@@ -513,19 +406,12 @@ p3 <- df_acc_A %>%
   scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
   labs(fill = NULL, 
        x = NULL, 
-       y = "Error in fractional savings", 
-       subtitle = str_glue("All {A_building} buildings")) +
-  coord_cartesian(ylim = c(-18, 18)) +
+       y = "Absolute error in fractional savings", 
+       subtitle = str_glue("All {A_building} buildings with TMY weather")) +
+  coord_cartesian(ylim = c(0, 23)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
         legend.position = "none",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-p_middle <- ggarrange(p3, p1, p2,
-                      ncol = 3, nrow = 1,
-                      labels = c("d)", "e)", "f)"),
-                      align = "hv",
-                      legend="none") +
-  plot_annotation(subtitle = "Accuracy comparison with typical meteorological weather")
 
 # Timeline plot
 df_time <- df_sprt_all_variable %>% 
@@ -611,304 +497,13 @@ p_bottom <- count %>%
 
 ggarrange(p_top, p_middle, p_bottom, 
           ncol = 1, nrow = 3,
-          heights = c(1.5, 1.5, 1),
-          labels = c(" ", " ", "g)"),
+          heights = c(1.2, 1.2, 1),
+          labels = c("a)", "b)", "c)"),
+          common.legend = T, 
           legend = "bottom") +
   plot_annotation(title = "M&V overall results comparison")
 
-ggsave(filename = "graphical_abs.png", path = fig_path, units = "in", height = 12, width = 12, dpi = 300)
-
-
-
-
-
-#### NULL ####
-rand_eob_S <- df_seq_FS_null_stable %>% 
-  filter(seq == "eob") %>% 
-  mutate(diff = 0 - FS, 
-         method = "rand_eob") %>% 
-  select(name, method, diff)
-
-conv_S <- df_FS_null_stable %>% 
-  filter(method != "rand") %>% 
-  pivot_wider(names_from = method, values_from = savings) %>% 
-  mutate(diff = true - conv, 
-         method = "conv") %>% 
-  select(name, method, diff)
-
-rand_final_S <- df_FS_null_stable %>% 
-  filter(method != "conv") %>% 
-  pivot_wider(names_from = method, values_from = savings) %>% 
-  mutate(diff = true - rand, 
-         method = "rand_final") %>% 
-  select(name, method, diff)
-
-df_acc_S <- rbind(rand_eob_S, conv_S, rand_final_S)
-
-p1 <- df_acc_S %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "conv" = "Conventional", "rand_eob" = "Randomized", "rand_final" = "Randomized\n(24 months)")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = NULL, 
-       subtitle = str_glue("{S_building} stable buildings")) +
-  coord_cartesian(ylim = c(-18, 18)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text = element_blank(), 
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-# plot for the variable subset
-rand_eob_V <- df_seq_FS_null_variable %>% 
-  filter(seq == "eob") %>% 
-  mutate(diff = 0 - FS, 
-         method = "rand_eob") %>% 
-  select(name, method, diff)
-
-conv_V <- df_FS_null_variable %>% 
-  filter(method != "rand") %>% 
-  pivot_wider(names_from = method, values_from = savings) %>% 
-  mutate(diff = true - conv, 
-         method = "conv") %>% 
-  select(name, method, diff)
-
-rand_final_V <- df_FS_null_variable %>% 
-  filter(method != "conv") %>% 
-  pivot_wider(names_from = method, values_from = savings) %>% 
-  mutate(diff = true - rand, 
-         method = "rand_final") %>% 
-  select(name, method, diff)
-
-df_acc_V <- rbind(rand_eob_V, conv_V, rand_final_V)
-
-p2 <- df_acc_V %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "conv" = "Conventional", "rand_eob" = "Randomized", "rand_final" = "Randomized\n(24 months)")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = NULL, 
-       subtitle = str_glue("{V_building} variable buildings")) +
-  coord_cartesian(ylim = c(-18, 18)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text = element_blank(), 
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-
-# plot for combined dataset
-rand_eob_A <- bind_rows(rand_eob_V, rand_eob_S) %>% 
-  select(name, rand_eob_diff = diff)
-
-conv_A <- bind_rows(conv_V, conv_S) %>% 
-  select(name, conv_diff = diff)
-
-rand_final_A <- bind_rows(rand_final_V, rand_final_S) %>% 
-  select(name, rand_final_diff = diff)
-
-df_acc_A <- rand_eob_A %>% 
-  left_join(conv_A, by = "name") %>% 
-  left_join(rand_final_A, by = "name") %>% 
-  pivot_longer(c(rand_eob_diff, conv_diff, rand_final_diff), names_to = "method", values_to = "diff")
-
-p3 <- df_acc_A %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "conv_diff" = "Conventional", "rand_eob_diff" = "Randomized", "rand_final_diff" = "Randomized\n(24 months)")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = "Error in fractional savings", 
-       subtitle = str_glue("All {A_building} buildings")) +
-  coord_cartesian(ylim = c(-18, 18)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text.x = element_blank(),
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-p_top <- ggarrange(p3, p1, p2,
-                   ncol = 3, nrow = 1,
-                   labels = c("a)", "b)", "c)"),
-                   align = "hv",
-                   legend="none") +
-  plot_annotation(subtitle = "with measured weather")
-
-rand_eob_S <- df_FS_tmy_null_stable %>% 
-  left_join(df_FS_null_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = savings - rand, 
-         method = "rand_eob") %>% 
-  select(name, method, diff)
-
-conv_S <- df_FS_tmy_null_stable %>% 
-  mutate(diff = 0 - conv, 
-         method = "conv") %>% 
-  select(name, method, diff)
-
-rand_final_S <- df_FS_tmy_null_stable %>% 
-  mutate(diff = 0 - rand, 
-         method = "rand_final") %>% 
-  select(name, method, diff)
-
-df_acc_S <- rbind(rand_eob_S, conv_S, rand_final_S)
-
-p1 <- df_acc_S %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "conv" = "Conventional", "rand_eob" = "Randomized", "rand_final" = "Randomized\n(24 months)")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = NULL, 
-       subtitle = str_glue("{S_building} stable buildings")) +
-  coord_cartesian(ylim = c(-18, 18)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text.y = element_blank(), 
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-# plot for variable set
-rand_eob_V <- df_FS_tmy_null_variable %>% 
-  left_join(df_FS_null_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = savings - rand, 
-         method = "rand_eob") %>% 
-  select(name, method, diff)
-
-conv_V <- df_FS_tmy_null_variable %>% 
-  mutate(diff = 0 - conv, 
-         method = "conv") %>% 
-  select(name, method, diff)
-
-rand_final_V <- df_FS_tmy_null_variable %>% 
-  mutate(diff = 0 - rand, 
-         method = "rand_final") %>% 
-  select(name, method, diff)
-
-df_acc_V <- rbind(rand_eob_V, conv_V, rand_final_V)
-
-p2 <- df_acc_V %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "conv" = "Conventional", "rand_eob" = "Randomized", "rand_final" = "Randomized\n(24 months)")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = NULL, 
-       subtitle = str_glue("{V_building} stable buildings")) +
-  coord_cartesian(ylim = c(-18, 18)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text.y = element_blank(), 
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-# plot for combined dataset
-rand_eob_A <- bind_rows(rand_eob_V, rand_eob_S) %>% 
-  select(name, rand_eob_diff = diff)
-
-conv_A <- bind_rows(conv_V, conv_S) %>% 
-  select(name, conv_diff = diff)
-
-rand_final_A <- bind_rows(rand_final_V, rand_final_S) %>% 
-  select(name, rand_final_diff = diff)
-
-df_acc_A <- rand_eob_A %>% 
-  left_join(conv_A, by = "name") %>% 
-  left_join(rand_final_A, by = "name") %>% 
-  pivot_longer(c(rand_eob_diff, conv_diff, rand_final_diff), names_to = "method", values_to = "diff")
-
-p3 <- df_acc_A %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "conv_diff" = "Conventional", "rand_eob_diff" = "Randomized", "rand_final_diff" = "Randomized\n(24 months)")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = "Error in fractional savings", 
-       subtitle = str_glue("All {A_building} buildings")) +
-  coord_cartesian(ylim = c(-18, 18)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-p_bottom <- ggarrange(p3, p1, p2,
-                      ncol = 3, nrow = 1,
-                      labels = c("d)", "e)", "f)"),
-                      align = "hv",
-                      legend="none") +
-  plot_annotation(subtitle = "with typical meteorological weather")
-
-ggarrange(p_top, p_bottom, 
-          nrow = 2, 
-          align = "hv", 
-          common.legend = T, 
-          legend = "bottom") +
-  plot_annotation(title = "No-saving M&V accuracy comparison")
-
-ggsave(filename = "null.png", path = fig_path, units = "in", height = 9, width = 12, dpi = 300)
-
-
+ggsave(filename = "abstract.png", path = fig_path, units = "in", height = 12, width = 10, dpi = 300)
 
 
 
@@ -916,30 +511,7 @@ ggsave(filename = "null.png", path = fig_path, units = "in", height = 9, width =
 
 #### ABS ####
 # plot for the stable subset
-rand_eob_S <- df_seq_FS_stable %>% 
-  filter(seq == "eob") %>% 
-  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - FS), 
-         method = "rand_eob") %>% 
-  select(name, method, diff)
-
-conv_S <- df_FS_stable %>% 
-  filter(method != "rand") %>% 
-  pivot_wider(names_from = method, values_from = savings) %>% 
-  mutate(diff = abs(true - conv), 
-         method = "conv") %>% 
-  select(name, method, diff)
-
-rand_final_S <- df_FS_stable %>% 
-  filter(method != "conv") %>% 
-  pivot_wider(names_from = method, values_from = savings) %>% 
-  mutate(diff = abs(true - rand), 
-         method = "rand_final") %>% 
-  select(name, method, diff)
-
-df_acc_S <- rbind(rand_eob_S, conv_S, rand_final_S)
-
-p1 <- df_acc_S %>% 
+p1 <- df_MW_S %>% 
   mutate(method = as.factor(method), 
          method = recode_factor(method, "conv" = "Conventional", "rand_eob" = "Randomized", "rand_final" = "Randomized\n(24 months)")) %>% 
   ggplot(aes(x = method, y = diff, fill = method)) +
@@ -965,30 +537,7 @@ p1 <- df_acc_S %>%
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 
 # plot for the variable subset
-rand_eob_V <- df_seq_FS_variable %>% 
-  filter(seq == "eob") %>% 
-  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site"))%>% 
-  mutate(diff = abs(savings - FS), 
-         method = "rand_eob") %>% 
-  select(name, method, diff)
-
-conv_V <- df_FS_variable %>% 
-  filter(method != "rand") %>% 
-  pivot_wider(names_from = method, values_from = savings) %>% 
-  mutate(diff = abs(true - conv), 
-         method = "conv") %>% 
-  select(name, method, diff)
-
-rand_final_V <- df_FS_variable %>% 
-  filter(method != "conv") %>% 
-  pivot_wider(names_from = method, values_from = savings) %>% 
-  mutate(diff = abs(true - rand), 
-         method = "rand_final") %>% 
-  select(name, method, diff)
-
-df_acc_V <- rbind(rand_eob_V, conv_V, rand_final_V)
-
-p2 <- df_acc_V %>% 
+p2 <- df_MW_V %>% 
   mutate(method = as.factor(method), 
          method = recode_factor(method, "conv" = "Conventional", "rand_eob" = "Randomized", "rand_final" = "Randomized\n(24 months)")) %>% 
   ggplot(aes(x = method, y = diff, fill = method)) +
@@ -1015,21 +564,7 @@ p2 <- df_acc_V %>%
 
 
 # plot for combined dataset
-rand_eob_A <- bind_rows(rand_eob_V, rand_eob_S) %>% 
-  select(name, rand_eob_diff = diff)
-
-conv_A <- bind_rows(conv_V, conv_S) %>% 
-  select(name, conv_diff = diff)
-
-rand_final_A <- bind_rows(rand_final_V, rand_final_S) %>% 
-  select(name, rand_final_diff = diff)
-
-df_acc_A <- rand_eob_A %>% 
-  left_join(conv_A, by = "name") %>% 
-  left_join(rand_final_A, by = "name") %>% 
-  pivot_longer(c(rand_eob_diff, conv_diff, rand_final_diff), names_to = "method", values_to = "diff")
-
-p3 <- df_acc_A %>% 
+p3 <- df_MW_A %>% 
   mutate(method = as.factor(method), 
          method = recode_factor(method, "conv_diff" = "Conventional", "rand_eob_diff" = "Randomized", "rand_final_diff" = "Randomized\n(24 months)")) %>% 
   ggplot(aes(x = method, y = diff, fill = method)) +
@@ -1063,29 +598,7 @@ p_top <- ggarrange(p3, p1, p2,
 
 # TMY
 # plot for the stable subset
-rand_eob_S <- df_sprt_all_stable %>% 
-  filter(seq == "eob") %>% 
-  select(-c(seq, sprt, n_weeks)) %>% 
-  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - annual), 
-         method = "rand_eob") %>% 
-  select(name, method, diff)
-
-conv_S <- df_FS_tmy_stable %>% 
-  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - conv), 
-         method = "conv") %>% 
-  select(name, method, diff)
-
-rand_final_S <- df_FS_tmy_stable %>% 
-  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - rand), 
-         method = "rand_final") %>% 
-  select(name, method, diff)
-
-df_acc_S <- rbind(rand_eob_S, conv_S, rand_final_S)
-
-p1 <- df_acc_S %>% 
+p1 <- df_TW_S %>% 
   mutate(method = as.factor(method), 
          method = recode_factor(method, "conv" = "Conventional", "rand_eob" = "Randomized", "rand_final" = "Randomized\n(24 months)")) %>% 
   ggplot(aes(x = method, y = diff, fill = method)) +
@@ -1111,29 +624,7 @@ p1 <- df_acc_S %>%
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 
 # plot for the variable subset
-rand_eob_V <- df_sprt_all_variable %>% 
-  filter(seq == "eob") %>% 
-  select(-c(seq, sprt, n_weeks)) %>% 
-  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - annual), 
-         method = "rand_eob") %>% 
-  select(name, method, diff)
-
-conv_V <- df_FS_tmy_variable %>% 
-  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - conv), 
-         method = "conv") %>% 
-  select(name, method, diff)
-
-rand_final_V <- df_FS_tmy_variable %>% 
-  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - rand), 
-         method = "rand_final") %>% 
-  select(name, method, diff)
-
-df_acc_V <- rbind(rand_eob_V, conv_V, rand_final_V)
-
-p2 <- df_acc_V %>% 
+p2 <- df_TW_V %>% 
   mutate(method = as.factor(method), 
          method = recode_factor(method, "conv" = "Conventional", "rand_eob" = "Randomized", "rand_final" = "Randomized\n(24 months)")) %>% 
   ggplot(aes(x = method, y = diff, fill = method)) +
@@ -1159,21 +650,7 @@ p2 <- df_acc_V %>%
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 
 # plot for combined dataset
-rand_eob_A <- bind_rows(rand_eob_V, rand_eob_S) %>% 
-  select(name, rand_eob_diff = diff)
-
-conv_A <- bind_rows(conv_V, conv_S) %>% 
-  select(name, conv_diff = diff)
-
-rand_final_A <- bind_rows(rand_final_V, rand_final_S) %>% 
-  select(name, rand_final_diff = diff)
-
-df_acc_A <- rand_eob_A %>% 
-  left_join(conv_A, by = "name") %>% 
-  left_join(rand_final_A, by = "name") %>% 
-  pivot_longer(c(rand_eob_diff, conv_diff, rand_final_diff), names_to = "method", values_to = "diff")
-
-p3 <- df_acc_A %>% 
+p3 <- df_TW_A %>% 
   mutate(method = as.factor(method), 
          method = recode_factor(method, "conv_diff" = "Conventional", "rand_eob_diff" = "Randomized", "rand_final_diff" = "Randomized\n(24 months)")) %>% 
   ggplot(aes(x = method, y = diff, fill = method)) +
@@ -1205,15 +682,18 @@ p_bottom <- ggarrange(p3, p1, p2,
   plot_annotation(subtitle = "with typical meteorological weather")
 
 ggarrange(p_top, p_bottom, 
-          nrow = 2, 
+          ncol = 1, nrow = 2, 
           align = "hv", 
-          common.legend = T, 
-          legend = "bottom") +
+          legend = "none") +
   plot_annotation(title = "M&V accuracy comparison")
 
 ggsave(filename = "abs.png", path = fig_path, units = "in", height = 9, width = 12, dpi = 300)
 
-# NULL
+
+
+
+
+#### ABS-NULL ####
 rand_eob_S <- df_seq_FS_null_stable %>% 
   filter(seq == "eob") %>% 
   mutate(diff = abs(0 - FS), 
@@ -1234,32 +714,7 @@ rand_final_S <- df_FS_null_stable %>%
          method = "rand_final") %>% 
   select(name, method, diff)
 
-df_acc_S <- rbind(rand_eob_S, conv_S, rand_final_S)
-
-p1 <- df_acc_S %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "conv" = "Conventional", "rand_eob" = "Randomized", "rand_final" = "Randomized\n(24 months)")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = NULL, 
-       subtitle = str_glue("{S_building} stable buildings")) +
-  coord_cartesian(ylim = c(0, 23)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text.y = element_blank(), 
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+df_MW_S <- rbind(rand_eob_S, conv_S, rand_final_S)
 
 # plot for the variable subset
 rand_eob_V <- df_seq_FS_null_variable %>% 
@@ -1282,33 +737,7 @@ rand_final_V <- df_FS_null_variable %>%
          method = "rand_final") %>% 
   select(name, method, diff)
 
-df_acc_V <- rbind(rand_eob_V, conv_V, rand_final_V)
-
-p2 <- df_acc_V %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "conv" = "Conventional", "rand_eob" = "Randomized", "rand_final" = "Randomized\n(24 months)")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = NULL, 
-       subtitle = str_glue("{V_building} variable buildings")) +
-  coord_cartesian(ylim = c(0, 23)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text.y = element_blank(), 
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
+df_MW_V <- rbind(rand_eob_V, conv_V, rand_final_V)
 
 # plot for combined dataset
 rand_eob_A <- bind_rows(rand_eob_V, rand_eob_S) %>% 
@@ -1320,12 +749,12 @@ conv_A <- bind_rows(conv_V, conv_S) %>%
 rand_final_A <- bind_rows(rand_final_V, rand_final_S) %>% 
   select(name, rand_final_diff = diff)
 
-df_acc_A <- rand_eob_A %>% 
+df_MW_A <- rand_eob_A %>% 
   left_join(conv_A, by = "name") %>% 
   left_join(rand_final_A, by = "name") %>% 
   pivot_longer(c(rand_eob_diff, conv_diff, rand_final_diff), names_to = "method", values_to = "diff")
 
-p3 <- df_acc_A %>% 
+df_MW_A %>% 
   mutate(method = as.factor(method), 
          method = recode_factor(method, "conv_diff" = "Conventional", "rand_eob_diff" = "Randomized", "rand_final_diff" = "Randomized\n(24 months)")) %>% 
   ggplot(aes(x = method, y = diff, fill = method)) +
@@ -1343,19 +772,12 @@ p3 <- df_acc_A %>%
   labs(fill = NULL, 
        x = NULL, 
        y = "Absolute error in fractional savings", 
-       subtitle = str_glue("All {A_building} buildings")) +
+       title = "No-saving M&V accuracy comparison", 
+       subtitle = str_glue("All {A_building} buildings wither measured weather")) +
   coord_cartesian(ylim = c(0, 23)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
         legend.position = "none",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-ggarrange(p3, p1, p2,
-          ncol = 3, nrow = 1,
-          labels = c("a)", "b)", "c)"),
-          align = "hv",
-          legend="none") +
-  plot_annotation(title = "No-saving M&V accuracy comparison", 
-                  subtitle = "with measured weather")
 
 ggsave(filename = "abs_null.png", path = fig_path, units = "in", height = 6, width = 12, dpi = 300)
 
@@ -1363,14 +785,679 @@ ggsave(filename = "abs_null.png", path = fig_path, units = "in", height = 6, wid
 
 
 
-#### CONTINUE ####
+#### ABS-CONT ####
 rand_cont_S <- df_cont_stable %>% 
   select(name, site, cont_fs) %>% 
   left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = savings - cont_fs,
+  mutate(diff = abs(savings - cont_fs),
          method = "rand_fs") %>% 
   select(name, method, diff)
-  
+
+conv_S <- df_FS_stable %>% 
+  filter(method != "rand") %>% 
+  pivot_wider(names_from = method, values_from = savings) %>% 
+  mutate(diff = abs(true - conv), 
+         method = "conv") %>% 
+  select(name, method, diff)
+
+rand_final_S <- df_FS_stable %>% 
+  filter(method != "conv") %>% 
+  pivot_wider(names_from = method, values_from = savings) %>% 
+  mutate(diff = abs(true - rand), 
+         method = "rand_final") %>% 
+  select(name, method, diff)
+
+df_MW_S <- rbind(rand_cont_S, conv_S, rand_final_S)
+
+# plot for the variable subset
+rand_cont_V <- df_cont_variable %>% 
+  select(name, site, cont_fs) %>% 
+  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - cont_fs),
+         method = "rand_fs") %>% 
+  select(name, method, diff)
+
+conv_V <- df_FS_variable %>% 
+  filter(method != "rand") %>% 
+  pivot_wider(names_from = method, values_from = savings) %>% 
+  mutate(diff = abs(true - conv), 
+         method = "conv") %>% 
+  select(name, method, diff)
+
+rand_final_V <- df_FS_variable %>% 
+  filter(method != "conv") %>% 
+  pivot_wider(names_from = method, values_from = savings) %>% 
+  mutate(diff = abs(true - rand), 
+         method = "rand_final") %>% 
+  select(name, method, diff)
+
+df_MW_V <- rbind(rand_cont_V, conv_V, rand_final_V)
+
+# plot for combined dataset
+rand_cont_A <- bind_rows(rand_cont_V, rand_cont_S) %>% 
+  select(name, rand_cont_diff = diff)
+
+conv_A <- bind_rows(conv_V, conv_S) %>% 
+  select(name, conv_diff = diff)
+
+rand_final_A <- bind_rows(rand_final_V, rand_final_S) %>% 
+  select(name, rand_final_diff = diff)
+
+df_MW_A <- rand_cont_A %>% 
+  left_join(conv_A, by = "name") %>% 
+  left_join(rand_final_A, by = "name") %>% 
+  pivot_longer(c(rand_cont_diff, conv_diff, rand_final_diff), names_to = "method", values_to = "diff")
+
+df_MW_A %>% 
+  mutate(method = as.factor(method), 
+         method = recode_factor(method, "conv_diff" = "Conventional", "rand_cont_diff" = "Randomized\n(20/80)", "rand_final_diff" = "Randomized\n(50/50)")) %>% 
+  ggplot(aes(x = method, y = diff, fill = method)) +
+  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
+  geom_lv(k = 4, outlier.shape = NA) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
+  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
+  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
+            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 4), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
+  labs(fill = NULL, 
+       x = NULL, 
+       y = "Error in fractional savings", 
+       title = "M&V accuracy comparison",
+       subtitle = str_glue("All {A_building} buildings with measured weather conditions")) +
+  coord_cartesian(ylim = c(0, 23)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "none",
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+ggsave(filename = "abs_cont.png", path = fig_path, units = "in", height = 6, width = 12, dpi = 300)
+
+
+
+
+
+
+#### ABS-INT ####
+interval_1_S <- df_FS_stable %>% 
+  filter(method != "conv") %>% 
+  pivot_wider(names_from = method, values_from = savings) %>% 
+  mutate(diff = abs(true - rand), 
+         method = "rand_interval_1") %>% 
+  select(name, method, diff)
+
+interval_2_S <- df_interval_stable %>% 
+  select(c(name, site, interval_fs_2)) %>% 
+  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - interval_fs_2), 
+         method = "rand_interval_2") %>% 
+  select(name, method, diff)
+
+interval_3_S <- df_interval_stable %>% 
+  select(c(name, site, interval_fs_3)) %>% 
+  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - interval_fs_3), 
+         method = "rand_interval_3") %>% 
+  select(name, method, diff)
+
+interval_7_S <- df_interval_stable %>% 
+  select(c(name, site, interval_fs_7)) %>% 
+  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - interval_fs_7), 
+         method = "rand_interval_7") %>% 
+  select(name, method, diff)
+
+df_MW_S <- rbind(interval_1_S, interval_2_S, interval_3_S, interval_7_S)
+
+interval_1_V <- df_FS_variable %>% 
+  filter(method != "conv") %>% 
+  pivot_wider(names_from = method, values_from = savings) %>% 
+  mutate(diff = abs(true - rand), 
+         method = "rand_interval_1") %>% 
+  select(name, method, diff)
+
+interval_2_V <- df_interval_variable %>% 
+  select(c(name, site, interval_fs_2)) %>% 
+  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - interval_fs_2), 
+         method = "rand_interval_2") %>% 
+  select(name, method, diff)
+
+interval_3_V <- df_interval_variable %>% 
+  select(c(name, site, interval_fs_3)) %>% 
+  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - interval_fs_3), 
+         method = "rand_interval_3") %>% 
+  select(name, method, diff)
+
+interval_7_V <- df_interval_variable %>% 
+  select(c(name, site, interval_fs_7)) %>% 
+  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - interval_fs_7), 
+         method = "rand_interval_7") %>% 
+  select(name, method, diff)
+
+df_MW_V <- rbind(interval_1_V, interval_2_V, interval_3_V, interval_7_V)
+
+# plot for combined dataset
+interval_1_A <- bind_rows(interval_1_V, interval_1_S) %>% 
+  select(name, interval_1_diff = diff)
+
+interval_2_A <- bind_rows(interval_2_V, interval_2_S) %>% 
+  select(name, interval_2_diff = diff)
+
+interval_3_A <- bind_rows(interval_3_V, interval_3_S) %>% 
+  select(name, interval_3_diff = diff)
+
+interval_7_A <- bind_rows(interval_7_V, interval_7_S) %>% 
+  select(name, interval_7_diff = diff)
+
+df_MW_A <- interval_1_A %>% 
+  left_join(interval_2_A, by = "name") %>% 
+  left_join(interval_3_A, by = "name") %>% 
+  left_join(interval_7_A, by = "name") %>% 
+  pivot_longer(c(interval_1_diff, interval_2_diff, interval_3_diff, interval_7_diff), names_to = "method", values_to = "diff")
+
+p_top <- df_MW_A %>% 
+  mutate(method = as.factor(method), 
+         method = recode_factor(method, 
+                                "interval_1_diff" = "Daily\nsampling", 
+                                "interval_2_diff" = "2-day\nsampling", 
+                                "interval_3_diff" = "3-day\nsampling", 
+                                "interval_7_diff" = "7-day\nsampling")) %>% 
+  ggplot(aes(x = method, y = diff, fill = method)) +
+  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
+  geom_lv(k = 4, outlier.shape = NA) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
+  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
+  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
+            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 4), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80", "grey80", "grey80")) + 
+  labs(fill = NULL, 
+       x = NULL, 
+       y = "Error in fractional savings", 
+       subtitle = str_glue("All {A_building} buildings with measured weather")) +
+  coord_cartesian(ylim = c(0, 15)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "none",
+        axis.text.x = element_blank(),
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+# TMY version
+interval_1_S <- df_FS_tmy_stable %>% 
+  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - rand), 
+         method = "rand_interval_1") %>% 
+  select(name, method, diff)
+
+interval_2_S <- df_interval_stable %>% 
+  select(c(name, site, interval_tmy_2)) %>% 
+  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - interval_tmy_2), 
+         method = "rand_interval_2") %>% 
+  select(name, method, diff)
+
+interval_3_S <- df_interval_stable %>% 
+  select(c(name, site, interval_tmy_3)) %>% 
+  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - interval_tmy_3), 
+         method = "rand_interval_3") %>% 
+  select(name, method, diff)
+
+interval_7_S <- df_interval_stable %>% 
+  select(c(name, site, interval_tmy_7)) %>% 
+  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - interval_tmy_7), 
+         method = "rand_interval_7") %>% 
+  select(name, method, diff)
+
+df_TW_S <- rbind(interval_1_S, interval_2_S, interval_3_S, interval_7_S)
+
+interval_1_V <- df_FS_tmy_variable %>% 
+  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - rand), 
+         method = "rand_interval_1") %>% 
+  select(name, method, diff)
+
+interval_2_V <- df_interval_variable %>% 
+  select(c(name, site, interval_tmy_2)) %>% 
+  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - interval_tmy_2), 
+         method = "rand_interval_2") %>% 
+  select(name, method, diff)
+
+interval_3_V <- df_interval_variable %>% 
+  select(c(name, site, interval_tmy_3)) %>% 
+  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - interval_tmy_3), 
+         method = "rand_interval_3") %>% 
+  select(name, method, diff)
+
+interval_7_V <- df_interval_variable %>% 
+  select(c(name, site, interval_tmy_7)) %>% 
+  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - interval_tmy_7), 
+         method = "rand_interval_7") %>% 
+  select(name, method, diff)
+
+df_TW_V <- rbind(interval_1_V, interval_2_V, interval_3_V, interval_7_V)
+
+# plot for combined dataset
+interval_1_A <- bind_rows(interval_1_V, interval_1_S) %>% 
+  select(name, interval_1_diff = diff)
+
+interval_2_A <- bind_rows(interval_2_V, interval_2_S) %>% 
+  select(name, interval_2_diff = diff)
+
+interval_3_A <- bind_rows(interval_3_V, interval_3_S) %>% 
+  select(name, interval_3_diff = diff)
+
+interval_7_A <- bind_rows(interval_7_V, interval_7_S) %>% 
+  select(name, interval_7_diff = diff)
+
+df_TW_A <- interval_1_A %>% 
+  left_join(interval_2_A, by = "name") %>% 
+  left_join(interval_3_A, by = "name") %>% 
+  left_join(interval_7_A, by = "name") %>%
+  pivot_longer(c(interval_1_diff, interval_2_diff, interval_3_diff, interval_7_diff), names_to = "method", values_to = "diff")
+
+p_bottom <- df_TW_A %>% 
+  mutate(method = as.factor(method), 
+         method = recode_factor(method, 
+                                "interval_1_diff" = "Daily\nsampling", 
+                                "interval_2_diff" = "2-day\nsampling", 
+                                "interval_3_diff" = "3-day\nsampling", 
+                                "interval_7_diff" = "7-day\nsampling")) %>% 
+  ggplot(aes(x = method, y = diff, fill = method)) +
+  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
+  geom_lv(k = 4, outlier.shape = NA) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
+  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
+  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
+            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 4), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80", "grey80", "grey80")) + 
+  labs(fill = NULL, 
+       x = NULL, 
+       y = "Error in fractional savings", 
+       subtitle = str_glue("All {A_building} buildings with TMY weather")) +
+  coord_cartesian(ylim = c(0, 15)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "none",
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+ggarrange(p_top, p_bottom, 
+          ncol = 1, nrow = 2, 
+          align = "hv", 
+          legend = "none") +
+  plot_annotation(title = "M&V accuracy comparison")
+
+ggsave(filename = "abs_interval.png", path = fig_path, units = "in", height = 9, width = 12, dpi = 300)
+
+# sprt sequence plot for different sampling intervals
+interval_1_S <- df_seq_FS_stable %>% 
+  filter(seq == "eob") %>% 
+  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - FS), 
+         method = "rand_interval_1") %>% 
+  select(name, method, diff)
+
+interval_2_S <- df_seq_interval_FS_stable %>% 
+  filter(interval == 2 & seq == "eob") %>% 
+  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - FS), 
+         method = "rand_interval_2") %>% 
+  select(name, method, diff)
+
+interval_3_S <- df_seq_interval_FS_stable %>% 
+  filter(interval == 3 & seq == "eob") %>% 
+  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - FS), 
+         method = "rand_interval_3") %>% 
+  select(name, method, diff)
+
+interval_7_S <- df_seq_interval_FS_stable %>% 
+  filter(interval == 7 & seq == "eob") %>% 
+  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - FS), 
+         method = "rand_interval_7") %>% 
+  select(name, method, diff)
+
+df_MW_S <- rbind(interval_1_S, interval_2_S, interval_3_S, interval_7_S)
+
+# variable set
+interval_1_V <- df_seq_FS_variable %>% 
+  filter(seq == "eob") %>% 
+  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - FS), 
+         method = "rand_interval_1") %>% 
+  select(name, method, diff)
+
+interval_2_V <- df_seq_interval_FS_variable %>% 
+  filter(interval == 2 & seq == "eob") %>% 
+  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - FS), 
+         method = "rand_interval_2") %>% 
+  select(name, method, diff)
+
+interval_3_V <- df_seq_interval_FS_variable %>% 
+  filter(interval == 3 & seq == "eob") %>% 
+  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - FS), 
+         method = "rand_interval_3") %>% 
+  select(name, method, diff)
+
+interval_7_V <- df_seq_interval_FS_variable %>% 
+  filter(interval == 7 & seq == "eob") %>% 
+  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - FS), 
+         method = "rand_interval_7") %>% 
+  select(name, method, diff)
+
+df_MW_V <- rbind(interval_1_V, interval_2_V, interval_3_V, interval_7_V)
+
+# plot for combined dataset
+interval_1_A <- bind_rows(interval_1_V, interval_1_S) %>% 
+  select(name, interval_1_diff = diff)
+
+interval_2_A <- bind_rows(interval_2_V, interval_2_S) %>% 
+  select(name, interval_2_diff = diff)
+
+interval_3_A <- bind_rows(interval_3_V, interval_3_S) %>% 
+  select(name, interval_3_diff = diff)
+
+interval_7_A <- bind_rows(interval_7_V, interval_7_S) %>% 
+  select(name, interval_7_diff = diff)
+
+df_MW_A <- interval_1_A %>% 
+  left_join(interval_2_A, by = "name") %>% 
+  left_join(interval_3_A, by = "name") %>% 
+  left_join(interval_7_A, by = "name") %>%
+  pivot_longer(c(interval_1_diff, interval_2_diff, interval_3_diff, interval_7_diff), names_to = "method", values_to = "diff")
+
+p_top <- df_MW_A %>% 
+  mutate(method = as.factor(method), 
+         method = recode_factor(method, 
+                                "interval_1_diff" = "Daily\nsampling", 
+                                "interval_2_diff" = "2-day\nsampling", 
+                                "interval_3_diff" = "3-day\nsampling", 
+                                "interval_7_diff" = "7-day\nsampling")) %>% 
+  ggplot(aes(x = method, y = diff, fill = method)) +
+  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
+  geom_lv(k = 4, outlier.shape = NA) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
+  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
+  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
+            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 4), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80", "grey80", "grey80")) + 
+  labs(fill = NULL, 
+       x = NULL, 
+       y = "Error in fractional savings", 
+       subtitle = str_glue("All {A_building} buildings with measured weather")) +
+  coord_cartesian(ylim = c(0, 15)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "none",
+        axis.text.x = element_blank(),
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+# with tmy version
+interval_1_S <- df_sprt_all_stable %>% 
+  filter(seq == "eob") %>% 
+  select(-c(seq, sprt, n_weeks)) %>% 
+  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - annual), 
+         method = "rand_interval_1") %>% 
+  select(name, method, diff)
+
+interval_2_S <- df_seq_interval_nm_stable %>% 
+  filter(interval == 2 & seq == "eob") %>% 
+  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - annual), 
+         method = "rand_interval_2") %>% 
+  select(name, method, diff)
+
+interval_3_S <- df_seq_interval_nm_stable %>% 
+  filter(interval == 3 & seq == "eob") %>% 
+  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - annual), 
+         method = "rand_interval_3") %>% 
+  select(name, method, diff)
+
+interval_7_S <- df_seq_interval_nm_stable %>% 
+  filter(interval == 7 & seq == "eob") %>% 
+  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - annual), 
+         method = "rand_interval_7") %>% 
+  select(name, method, diff)
+
+df_TW_S <- rbind(interval_1_S, interval_2_S, interval_3_S, interval_7_S)
+
+# variable set
+interval_1_V <- df_sprt_all_variable %>% 
+  filter(seq == "eob") %>% 
+  select(-c(seq, sprt, n_weeks)) %>% 
+  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - annual), 
+         method = "rand_interval_1") %>% 
+  select(name, method, diff)
+
+interval_2_V <- df_seq_interval_nm_variable %>% 
+  filter(interval == 2 & seq == "eob") %>% 
+  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - annual), 
+         method = "rand_interval_2") %>% 
+  select(name, method, diff)
+
+interval_3_V <- df_seq_interval_nm_variable %>% 
+  filter(interval == 3 & seq == "eob") %>% 
+  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - annual), 
+         method = "rand_interval_3") %>% 
+  select(name, method, diff)
+
+interval_7_V <- df_seq_interval_nm_variable %>% 
+  filter(interval == 7 & seq == "eob") %>% 
+  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - annual), 
+         method = "rand_interval_7") %>% 
+  select(name, method, diff)
+
+df_TW_V <- rbind(interval_1_V, interval_2_V, interval_3_V, interval_7_V)
+
+# plot for combined dataset
+interval_1_A <- bind_rows(interval_1_V, interval_1_S) %>% 
+  select(name, interval_1_diff = diff)
+
+interval_2_A <- bind_rows(interval_2_V, interval_2_S) %>% 
+  select(name, interval_2_diff = diff)
+
+interval_3_A <- bind_rows(interval_3_V, interval_3_S) %>% 
+  select(name, interval_3_diff = diff)
+
+interval_7_A <- bind_rows(interval_7_V, interval_7_S) %>% 
+  select(name, interval_7_diff = diff)
+
+df_TW_A <- interval_1_A %>% 
+  left_join(interval_2_A, by = "name") %>% 
+  left_join(interval_3_A, by = "name") %>% 
+  left_join(interval_7_A, by = "name") %>%
+  pivot_longer(c(interval_1_diff, interval_2_diff, interval_3_diff, interval_7_diff), names_to = "method", values_to = "diff")
+
+p_bottom <- df_TW_A %>% 
+  mutate(method = as.factor(method), 
+         method = recode_factor(method, 
+                                "interval_1_diff" = "Daily\nsampling", 
+                                "interval_2_diff" = "2-day\nsampling", 
+                                "interval_3_diff" = "3-day\nsampling", 
+                                "interval_7_diff" = "7-day\nsampling")) %>% 
+  ggplot(aes(x = method, y = diff, fill = method)) +
+  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
+  geom_lv(k = 4, outlier.shape = NA) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
+  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
+  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
+            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 4), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80", "grey80", "grey80")) + 
+  labs(fill = NULL, 
+       x = NULL, 
+       y = "Error in fractional savings", 
+       subtitle = str_glue("All {A_building} buildings with TMY weather")) +
+  coord_cartesian(ylim = c(0, 15)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "none",
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+ggarrange(p_top, p_bottom, 
+          ncol = 1, nrow = 2, 
+          align = "hv", 
+          legend = "none") +
+  plot_annotation(title = "M&V accuracy comparison")
+
+ggsave(filename = "abs_interval_sprt.png", path = fig_path, units = "in", height = 9, width = 12, dpi = 300)
+
+# null results
+interval_1_S <- df_FS_null_stable %>% 
+  filter(method != "conv") %>% 
+  pivot_wider(names_from = method, values_from = savings) %>% 
+  mutate(diff = abs(true - rand), 
+         method = "rand_interval_1") %>% 
+  select(name, method, diff)
+
+interval_2_S <- df_interval_null_stable %>% 
+  select(c(name, site, interval_fs_2)) %>% 
+  left_join(df_FS_null_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - interval_fs_2), 
+         method = "rand_interval_2") %>% 
+  select(name, method, diff)
+
+interval_3_S <- df_interval_null_stable %>% 
+  select(c(name, site, interval_fs_3)) %>% 
+  left_join(df_FS_null_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - interval_fs_3), 
+         method = "rand_interval_3") %>% 
+  select(name, method, diff)
+
+interval_7_S <- df_interval_null_stable %>% 
+  select(c(name, site, interval_fs_7)) %>% 
+  left_join(df_FS_null_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - interval_fs_7), 
+         method = "rand_interval_3") %>% 
+  select(name, method, diff)
+
+df_MW_S <- rbind(interval_1_S, interval_2_S, interval_3_S, interval_7_S)
+
+interval_1_V <- df_FS_null_variable %>% 
+  filter(method != "conv") %>% 
+  pivot_wider(names_from = method, values_from = savings) %>% 
+  mutate(diff = abs(true - rand), 
+         method = "rand_interval_1") %>% 
+  select(name, method, diff)
+
+interval_2_V <- df_interval_null_variable %>% 
+  select(c(name, site, interval_fs_2)) %>% 
+  left_join(df_FS_null_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - interval_fs_2), 
+         method = "rand_interval_2") %>% 
+  select(name, method, diff)
+
+interval_3_V <- df_interval_null_variable %>% 
+  select(c(name, site, interval_fs_3)) %>% 
+  left_join(df_FS_null_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - interval_fs_3), 
+         method = "rand_interval_3") %>% 
+  select(name, method, diff)
+
+interval_7_V <- df_interval_null_variable %>% 
+  select(c(name, site, interval_fs_7)) %>% 
+  left_join(df_FS_null_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - interval_fs_7), 
+         method = "rand_interval_3") %>% 
+  select(name, method, diff)
+
+df_MW_V <- rbind(interval_1_V, interval_2_V, interval_3_V, interval_7_V)
+
+# plot for combined dataset
+interval_1_A <- bind_rows(interval_1_V, interval_1_S) %>% 
+  select(name, interval_1_diff = diff)
+
+interval_2_A <- bind_rows(interval_2_V, interval_2_S) %>% 
+  select(name, interval_2_diff = diff)
+
+interval_3_A <- bind_rows(interval_3_V, interval_3_S) %>% 
+  select(name, interval_3_diff = diff)
+
+interval_7_A <- bind_rows(interval_7_V, interval_7_S) %>% 
+  select(name, interval_7_diff = diff)
+
+df_MW_A <- interval_1_A %>% 
+  left_join(interval_2_A, by = "name") %>% 
+  left_join(interval_3_A, by = "name") %>% 
+  left_join(interval_7_A, by = "name") %>% 
+  pivot_longer(c(interval_1_diff, interval_2_diff, interval_3_diff, interval_7_diff), names_to = "method", values_to = "diff")
+
+df_MW_A %>% 
+  mutate(method = as.factor(method), 
+         method = recode_factor(method, 
+                                "interval_1_diff" = "Daily\nsampling", 
+                                "interval_2_diff" = "2-day\nsampling", 
+                                "interval_3_diff" = "3-day\nsampling", 
+                                "interval_7_diff" = "7-day\nsampling")) %>% 
+  ggplot(aes(x = method, y = diff, fill = method)) +
+  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
+  geom_lv(k = 4, outlier.shape = NA) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
+  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
+  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
+            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 4), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80", "grey80", "grey80")) + 
+  labs(fill = NULL, 
+       x = NULL, 
+       y = "Error in fractional savings",
+       title = "No-saving M&V accuracy comparison", 
+       subtitle = str_glue("All {A_building} buildings with measured weather")) +
+  coord_cartesian(ylim = c(0, 10)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "none",
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+ggsave(filename = "abs_interval_null.png", path = fig_path, units = "in", height = 6, width = 12, dpi = 300)
+
+
+
+
+
+
+
+#### MEAN ####
+# plot for the stable subset
+rand_eob_S <- df_seq_FS_stable %>% 
+  filter(seq == "eob") %>% 
+  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - FS, 
+         method = "rand_eob") %>% 
+  select(name, method, diff)
+
 conv_S <- df_FS_stable %>% 
   filter(method != "rand") %>% 
   pivot_wider(names_from = method, values_from = savings) %>% 
@@ -1385,11 +1472,11 @@ rand_final_S <- df_FS_stable %>%
          method = "rand_final") %>% 
   select(name, method, diff)
 
-df_acc_S <- rbind(rand_cont_S, conv_S, rand_final_S)
+df_MW_S <- rbind(rand_eob_S, conv_S, rand_final_S)
 
-p1 <- df_acc_S %>% 
+p1 <- df_MW_S %>% 
   mutate(method = as.factor(method), 
-         method = recode_factor(method, "conv" = "Conventional", "rand_fs" = "Randomized\n(20/80)", "rand_final" = "Randomized\n(50/50)")) %>% 
+         method = recode_factor(method, "conv" = "Conventional", "rand_eob" = "Randomized", "rand_final" = "Randomized\n(24 months)")) %>% 
   ggplot(aes(x = method, y = diff, fill = method)) +
   geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
   geom_lv(k = 4, outlier.shape = NA) +
@@ -1409,8 +1496,383 @@ p1 <- df_acc_S %>%
   coord_cartesian(ylim = c(-18, 18)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
         legend.position = "none",
+        axis.text = element_blank(), 
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+# plot for the variable subset
+rand_eob_V <- df_seq_FS_variable %>% 
+  filter(seq == "eob") %>% 
+  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site"))%>% 
+  mutate(diff = savings - FS, 
+         method = "rand_eob") %>% 
+  select(name, method, diff)
+
+conv_V <- df_FS_variable %>% 
+  filter(method != "rand") %>% 
+  pivot_wider(names_from = method, values_from = savings) %>% 
+  mutate(diff = true - conv, 
+         method = "conv") %>% 
+  select(name, method, diff)
+
+rand_final_V <- df_FS_variable %>% 
+  filter(method != "conv") %>% 
+  pivot_wider(names_from = method, values_from = savings) %>% 
+  mutate(diff = true - rand, 
+         method = "rand_final") %>% 
+  select(name, method, diff)
+
+df_MW_V <- rbind(rand_eob_V, conv_V, rand_final_V)
+
+p2 <- df_MW_V %>% 
+  mutate(method = as.factor(method), 
+         method = recode_factor(method, "conv" = "Conventional", "rand_eob" = "Randomized", "rand_final" = "Randomized\n(24 months)")) %>% 
+  ggplot(aes(x = method, y = diff, fill = method)) +
+  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
+  geom_lv(k = 4, outlier.shape = NA) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
+  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
+  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
+            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 4), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
+  labs(fill = NULL, 
+       x = NULL, 
+       y = NULL, 
+       subtitle = str_glue("{V_building} variable buildings")) +
+  coord_cartesian(ylim = c(-18, 18)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "none",
+        axis.text = element_blank(), 
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+
+# plot for combined dataset
+rand_eob_A <- bind_rows(rand_eob_V, rand_eob_S) %>% 
+  select(name, rand_eob_diff = diff)
+
+conv_A <- bind_rows(conv_V, conv_S) %>% 
+  select(name, conv_diff = diff)
+
+rand_final_A <- bind_rows(rand_final_V, rand_final_S) %>% 
+  select(name, rand_final_diff = diff)
+
+df_MW_A <- rand_eob_A %>% 
+  left_join(conv_A, by = "name") %>% 
+  left_join(rand_final_A, by = "name") %>% 
+  pivot_longer(c(rand_eob_diff, conv_diff, rand_final_diff), names_to = "method", values_to = "diff")
+
+p3 <- df_MW_A %>% 
+  mutate(method = as.factor(method), 
+         method = recode_factor(method, "conv_diff" = "Conventional", "rand_eob_diff" = "Randomized", "rand_final_diff" = "Randomized\n(24 months)")) %>% 
+  ggplot(aes(x = method, y = diff, fill = method)) +
+  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
+  geom_lv(k = 4, outlier.shape = NA) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
+  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
+  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
+            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 4), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
+  labs(fill = NULL, 
+       x = NULL, 
+       y = "Error in fractional savings", 
+       subtitle = str_glue("All {A_building} buildings")) +
+  coord_cartesian(ylim = c(-18, 18)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "none",
+        axis.text.x = element_blank(),
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+p_top <- ggarrange(p3, p1, p2,
+                   ncol = 3, nrow = 1,
+                   labels = c("a)", "b)", "c)"),
+                   align = "hv",
+                   legend="none") +
+  plot_annotation(subtitle = "Accuracy comparison with measured weather conditions")
+
+# TMY 
+# plot for the stable subset
+rand_eob_S <- df_sprt_all_stable %>% 
+  filter(seq == "eob") %>% 
+  select(-c(seq, sprt, n_weeks)) %>% 
+  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - annual, 
+         method = "rand_eob") %>% 
+  select(name, method, diff)
+
+conv_S <- df_FS_tmy_stable %>% 
+  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - conv, 
+         method = "conv") %>% 
+  select(name, method, diff)
+
+rand_final_S <- df_FS_tmy_stable %>% 
+  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - rand, 
+         method = "rand_final") %>% 
+  select(name, method, diff)
+
+df_TW_S <- rbind(rand_eob_S, conv_S, rand_final_S)
+
+p1 <- df_TW_S %>% 
+  mutate(method = as.factor(method), 
+         method = recode_factor(method, "conv" = "Conventional", "rand_eob" = "Randomized", "rand_final" = "Randomized\n(24 months)")) %>% 
+  ggplot(aes(x = method, y = diff, fill = method)) +
+  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
+  geom_lv(k = 4, outlier.shape = NA) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
+  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
+  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
+            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 4), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
+  labs(fill = NULL, 
+       x = NULL, 
+       y = NULL, 
+       subtitle = str_glue("{S_building} stable buildings")) +
+  coord_cartesian(ylim = c(-18, 18)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "none",
         axis.text.y = element_blank(), 
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+# plot for the variable subset
+rand_eob_V <- df_sprt_all_variable %>% 
+  filter(seq == "eob") %>% 
+  select(-c(seq, sprt, n_weeks)) %>% 
+  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - annual, 
+         method = "rand_eob") %>% 
+  select(name, method, diff)
+
+conv_V <- df_FS_tmy_variable %>% 
+  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - conv, 
+         method = "conv") %>% 
+  select(name, method, diff)
+
+rand_final_V <- df_FS_tmy_variable %>% 
+  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - rand, 
+         method = "rand_final") %>% 
+  select(name, method, diff)
+
+df_TW_V <- rbind(rand_eob_V, conv_V, rand_final_V)
+
+p2 <- df_TW_V %>% 
+  mutate(method = as.factor(method), 
+         method = recode_factor(method, "conv" = "Conventional", "rand_eob" = "Randomized", "rand_final" = "Randomized\n(24 months)")) %>% 
+  ggplot(aes(x = method, y = diff, fill = method)) +
+  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
+  geom_lv(k = 4, outlier.shape = NA) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
+  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
+  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
+            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 4), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
+  labs(fill = NULL, 
+       x = NULL, 
+       y = NULL, 
+       subtitle = str_glue("{V_building} variable buildings")) +
+  coord_cartesian(ylim = c(-18, 18)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "none",
+        axis.text.y = element_blank(), 
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+
+# plot for combined dataset
+rand_eob_A <- bind_rows(rand_eob_V, rand_eob_S) %>% 
+  select(name, rand_eob_diff = diff)
+
+conv_A <- bind_rows(conv_V, conv_S) %>% 
+  select(name, conv_diff = diff)
+
+rand_final_A <- bind_rows(rand_final_V, rand_final_S) %>% 
+  select(name, rand_final_diff = diff)
+
+df_TW_A <- rand_eob_A %>% 
+  left_join(conv_A, by = "name") %>% 
+  left_join(rand_final_A, by = "name") %>% 
+  pivot_longer(c(rand_eob_diff, conv_diff, rand_final_diff), names_to = "method", values_to = "diff")
+
+p3 <- df_TW_A %>% 
+  mutate(method = as.factor(method), 
+         method = recode_factor(method, "conv_diff" = "Conventional", "rand_eob_diff" = "Randomized", "rand_final_diff" = "Randomized\n(24 months)")) %>% 
+  ggplot(aes(x = method, y = diff, fill = method)) +
+  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
+  geom_lv(k = 4, outlier.shape = NA) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
+  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
+  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
+            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 4), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
+  labs(fill = NULL, 
+       x = NULL, 
+       y = "Error in fractional savings", 
+       subtitle = str_glue("All {A_building} buildings")) +
+  coord_cartesian(ylim = c(-18, 18)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "none",
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+p_bottom <- ggarrange(p3, p1, p2,
+                      ncol = 3, nrow = 1,
+                      labels = c("d)", "e)", "f)"),
+                      align = "hv",
+                      legend="none") +
+  plot_annotation(subtitle = "Accuracy comparison with typical meteorological weather")
+
+ggarrange(p_top, p_bottom, 
+          ncol = 1, nrow = 2, 
+          align = "hv", 
+          legend = "none") +
+  plot_annotation(title = "M&V accuracy comparison")
+
+ggsave(filename = "mean.png", path = fig_path, units = "in", height = 6, width = 12, dpi = 300)
+
+
+
+
+
+
+#### MEAN-NULL ####
+rand_eob_S <- df_seq_FS_null_stable %>% 
+  filter(seq == "eob") %>% 
+  mutate(diff = 0 - FS, 
+         method = "rand_eob") %>% 
+  select(name, method, diff)
+
+conv_S <- df_FS_null_stable %>% 
+  filter(method != "rand") %>% 
+  pivot_wider(names_from = method, values_from = savings) %>% 
+  mutate(diff = true - conv, 
+         method = "conv") %>% 
+  select(name, method, diff)
+
+rand_final_S <- df_FS_null_stable %>% 
+  filter(method != "conv") %>% 
+  pivot_wider(names_from = method, values_from = savings) %>% 
+  mutate(diff = true - rand, 
+         method = "rand_final") %>% 
+  select(name, method, diff)
+
+df_MW_S <- rbind(rand_eob_S, conv_S, rand_final_S)
+
+# plot for the variable subset
+rand_eob_V <- df_seq_FS_null_variable %>% 
+  filter(seq == "eob") %>% 
+  mutate(diff = 0 - FS, 
+         method = "rand_eob") %>% 
+  select(name, method, diff)
+
+conv_V <- df_FS_null_variable %>% 
+  filter(method != "rand") %>% 
+  pivot_wider(names_from = method, values_from = savings) %>% 
+  mutate(diff = true - conv, 
+         method = "conv") %>% 
+  select(name, method, diff)
+
+rand_final_V <- df_FS_null_variable %>% 
+  filter(method != "conv") %>% 
+  pivot_wider(names_from = method, values_from = savings) %>% 
+  mutate(diff = true - rand, 
+         method = "rand_final") %>% 
+  select(name, method, diff)
+
+df_MW_V <- rbind(rand_eob_V, conv_V, rand_final_V)
+
+# plot for combined dataset
+rand_eob_A <- bind_rows(rand_eob_V, rand_eob_S) %>% 
+  select(name, rand_eob_diff = diff)
+
+conv_A <- bind_rows(conv_V, conv_S) %>% 
+  select(name, conv_diff = diff)
+
+rand_final_A <- bind_rows(rand_final_V, rand_final_S) %>% 
+  select(name, rand_final_diff = diff)
+
+df_MW_A <- rand_eob_A %>% 
+  left_join(conv_A, by = "name") %>% 
+  left_join(rand_final_A, by = "name") %>% 
+  pivot_longer(c(rand_eob_diff, conv_diff, rand_final_diff), names_to = "method", values_to = "diff")
+
+df_MW_A %>% 
+  mutate(method = as.factor(method), 
+         method = recode_factor(method, 
+                                "conv_diff" = "Conventional", 
+                                "rand_eob_diff" = "Randomized", 
+                                "rand_final_diff" = "Randomized\n(24 months)")) %>% 
+  ggplot(aes(x = method, y = diff, fill = method)) +
+  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
+  geom_lv(k = 4, outlier.shape = NA) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
+  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
+  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
+            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 4), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
+  labs(fill = NULL, 
+       x = NULL, 
+       y = "Error in fractional savings",
+       title = "No-saving M&V accuracy comparison", 
+       subtitle = str_glue("All {A_building} buildings with measured weather")) +
+  coord_cartesian(ylim = c(-18, 18)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "none",
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+ggsave(filename = "mean_null.png", path = fig_path, units = "in", height = 9, width = 12, dpi = 300)
+
+
+
+
+
+
+
+#### MEAN-CONT ####
+rand_cont_S <- df_cont_stable %>% 
+  select(name, site, cont_fs) %>% 
+  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - cont_fs,
+         method = "rand_fs") %>% 
+  select(name, method, diff)
+
+conv_S <- df_FS_stable %>% 
+  filter(method != "rand") %>% 
+  pivot_wider(names_from = method, values_from = savings) %>% 
+  mutate(diff = true - conv, 
+         method = "conv") %>% 
+  select(name, method, diff)
+
+rand_final_S <- df_FS_stable %>% 
+  filter(method != "conv") %>% 
+  pivot_wider(names_from = method, values_from = savings) %>% 
+  mutate(diff = true - rand, 
+         method = "rand_final") %>% 
+  select(name, method, diff)
+
+df_MW_S <- rbind(rand_cont_S, conv_S, rand_final_S)
 
 # plot for the variable subset
 rand_cont_V <- df_cont_variable %>% 
@@ -1434,33 +1896,7 @@ rand_final_V <- df_FS_variable %>%
          method = "rand_final") %>% 
   select(name, method, diff)
 
-df_acc_V <- rbind(rand_cont_V, conv_V, rand_final_V)
-
-p2 <- df_acc_V %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "conv" = "Conventional", "rand_fs" = "Randomized\n(20/80)", "rand_final" = "Randomized\n(50/50)")) %>%  
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = NULL, 
-       subtitle = str_glue("{V_building} variable buildings")) +
-  coord_cartesian(ylim = c(-18, 18)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text.y = element_blank(), 
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
+df_MW_V <- rbind(rand_cont_V, conv_V, rand_final_V)
 
 # plot for combined dataset
 rand_cont_A <- bind_rows(rand_cont_V, rand_cont_S) %>% 
@@ -1472,12 +1908,12 @@ conv_A <- bind_rows(conv_V, conv_S) %>%
 rand_final_A <- bind_rows(rand_final_V, rand_final_S) %>% 
   select(name, rand_final_diff = diff)
 
-df_acc_A <- rand_cont_A %>% 
+df_MW_A <- rand_cont_A %>% 
   left_join(conv_A, by = "name") %>% 
   left_join(rand_final_A, by = "name") %>% 
   pivot_longer(c(rand_cont_diff, conv_diff, rand_final_diff), names_to = "method", values_to = "diff")
 
-p3 <- df_acc_A %>% 
+df_MW_A %>% 
   mutate(method = as.factor(method), 
          method = recode_factor(method, "conv_diff" = "Conventional", "rand_cont_diff" = "Randomized\n(20/80)", "rand_final_diff" = "Randomized\n(50/50)")) %>% 
   ggplot(aes(x = method, y = diff, fill = method)) +
@@ -1495,28 +1931,20 @@ p3 <- df_acc_A %>%
   labs(fill = NULL, 
        x = NULL, 
        y = "Error in fractional savings", 
-       subtitle = str_glue("All {A_building} buildings")) +
+       title = "M&V accuracy comparison",
+       subtitle = str_glue("All {A_building} buildings with measured weather conditions")) +
   coord_cartesian(ylim = c(-18, 18)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
         legend.position = "none",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 
-
-ggarrange(p3, p1, p2,
-          ncol = 3, nrow = 1,
-          labels = c("a)", "b)", "c)"),
-          align = "hv",
-          legend="none") +
-  plot_annotation(title = "M&V accuracy comparison", 
-                  subtitle = "with measured weather conditions")
-
-ggsave(filename = "cont.png", path = fig_path, units = "in", height = 6, width = 12, dpi = 300)
+ggsave(filename = "mean_cont.png", path = fig_path, units = "in", height = 6, width = 12, dpi = 300)
 
 
 
 
 
-#### INTERVAL ####
+#### MEAN-INT ####
 interval_1_S <- df_FS_stable %>% 
   filter(method != "conv") %>% 
   pivot_wider(names_from = method, values_from = savings) %>% 
@@ -1525,45 +1953,27 @@ interval_1_S <- df_FS_stable %>%
   select(name, method, diff)
 
 interval_2_S <- df_interval_stable %>% 
-  select(c(name, site, cont_fs_2)) %>% 
+  select(c(name, site, interval_fs_2)) %>% 
   left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = savings - cont_fs_2, 
+  mutate(diff = savings - interval_fs_2, 
          method = "rand_interval_2") %>% 
   select(name, method, diff)
 
 interval_3_S <- df_interval_stable %>% 
-  select(c(name, site, cont_fs_3)) %>% 
+  select(c(name, site, interval_fs_3)) %>% 
   left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = savings - cont_fs_3, 
+  mutate(diff = savings - interval_fs_3, 
          method = "rand_interval_3") %>% 
   select(name, method, diff)
 
-df_acc_S <- rbind(interval_1_S, interval_2_S, interval_3_S)
+interval_7_S <- df_interval_stable %>% 
+  select(c(name, site, interval_fs_7)) %>% 
+  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - interval_fs_7, 
+         method = "rand_interval_7") %>% 
+  select(name, method, diff)
 
-p1 <- df_acc_S %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "rand_interval_1" = "Daily\nsampling", "rand_interval_2" = "2-day\nsampling", "rand_interval_3" = "3-day\nsampling")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.shape = NA, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = NULL, 
-       subtitle = str_glue("{S_building} stable buildings")) +
-  coord_cartesian(ylim = c(-18, 18)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text = element_blank(),
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+df_MW_S <- rbind(interval_1_S, interval_2_S, interval_3_S, interval_7_S)
 
 interval_1_V <- df_FS_variable %>% 
   filter(method != "conv") %>% 
@@ -1573,45 +1983,27 @@ interval_1_V <- df_FS_variable %>%
   select(name, method, diff)
 
 interval_2_V <- df_interval_variable %>% 
-  select(c(name, site, cont_fs_2)) %>% 
+  select(c(name, site, interval_fs_2)) %>% 
   left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = savings - cont_fs_2, 
+  mutate(diff = savings - interval_fs_2, 
          method = "rand_interval_2") %>% 
   select(name, method, diff)
 
 interval_3_V <- df_interval_variable %>% 
-  select(c(name, site, cont_fs_3)) %>% 
+  select(c(name, site, interval_fs_3)) %>% 
   left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = savings - cont_fs_3, 
+  mutate(diff = savings - interval_fs_3, 
          method = "rand_interval_3") %>% 
   select(name, method, diff)
 
-df_acc_V <- rbind(interval_1_V, interval_2_V, interval_3_V)
+interval_7_V <- df_interval_variable %>% 
+  select(c(name, site, interval_fs_7)) %>% 
+  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - interval_fs_7, 
+         method = "rand_interval_3") %>% 
+  select(name, method, diff)
 
-p2 <- df_acc_V %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "rand_interval_1" = "Daily\nsampling", "rand_interval_2" = "2-day\nsampling", "rand_interval_3" = "3-day\nsampling")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.shape = NA, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = NULL, 
-       subtitle = str_glue("{V_building} variable buildings")) +
-  coord_cartesian(ylim = c(-18, 18)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text = element_blank(), 
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+df_MW_V <- rbind(interval_1_V, interval_2_V, interval_3_V, interval_7_V)
 
 # plot for combined dataset
 interval_1_A <- bind_rows(interval_1_V, interval_1_S) %>% 
@@ -1623,14 +2015,22 @@ interval_2_A <- bind_rows(interval_2_V, interval_2_S) %>%
 interval_3_A <- bind_rows(interval_3_V, interval_3_S) %>% 
   select(name, interval_3_diff = diff)
 
-df_acc_A <- interval_1_A %>% 
+interval_7_A <- bind_rows(interval_7_V, interval_7_S) %>% 
+  select(name, interval_7_diff = diff)
+
+df_MW_A <- interval_1_A %>% 
   left_join(interval_2_A, by = "name") %>% 
   left_join(interval_3_A, by = "name") %>% 
-  pivot_longer(c(interval_1_diff, interval_2_diff, interval_3_diff), names_to = "method", values_to = "diff")
+  left_join(interval_7_A, by = "name") %>% 
+  pivot_longer(c(interval_1_diff, interval_2_diff, interval_3_diff, interval_7_diff), names_to = "method", values_to = "diff")
 
-p3 <- df_acc_A %>% 
+p_top <- df_MW_A %>% 
   mutate(method = as.factor(method), 
-         method = recode_factor(method, "interval_1_diff" = "Daily\nsampling", "interval_2_diff" = "2-day\nsampling", "interval_3_diff" = "3-day\nsampling")) %>% 
+         method = recode_factor(method, 
+                                "interval_1_diff" = "Daily\nsampling", 
+                                "interval_2_diff" = "2-day\nsampling", 
+                                "interval_3_diff" = "3-day\nsampling", 
+                                "interval_7_diff" = "7-day\nsampling")) %>% 
   ggplot(aes(x = method, y = diff, fill = method)) +
   geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
   geom_lv(k = 4, outlier.shape = NA) +
@@ -1642,23 +2042,16 @@ p3 <- df_acc_A %>%
                      breaks = breaks_pretty(n = 4), 
                      labels = number_format(suffix = " %")) +
   scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
+  scale_color_manual(values = c("grey80", "grey80", "grey80", "grey80")) + 
   labs(fill = NULL, 
        x = NULL, 
        y = "Error in fractional savings", 
-       subtitle = str_glue("All {A_building} buildings")) +
-  coord_cartesian(ylim = c(-18, 18)) +
+       subtitle = str_glue("All {A_building} buildings with measured weather")) +
+  coord_cartesian(ylim = c(-10, 10)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
         legend.position = "none",
         axis.text.x = element_blank(),
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-p_top <- ggarrange(p3, p1, p2,
-                   ncol = 3, nrow = 1,
-                   labels = c("a)", "b)", "c)"),
-                   align = "hv",
-                   legend="none") +
-  plot_annotation(subtitle = "with measured weather conditions")
 
 # TMY version
 interval_1_S <- df_FS_tmy_stable %>% 
@@ -1668,45 +2061,27 @@ interval_1_S <- df_FS_tmy_stable %>%
   select(name, method, diff)
 
 interval_2_S <- df_interval_stable %>% 
-  select(c(name, site, cont_tmy_2)) %>% 
+  select(c(name, site, interval_tmy_2)) %>% 
   left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = savings - cont_tmy_2, 
+  mutate(diff = savings - interval_tmy_2, 
          method = "rand_interval_2") %>% 
   select(name, method, diff)
 
 interval_3_S <- df_interval_stable %>% 
-  select(c(name, site, cont_tmy_3)) %>% 
+  select(c(name, site, interval_tmy_3)) %>% 
   left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = savings - cont_tmy_3, 
+  mutate(diff = savings - interval_tmy_3, 
          method = "rand_interval_3") %>% 
   select(name, method, diff)
 
-df_acc_S <- rbind(interval_1_S, interval_2_S, interval_3_S)
+interval_7_S <- df_interval_stable %>% 
+  select(c(name, site, interval_tmy_7)) %>% 
+  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - interval_tmy_7, 
+         method = "rand_interval_7") %>% 
+  select(name, method, diff)
 
-p1 <- df_acc_S %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "rand_interval_1" = "Daily\nsampling", "rand_interval_2" = "2-day\nsampling", "rand_interval_3" = "3-day\nsampling")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.shape = NA, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = NULL, 
-       subtitle = str_glue("{S_building} stable buildings")) +
-  coord_cartesian(ylim = c(-18, 18)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text.y = element_blank(), 
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+df_TW_S <- rbind(interval_1_S, interval_2_S, interval_3_S, interval_7_S)
 
 interval_1_V <- df_FS_tmy_variable %>% 
   left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
@@ -1715,45 +2090,27 @@ interval_1_V <- df_FS_tmy_variable %>%
   select(name, method, diff)
 
 interval_2_V <- df_interval_variable %>% 
-  select(c(name, site, cont_tmy_2)) %>% 
+  select(c(name, site, interval_tmy_2)) %>% 
   left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = savings - cont_tmy_2, 
+  mutate(diff = savings - interval_tmy_2, 
          method = "rand_interval_2") %>% 
   select(name, method, diff)
 
 interval_3_V <- df_interval_variable %>% 
-  select(c(name, site, cont_tmy_3)) %>% 
+  select(c(name, site, interval_tmy_3)) %>% 
   left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = savings - cont_tmy_3, 
+  mutate(diff = savings - interval_tmy_3, 
          method = "rand_interval_3") %>% 
   select(name, method, diff)
 
-df_acc_V <- rbind(interval_1_V, interval_2_V, interval_3_V)
+interval_7_V <- df_interval_variable %>% 
+  select(c(name, site, interval_tmy_7)) %>% 
+  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - interval_tmy_7, 
+         method = "rand_interval_7") %>% 
+  select(name, method, diff)
 
-p2 <- df_acc_V %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "rand_interval_1" = "Daily\nsampling", "rand_interval_2" = "2-day\nsampling", "rand_interval_3" = "3-day\nsampling")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.shape = NA, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = NULL, 
-       subtitle = str_glue("{V_building} variable buildings")) +
-  coord_cartesian(ylim = c(-18, 18)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text.y = element_blank(), 
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+df_TW_V <- rbind(interval_1_V, interval_2_V, interval_3_V, interval_7_V)
 
 # plot for combined dataset
 interval_1_A <- bind_rows(interval_1_V, interval_1_S) %>% 
@@ -1765,14 +2122,22 @@ interval_2_A <- bind_rows(interval_2_V, interval_2_S) %>%
 interval_3_A <- bind_rows(interval_3_V, interval_3_S) %>% 
   select(name, interval_3_diff = diff)
 
-df_acc_A <- interval_1_A %>% 
+interval_7_A <- bind_rows(interval_7_V, interval_7_S) %>% 
+  select(name, interval_7_diff = diff)
+
+df_TW_A <- interval_1_A %>% 
   left_join(interval_2_A, by = "name") %>% 
   left_join(interval_3_A, by = "name") %>% 
-  pivot_longer(c(interval_1_diff, interval_2_diff, interval_3_diff), names_to = "method", values_to = "diff")
+  left_join(interval_7_A, by = "name") %>% 
+  pivot_longer(c(interval_1_diff, interval_2_diff, interval_3_diff, interval_7_diff), names_to = "method", values_to = "diff")
 
-p3 <- df_acc_A %>% 
+p_bottom <- df_TW_A %>% 
   mutate(method = as.factor(method), 
-         method = recode_factor(method, "interval_1_diff" = "Daily\nsampling", "interval_2_diff" = "2-day\nsampling", "interval_3_diff" = "3-day\nsampling")) %>% 
+         method = recode_factor(method, 
+                                "interval_1_diff" = "Daily\nsampling", 
+                                "interval_2_diff" = "2-day\nsampling", 
+                                "interval_3_diff" = "3-day\nsampling", 
+                                "interval_7_diff" = "7-day\nsampling")) %>% 
   ggplot(aes(x = method, y = diff, fill = method)) +
   geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
   geom_lv(k = 4, outlier.shape = NA) +
@@ -1784,22 +2149,15 @@ p3 <- df_acc_A %>%
                      breaks = breaks_pretty(n = 4), 
                      labels = number_format(suffix = " %")) +
   scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
+  scale_color_manual(values = c("grey80", "grey80", "grey80", "grey80")) + 
   labs(fill = NULL, 
        x = NULL, 
        y = "Error in fractional savings", 
-       subtitle = str_glue("All {A_building} buildings")) +
-  coord_cartesian(ylim = c(-18, 18)) +
+       subtitle = str_glue("All {A_building} buildings with TMY weather")) +
+  coord_cartesian(ylim = c(-10, 10)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
         legend.position = "none",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-p_bottom <- ggarrange(p3, p1, p2,
-                      ncol = 3, nrow = 1,
-                      labels = c("d)", "e)", "f)"),
-                      align = "hv",
-                      legend="none") +
-  plot_annotation(subtitle = "with typical meteorological weather")
 
 ggarrange(p_top, p_bottom, 
           ncol = 1, nrow = 2, 
@@ -1807,7 +2165,7 @@ ggarrange(p_top, p_bottom,
           legend = "none") +
   plot_annotation(title = "M&V accuracy comparison")
 
-ggsave(filename = "interval.png", path = fig_path, units = "in", height = 9, width = 12, dpi = 300)
+ggsave(filename = "mean_interval.png", path = fig_path, units = "in", height = 9, width = 12, dpi = 300)
 
 # sprt sequence plot for different sampling intervals
 interval_1_S <- df_seq_FS_stable %>% 
@@ -1831,32 +2189,14 @@ interval_3_S <- df_seq_interval_FS_stable %>%
          method = "rand_interval_3") %>% 
   select(name, method, diff)
 
-df_acc_S <- rbind(interval_1_S, interval_2_S, interval_3_S)
+interval_7_S <- df_seq_interval_FS_stable %>% 
+  filter(interval == 7 & seq == "eob") %>% 
+  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - FS, 
+         method = "rand_interval_7") %>% 
+  select(name, method, diff)
 
-p1 <- df_acc_S %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "rand_interval_1" = "Daily\nsampling", "rand_interval_2" = "2-day\nsampling", "rand_interval_3" = "3-day\nsampling")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.shape = NA, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = NULL, 
-       subtitle = str_glue("{S_building} stable buildings")) +
-  coord_cartesian(ylim = c(-18, 18)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text = element_blank(),
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+df_MW_S <- rbind(interval_1_S, interval_2_S, interval_3_S, interval_7_S)
 
 # variable set
 interval_1_V <- df_seq_FS_variable %>% 
@@ -1880,32 +2220,14 @@ interval_3_V <- df_seq_interval_FS_variable %>%
          method = "rand_interval_3") %>% 
   select(name, method, diff)
 
-df_acc_V <- rbind(interval_1_V, interval_2_V, interval_3_V)
+interval_7_V <- df_seq_interval_FS_variable %>% 
+  filter(interval == 7 & seq == "eob") %>% 
+  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - FS, 
+         method = "rand_interval_7") %>% 
+  select(name, method, diff)
 
-p2 <- df_acc_V %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "rand_interval_1" = "Daily\nsampling", "rand_interval_2" = "2-day\nsampling", "rand_interval_3" = "3-day\nsampling")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.shape = NA, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = NULL, 
-       subtitle = str_glue("{V_building} stable buildings")) +
-  coord_cartesian(ylim = c(-18, 18)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text = element_blank(),
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+df_MW_V <- rbind(interval_1_V, interval_2_V, interval_3_V, interval_7_V)
 
 # plot for combined dataset
 interval_1_A <- bind_rows(interval_1_V, interval_1_S) %>% 
@@ -1917,14 +2239,22 @@ interval_2_A <- bind_rows(interval_2_V, interval_2_S) %>%
 interval_3_A <- bind_rows(interval_3_V, interval_3_S) %>% 
   select(name, interval_3_diff = diff)
 
-df_acc_A <- interval_1_A %>% 
+interval_7_A <- bind_rows(interval_7_V, interval_7_S) %>% 
+  select(name, interval_7_diff = diff)
+
+df_MW_A <- interval_1_A %>% 
   left_join(interval_2_A, by = "name") %>% 
   left_join(interval_3_A, by = "name") %>% 
-  pivot_longer(c(interval_1_diff, interval_2_diff, interval_3_diff), names_to = "method", values_to = "diff")
+  left_join(interval_7_A, by = "name") %>% 
+  pivot_longer(c(interval_1_diff, interval_2_diff, interval_3_diff, interval_7_diff), names_to = "method", values_to = "diff")
 
-p3 <- df_acc_A %>% 
+p_top <- df_MW_A %>% 
   mutate(method = as.factor(method), 
-         method = recode_factor(method, "interval_1_diff" = "Daily\nsampling", "interval_2_diff" = "2-day\nsampling", "interval_3_diff" = "3-day\nsampling")) %>% 
+         method = recode_factor(method, 
+                                "interval_1_diff" = "Daily\nsampling", 
+                                "interval_2_diff" = "2-day\nsampling", 
+                                "interval_3_diff" = "3-day\nsampling", 
+                                "interval_7_diff" = "7-day\nsampling")) %>% 
   ggplot(aes(x = method, y = diff, fill = method)) +
   geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
   geom_lv(k = 4, outlier.shape = NA) +
@@ -1936,23 +2266,16 @@ p3 <- df_acc_A %>%
                      breaks = breaks_pretty(n = 4), 
                      labels = number_format(suffix = " %")) +
   scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
+  scale_color_manual(values = c("grey80", "grey80", "grey80", "grey80")) + 
   labs(fill = NULL, 
        x = NULL, 
        y = "Error in fractional savings", 
-       subtitle = str_glue("All {A_building} buildings")) +
-  coord_cartesian(ylim = c(-18, 18)) +
+       subtitle = str_glue("All {A_building} buildings with measured weather")) +
+  coord_cartesian(ylim = c(-10, 10)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
         legend.position = "none",
         axis.text.x = element_blank(),
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-p_top <- ggarrange(p3, p1, p2,
-                   ncol = 3, nrow = 1,
-                   labels = c("a)", "b)", "c)"),
-                   align = "hv",
-                   legend="none") +
-  plot_annotation(subtitle = "with measured weather conditions")
 
 # with tmy version
 interval_1_S <- df_sprt_all_stable %>% 
@@ -1977,32 +2300,14 @@ interval_3_S <- df_seq_interval_nm_stable %>%
          method = "rand_interval_3") %>% 
   select(name, method, diff)
 
-df_acc_S <- rbind(interval_1_S, interval_2_S, interval_3_S)
+interval_7_S <- df_seq_interval_nm_stable %>% 
+  filter(interval == 7 & seq == "eob") %>% 
+  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - annual, 
+         method = "rand_interval_7") %>% 
+  select(name, method, diff)
 
-p1 <- df_acc_S %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "rand_interval_1" = "Daily\nsampling", "rand_interval_2" = "2-day\nsampling", "rand_interval_3" = "3-day\nsampling")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.shape = NA, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = NULL, 
-       subtitle = str_glue("{S_building} stable buildings")) +
-  coord_cartesian(ylim = c(-18, 18)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text.y = element_blank(),
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+df_TW_S <- rbind(interval_1_S, interval_2_S, interval_3_S, interval_7_S)
 
 # variable set
 interval_1_V <- df_sprt_all_variable %>% 
@@ -2027,32 +2332,14 @@ interval_3_V <- df_seq_interval_nm_variable %>%
          method = "rand_interval_3") %>% 
   select(name, method, diff)
 
-df_acc_V <- rbind(interval_1_V, interval_2_V, interval_3_V)
+interval_7_V <- df_seq_interval_nm_variable %>% 
+  filter(interval == 7 & seq == "eob") %>% 
+  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - annual, 
+         method = "rand_interval_7") %>% 
+  select(name, method, diff)
 
-p2 <- df_acc_V %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "rand_interval_1" = "Daily\nsampling", "rand_interval_2" = "2-day\nsampling", "rand_interval_3" = "3-day\nsampling")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.shape = NA, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = NULL, 
-       subtitle = str_glue("{V_building} stable buildings")) +
-  coord_cartesian(ylim = c(-18, 18)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text.y = element_blank(),
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+df_TW_V <- rbind(interval_1_V, interval_2_V, interval_3_V, interval_7_V)
 
 # plot for combined dataset
 interval_1_A <- bind_rows(interval_1_V, interval_1_S) %>% 
@@ -2064,14 +2351,22 @@ interval_2_A <- bind_rows(interval_2_V, interval_2_S) %>%
 interval_3_A <- bind_rows(interval_3_V, interval_3_S) %>% 
   select(name, interval_3_diff = diff)
 
-df_acc_A <- interval_1_A %>% 
+interval_7_A <- bind_rows(interval_7_V, interval_7_S) %>% 
+  select(name, interval_7_diff = diff)
+
+df_TW_A <- interval_1_A %>% 
   left_join(interval_2_A, by = "name") %>% 
   left_join(interval_3_A, by = "name") %>% 
-  pivot_longer(c(interval_1_diff, interval_2_diff, interval_3_diff), names_to = "method", values_to = "diff")
+  left_join(interval_7_A, by = "name") %>% 
+  pivot_longer(c(interval_1_diff, interval_2_diff, interval_3_diff, interval_7_diff), names_to = "method", values_to = "diff")
 
-p3 <- df_acc_A %>% 
+p_bottom <- df_TW_A %>% 
   mutate(method = as.factor(method), 
-         method = recode_factor(method, "interval_1_diff" = "Daily\nsampling", "interval_2_diff" = "2-day\nsampling", "interval_3_diff" = "3-day\nsampling")) %>% 
+         method = recode_factor(method, 
+                                "interval_1_diff" = "Daily\nsampling", 
+                                "interval_2_diff" = "2-day\nsampling", 
+                                "interval_3_diff" = "3-day\nsampling", 
+                                "interval_7_diff" = "7-day\nsampling")) %>% 
   ggplot(aes(x = method, y = diff, fill = method)) +
   geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
   geom_lv(k = 4, outlier.shape = NA) +
@@ -2083,22 +2378,16 @@ p3 <- df_acc_A %>%
                      breaks = breaks_pretty(n = 4), 
                      labels = number_format(suffix = " %")) +
   scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
+  scale_color_manual(values = c("grey80", "grey80", "grey80", "grey80")) + 
   labs(fill = NULL, 
        x = NULL, 
        y = "Error in fractional savings", 
-       subtitle = str_glue("All {A_building} buildings")) +
-  coord_cartesian(ylim = c(-18, 18)) +
+       subtitle = str_glue("All {A_building} buildings with TMY weather")) +
+  coord_cartesian(ylim = c(-10, 10)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
         legend.position = "none",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 
-p_bottom <- ggarrange(p3, p1, p2,
-                      ncol = 3, nrow = 1,
-                      labels = c("d)", "e)", "f)"),
-                      align = "hv",
-                      legend="none") +
-  plot_annotation(subtitle = "with typical meteorological weather")
 
 ggarrange(p_top, p_bottom, 
           ncol = 1, nrow = 2, 
@@ -2106,8 +2395,124 @@ ggarrange(p_top, p_bottom,
           legend = "none") +
   plot_annotation(title = "M&V accuracy comparison")
 
-ggsave(filename = "interval_sprt.png", path = fig_path, units = "in", height = 9, width = 12, dpi = 300)
+ggsave(filename = "mean_interval_sprt.png", path = fig_path, units = "in", height = 9, width = 12, dpi = 300)
 
+# null results
+interval_1_S <- df_FS_null_stable %>% 
+  filter(method != "conv") %>% 
+  pivot_wider(names_from = method, values_from = savings) %>% 
+  mutate(diff = true - rand, 
+         method = "rand_interval_1") %>% 
+  select(name, method, diff)
+
+interval_2_S <- df_interval_null_stable %>% 
+  select(c(name, site, interval_fs_2)) %>% 
+  left_join(df_FS_null_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - interval_fs_2, 
+         method = "rand_interval_2") %>% 
+  select(name, method, diff)
+
+interval_3_S <- df_interval_null_stable %>% 
+  select(c(name, site, interval_fs_3)) %>% 
+  left_join(df_FS_null_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - interval_fs_3, 
+         method = "rand_interval_3") %>% 
+  select(name, method, diff)
+
+interval_7_S <- df_interval_null_stable %>% 
+  select(c(name, site, interval_fs_7)) %>% 
+  left_join(df_FS_null_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - interval_fs_7, 
+         method = "rand_interval_7") %>% 
+  select(name, method, diff)
+
+df_MW_S <- rbind(interval_1_S, interval_2_S, interval_3_S, interval_7_S)
+
+interval_1_V <- df_FS_null_variable %>% 
+  filter(method != "conv") %>% 
+  pivot_wider(names_from = method, values_from = savings) %>% 
+  mutate(diff = true - rand, 
+         method = "rand_interval_1") %>% 
+  select(name, method, diff)
+
+interval_2_V <- df_interval_null_variable %>% 
+  select(c(name, site, interval_fs_2)) %>% 
+  left_join(df_FS_null_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - interval_fs_2, 
+         method = "rand_interval_2") %>% 
+  select(name, method, diff)
+
+interval_3_V <- df_interval_null_variable %>% 
+  select(c(name, site, interval_fs_3)) %>% 
+  left_join(df_FS_null_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - interval_fs_3, 
+         method = "rand_interval_3") %>% 
+  select(name, method, diff)
+
+interval_7_V <- df_interval_null_variable %>% 
+  select(c(name, site, interval_fs_7)) %>% 
+  left_join(df_FS_null_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - interval_fs_7, 
+         method = "rand_interval_7") %>% 
+  select(name, method, diff)
+
+df_MW_V <- rbind(interval_1_V, interval_2_V, interval_3_V, interval_7_V)
+
+# plot for combined dataset
+interval_1_A <- bind_rows(interval_1_V, interval_1_S) %>% 
+  select(name, interval_1_diff = diff)
+
+interval_2_A <- bind_rows(interval_2_V, interval_2_S) %>% 
+  select(name, interval_2_diff = diff)
+
+interval_3_A <- bind_rows(interval_3_V, interval_3_S) %>% 
+  select(name, interval_3_diff = diff)
+
+interval_7_A <- bind_rows(interval_7_V, interval_7_S) %>% 
+  select(name, interval_7_diff = diff)
+
+df_MW_A <- interval_1_A %>% 
+  left_join(interval_2_A, by = "name") %>% 
+  left_join(interval_3_A, by = "name") %>% 
+  left_join(interval_7_A, by = "name") %>% 
+  pivot_longer(c(interval_1_diff, interval_2_diff, interval_3_diff, interval_7_diff), names_to = "method", values_to = "diff")
+
+df_MW_A %>% 
+  mutate(method = as.factor(method), 
+         method = recode_factor(method, 
+                                "interval_1_diff" = "Daily\nsampling", 
+                                "interval_2_diff" = "2-day\nsampling", 
+                                "interval_3_diff" = "3-day\nsampling", 
+                                "interval_7_diff" = "7-day\nsampling")) %>% 
+  ggplot(aes(x = method, y = diff, fill = method)) +
+  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
+  geom_lv(k = 4, outlier.shape = NA) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
+  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
+  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
+            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 4), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80", "grey80", "grey80")) + 
+  labs(fill = NULL, 
+       x = NULL, 
+       y = "Error in fractional savings", 
+       title = "No-saving M&V accuracy comparison",
+       subtitle = str_glue("All {A_building} buildings with measure weather conditions")) +
+  coord_cartesian(ylim = c(-10, 10)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "none",
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+ggsave(filename = "mean_interval_null.png", path = fig_path, units = "in", height = 6, width = 12, dpi = 300)
+
+
+
+
+
+#### TIME-INT ####
 # timeline to finish sequential test
 interval_1_count <- bind_rows(df_sprt_all_stable, df_sprt_all_variable) %>% 
   select(c(seq, n_weeks)) %>% 
@@ -2129,11 +2534,22 @@ interval_3_count <- bind_rows(df_seq_interval_FS_stable, df_seq_interval_FS_vari
   mutate(seq = as.factor(seq)) %>% 
   mutate(method = "interval_3")
 
-df_count <- bind_rows(interval_1_count, interval_2_count, interval_3_count)
+interval_7_count <- bind_rows(df_seq_interval_FS_stable, df_seq_interval_FS_variable) %>% 
+  drop_na() %>% 
+  filter(seq != "final" & interval == 7) %>% 
+  select(c(seq, n_weeks)) %>% 
+  mutate(seq = as.factor(seq)) %>% 
+  mutate(method = "interval_7")
+
+df_count <- bind_rows(interval_1_count, interval_2_count, interval_3_count, interval_7_count)
 
 df_count %>% 
   mutate(method = as.factor(method), 
-         method = recode_factor(method, "interval_1" = "Daily\nsampling", "interval_2" = "2-day\nsampling", "interval_3" = "3-day\nsampling"),
+         method = recode_factor(method, 
+                                "interval_1" = "Daily\nsampling", 
+                                "interval_2" = "2-day\nsampling", 
+                                "interval_3" = "3-day\nsampling", 
+                                "interval_7" = "7-day\nsampling"),
          seq = recode_factor(seq, "sprt" = "SPRT", "temp" = "80% TMY range", "eob" = "M&V complete")) %>% 
   ggplot() +
   geom_boxplot(aes(x = seq, y = n_weeks, fill = method)) +
@@ -2150,892 +2566,6 @@ df_count %>%
         legend.position = "bottom",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 
-ggsave(filename = "timeline_sprt.png", path = fig_path, units = "in", height = 6, width = 9, dpi = 300)
+ggsave(filename = "timeline_interval_sprt.png", path = fig_path, units = "in", height = 6, width = 9, dpi = 300)
 
-# null results
-interval_1_S <- df_FS_null_stable %>% 
-  filter(method != "conv") %>% 
-  pivot_wider(names_from = method, values_from = savings) %>% 
-  mutate(diff = true - rand, 
-         method = "rand_interval_1") %>% 
-  select(name, method, diff)
 
-interval_2_S <- df_interval_null_stable %>% 
-  select(c(name, site, cont_fs_2)) %>% 
-  left_join(df_FS_null_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = savings - cont_fs_2, 
-         method = "rand_interval_2") %>% 
-  select(name, method, diff)
-
-interval_3_S <- df_interval_null_stable %>% 
-  select(c(name, site, cont_fs_3)) %>% 
-  left_join(df_FS_null_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = savings - cont_fs_3, 
-         method = "rand_interval_3") %>% 
-  select(name, method, diff)
-
-df_acc_S <- rbind(interval_1_S, interval_2_S, interval_3_S)
-
-p1 <- df_acc_S %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "rand_interval_1" = "Daily\nsampling", "rand_interval_2" = "2-day\nsampling", "rand_interval_3" = "3-day\nsampling")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.shape = NA, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = NULL, 
-       subtitle = str_glue("{S_building} stable buildings")) +
-  coord_cartesian(ylim = c(-18, 18)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text.y = element_blank(),
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-interval_1_V <- df_FS_null_variable %>% 
-  filter(method != "conv") %>% 
-  pivot_wider(names_from = method, values_from = savings) %>% 
-  mutate(diff = true - rand, 
-         method = "rand_interval_1") %>% 
-  select(name, method, diff)
-
-interval_2_V <- df_interval_null_variable %>% 
-  select(c(name, site, cont_fs_2)) %>% 
-  left_join(df_FS_null_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = savings - cont_fs_2, 
-         method = "rand_interval_2") %>% 
-  select(name, method, diff)
-
-interval_3_V <- df_interval_null_variable %>% 
-  select(c(name, site, cont_fs_3)) %>% 
-  left_join(df_FS_null_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = savings - cont_fs_3, 
-         method = "rand_interval_3") %>% 
-  select(name, method, diff)
-
-df_acc_V <- rbind(interval_1_V, interval_2_V, interval_3_V)
-
-p2 <- df_acc_V %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "rand_interval_1" = "Daily\nsampling", "rand_interval_2" = "2-day\nsampling", "rand_interval_3" = "3-day\nsampling")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.shape = NA, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = NULL, 
-       subtitle = str_glue("{V_building} variable buildings")) +
-  coord_cartesian(ylim = c(-18, 18)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text.y = element_blank(), 
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-# plot for combined dataset
-interval_1_A <- bind_rows(interval_1_V, interval_1_S) %>% 
-  select(name, interval_1_diff = diff)
-
-interval_2_A <- bind_rows(interval_2_V, interval_2_S) %>% 
-  select(name, interval_2_diff = diff)
-
-interval_3_A <- bind_rows(interval_3_V, interval_3_S) %>% 
-  select(name, interval_3_diff = diff)
-
-df_acc_A <- interval_1_A %>% 
-  left_join(interval_2_A, by = "name") %>% 
-  left_join(interval_3_A, by = "name") %>% 
-  pivot_longer(c(interval_1_diff, interval_2_diff, interval_3_diff), names_to = "method", values_to = "diff")
-
-p3 <- df_acc_A %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "interval_1_diff" = "Daily\nsampling", "interval_2_diff" = "2-day\nsampling", "interval_3_diff" = "3-day\nsampling")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = "Error in fractional savings", 
-       subtitle = str_glue("All {A_building} buildings")) +
-  coord_cartesian(ylim = c(-18, 18)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-ggarrange(p3, p1, p2,
-                   ncol = 3, nrow = 1,
-                   labels = c("a)", "b)", "c)"),
-                   align = "hv",
-                   legend="none") +
-  plot_annotation(title = "No-saving M&V accuracy comparison", 
-                  subtitle = "with measured weather conditions")
-
-ggsave(filename = "interval_null.png", path = fig_path, units = "in", height = 6, width = 12, dpi = 300)
-
-
-
-
-
-#### INTERABS ####
-interval_1_S <- df_FS_stable %>% 
-  filter(method != "conv") %>% 
-  pivot_wider(names_from = method, values_from = savings) %>% 
-  mutate(diff = abs(true - rand), 
-         method = "rand_interval_1") %>% 
-  select(name, method, diff)
-
-interval_2_S <- df_interval_stable %>% 
-  select(c(name, site, cont_fs_2)) %>% 
-  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - cont_fs_2), 
-         method = "rand_interval_2") %>% 
-  select(name, method, diff)
-
-interval_3_S <- df_interval_stable %>% 
-  select(c(name, site, cont_fs_3)) %>% 
-  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - cont_fs_3), 
-         method = "rand_interval_3") %>% 
-  select(name, method, diff)
-
-df_acc_S <- rbind(interval_1_S, interval_2_S, interval_3_S)
-
-p1 <- df_acc_S %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "rand_interval_1" = "Daily\nsampling", "rand_interval_2" = "2-day\nsampling", "rand_interval_3" = "3-day\nsampling")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.shape = NA, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = NULL, 
-       subtitle = str_glue("{S_building} stable buildings")) +
-  coord_cartesian(ylim = c(0, 15)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text = element_blank(),
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-interval_1_V <- df_FS_variable %>% 
-  filter(method != "conv") %>% 
-  pivot_wider(names_from = method, values_from = savings) %>% 
-  mutate(diff = abs(true - rand), 
-         method = "rand_interval_1") %>% 
-  select(name, method, diff)
-
-interval_2_V <- df_interval_variable %>% 
-  select(c(name, site, cont_fs_2)) %>% 
-  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - cont_fs_2), 
-         method = "rand_interval_2") %>% 
-  select(name, method, diff)
-
-interval_3_V <- df_interval_variable %>% 
-  select(c(name, site, cont_fs_3)) %>% 
-  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - cont_fs_3), 
-         method = "rand_interval_3") %>% 
-  select(name, method, diff)
-
-df_acc_V <- rbind(interval_1_V, interval_2_V, interval_3_V)
-
-p2 <- df_acc_V %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "rand_interval_1" = "Daily\nsampling", "rand_interval_2" = "2-day\nsampling", "rand_interval_3" = "3-day\nsampling")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.shape = NA, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = NULL, 
-       subtitle = str_glue("{V_building} variable buildings")) +
-  coord_cartesian(ylim = c(0, 15)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text = element_blank(), 
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-# plot for combined dataset
-interval_1_A <- bind_rows(interval_1_V, interval_1_S) %>% 
-  select(name, interval_1_diff = diff)
-
-interval_2_A <- bind_rows(interval_2_V, interval_2_S) %>% 
-  select(name, interval_2_diff = diff)
-
-interval_3_A <- bind_rows(interval_3_V, interval_3_S) %>% 
-  select(name, interval_3_diff = diff)
-
-df_acc_A <- interval_1_A %>% 
-  left_join(interval_2_A, by = "name") %>% 
-  left_join(interval_3_A, by = "name") %>% 
-  pivot_longer(c(interval_1_diff, interval_2_diff, interval_3_diff), names_to = "method", values_to = "diff")
-
-p3 <- df_acc_A %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "interval_1_diff" = "Daily\nsampling", "interval_2_diff" = "2-day\nsampling", "interval_3_diff" = "3-day\nsampling")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = "Error in fractional savings", 
-       subtitle = str_glue("All {A_building} buildings")) +
-  coord_cartesian(ylim = c(0, 15)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text.x = element_blank(),
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-p_top <- ggarrange(p3, p1, p2,
-                   ncol = 3, nrow = 1,
-                   labels = c("a)", "b)", "c)"),
-                   align = "hv",
-                   legend="none") +
-  plot_annotation(subtitle = "with measured weather conditions")
-
-# TMY version
-interval_1_S <- df_FS_tmy_stable %>% 
-  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - rand), 
-         method = "rand_interval_1") %>% 
-  select(name, method, diff)
-
-interval_2_S <- df_interval_stable %>% 
-  select(c(name, site, cont_tmy_2)) %>% 
-  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - cont_tmy_2), 
-         method = "rand_interval_2") %>% 
-  select(name, method, diff)
-
-interval_3_S <- df_interval_stable %>% 
-  select(c(name, site, cont_tmy_3)) %>% 
-  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - cont_tmy_3), 
-         method = "rand_interval_3") %>% 
-  select(name, method, diff)
-
-df_acc_S <- rbind(interval_1_S, interval_2_S, interval_3_S)
-
-p1 <- df_acc_S %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "rand_interval_1" = "Daily\nsampling", "rand_interval_2" = "2-day\nsampling", "rand_interval_3" = "3-day\nsampling")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.shape = NA, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = NULL, 
-       subtitle = str_glue("{S_building} stable buildings")) +
-  coord_cartesian(ylim = c(0, 15)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text.y = element_blank(), 
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-interval_1_V <- df_FS_tmy_variable %>% 
-  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - rand), 
-         method = "rand_interval_1") %>% 
-  select(name, method, diff)
-
-interval_2_V <- df_interval_variable %>% 
-  select(c(name, site, cont_tmy_2)) %>% 
-  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - cont_tmy_2), 
-         method = "rand_interval_2") %>% 
-  select(name, method, diff)
-
-interval_3_V <- df_interval_variable %>% 
-  select(c(name, site, cont_tmy_3)) %>% 
-  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - cont_tmy_3), 
-         method = "rand_interval_3") %>% 
-  select(name, method, diff)
-
-df_acc_V <- rbind(interval_1_V, interval_2_V, interval_3_V)
-
-p2 <- df_acc_V %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "rand_interval_1" = "Daily\nsampling", "rand_interval_2" = "2-day\nsampling", "rand_interval_3" = "3-day\nsampling")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.shape = NA, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = NULL, 
-       subtitle = str_glue("{V_building} variable buildings")) +
-  coord_cartesian(ylim = c(0, 15)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text.y = element_blank(), 
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-# plot for combined dataset
-interval_1_A <- bind_rows(interval_1_V, interval_1_S) %>% 
-  select(name, interval_1_diff = diff)
-
-interval_2_A <- bind_rows(interval_2_V, interval_2_S) %>% 
-  select(name, interval_2_diff = diff)
-
-interval_3_A <- bind_rows(interval_3_V, interval_3_S) %>% 
-  select(name, interval_3_diff = diff)
-
-df_acc_A <- interval_1_A %>% 
-  left_join(interval_2_A, by = "name") %>% 
-  left_join(interval_3_A, by = "name") %>% 
-  pivot_longer(c(interval_1_diff, interval_2_diff, interval_3_diff), names_to = "method", values_to = "diff")
-
-p3 <- df_acc_A %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "interval_1_diff" = "Daily\nsampling", "interval_2_diff" = "2-day\nsampling", "interval_3_diff" = "3-day\nsampling")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = "Error in fractional savings", 
-       subtitle = str_glue("All {A_building} buildings")) +
-  coord_cartesian(ylim = c(0, 15)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-p_bottom <- ggarrange(p3, p1, p2,
-                      ncol = 3, nrow = 1,
-                      labels = c("d)", "e)", "f)"),
-                      align = "hv",
-                      legend="none") +
-  plot_annotation(subtitle = "with typical meteorological weather")
-
-ggarrange(p_top, p_bottom, 
-          ncol = 1, nrow = 2, 
-          align = "hv", 
-          legend = "none") +
-  plot_annotation(title = "M&V accuracy comparison")
-
-ggsave(filename = "interval_abs.png", path = fig_path, units = "in", height = 9, width = 12, dpi = 300)
-
-# sprt sequence plot for different sampling intervals
-interval_1_S <- df_seq_FS_stable %>% 
-  filter(seq == "eob") %>% 
-  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - FS), 
-         method = "rand_interval_1") %>% 
-  select(name, method, diff)
-
-interval_2_S <- df_seq_interval_FS_stable %>% 
-  filter(interval == 2 & seq == "eob") %>% 
-  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - FS), 
-         method = "rand_interval_2") %>% 
-  select(name, method, diff)
-
-interval_3_S <- df_seq_interval_FS_stable %>% 
-  filter(interval == 3 & seq == "eob") %>% 
-  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - FS), 
-         method = "rand_interval_3") %>% 
-  select(name, method, diff)
-
-df_acc_S <- rbind(interval_1_S, interval_2_S, interval_3_S)
-
-p1 <- df_acc_S %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "rand_interval_1" = "Daily\nsampling", "rand_interval_2" = "2-day\nsampling", "rand_interval_3" = "3-day\nsampling")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.shape = NA, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = NULL, 
-       subtitle = str_glue("{S_building} stable buildings")) +
-  coord_cartesian(ylim = c(0, 15)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text = element_blank(),
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-# variable set
-interval_1_V <- df_seq_FS_variable %>% 
-  filter(seq == "eob") %>% 
-  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - FS), 
-         method = "rand_interval_1") %>% 
-  select(name, method, diff)
-
-interval_2_V <- df_seq_interval_FS_variable %>% 
-  filter(interval == 2 & seq == "eob") %>% 
-  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - FS), 
-         method = "rand_interval_2") %>% 
-  select(name, method, diff)
-
-interval_3_V <- df_seq_interval_FS_variable %>% 
-  filter(interval == 3 & seq == "eob") %>% 
-  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - FS), 
-         method = "rand_interval_3") %>% 
-  select(name, method, diff)
-
-df_acc_V <- rbind(interval_1_V, interval_2_V, interval_3_V)
-
-p2 <- df_acc_V %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "rand_interval_1" = "Daily\nsampling", "rand_interval_2" = "2-day\nsampling", "rand_interval_3" = "3-day\nsampling")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.shape = NA, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = NULL, 
-       subtitle = str_glue("{V_building} stable buildings")) +
-  coord_cartesian(ylim = c(0, 15)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text = element_blank(),
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-# plot for combined dataset
-interval_1_A <- bind_rows(interval_1_V, interval_1_S) %>% 
-  select(name, interval_1_diff = diff)
-
-interval_2_A <- bind_rows(interval_2_V, interval_2_S) %>% 
-  select(name, interval_2_diff = diff)
-
-interval_3_A <- bind_rows(interval_3_V, interval_3_S) %>% 
-  select(name, interval_3_diff = diff)
-
-df_acc_A <- interval_1_A %>% 
-  left_join(interval_2_A, by = "name") %>% 
-  left_join(interval_3_A, by = "name") %>% 
-  pivot_longer(c(interval_1_diff, interval_2_diff, interval_3_diff), names_to = "method", values_to = "diff")
-
-p3 <- df_acc_A %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "interval_1_diff" = "Daily\nsampling", "interval_2_diff" = "2-day\nsampling", "interval_3_diff" = "3-day\nsampling")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = "Error in fractional savings", 
-       subtitle = str_glue("All {A_building} buildings")) +
-  coord_cartesian(ylim = c(0, 15)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text.x = element_blank(),
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-p_top <- ggarrange(p3, p1, p2,
-                   ncol = 3, nrow = 1,
-                   labels = c("a)", "b)", "c)"),
-                   align = "hv",
-                   legend="none") +
-  plot_annotation(subtitle = "with measured weather conditions")
-
-# with tmy version
-interval_1_S <- df_sprt_all_stable %>% 
-  filter(seq == "eob") %>% 
-  select(-c(seq, sprt, n_weeks)) %>% 
-  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - annual), 
-         method = "rand_interval_1") %>% 
-  select(name, method, diff)
-
-interval_2_S <- df_seq_interval_nm_stable %>% 
-  filter(interval == 2 & seq == "eob") %>% 
-  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - annual), 
-         method = "rand_interval_2") %>% 
-  select(name, method, diff)
-
-interval_3_S <- df_seq_interval_nm_stable %>% 
-  filter(interval == 3 & seq == "eob") %>% 
-  left_join(df_FS_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - annual), 
-         method = "rand_interval_3") %>% 
-  select(name, method, diff)
-
-df_acc_S <- rbind(interval_1_S, interval_2_S, interval_3_S)
-
-p1 <- df_acc_S %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "rand_interval_1" = "Daily\nsampling", "rand_interval_2" = "2-day\nsampling", "rand_interval_3" = "3-day\nsampling")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.shape = NA, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = NULL, 
-       subtitle = str_glue("{S_building} stable buildings")) +
-  coord_cartesian(ylim = c(0, 15)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text.y = element_blank(),
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-# variable set
-interval_1_V <- df_sprt_all_variable %>% 
-  filter(seq == "eob") %>% 
-  select(-c(seq, sprt, n_weeks)) %>% 
-  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - annual), 
-         method = "rand_interval_1") %>% 
-  select(name, method, diff)
-
-interval_2_V <- df_seq_interval_nm_variable %>% 
-  filter(interval == 2 & seq == "eob") %>% 
-  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - annual), 
-         method = "rand_interval_2") %>% 
-  select(name, method, diff)
-
-interval_3_V <- df_seq_interval_nm_variable %>% 
-  filter(interval == 3 & seq == "eob") %>% 
-  left_join(df_FS_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - annual), 
-         method = "rand_interval_3") %>% 
-  select(name, method, diff)
-
-df_acc_V <- rbind(interval_1_V, interval_2_V, interval_3_V)
-
-p2 <- df_acc_V %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "rand_interval_1" = "Daily\nsampling", "rand_interval_2" = "2-day\nsampling", "rand_interval_3" = "3-day\nsampling")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.shape = NA, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = NULL, 
-       subtitle = str_glue("{V_building} stable buildings")) +
-  coord_cartesian(ylim = c(0, 15)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text.y = element_blank(),
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-# plot for combined dataset
-interval_1_A <- bind_rows(interval_1_V, interval_1_S) %>% 
-  select(name, interval_1_diff = diff)
-
-interval_2_A <- bind_rows(interval_2_V, interval_2_S) %>% 
-  select(name, interval_2_diff = diff)
-
-interval_3_A <- bind_rows(interval_3_V, interval_3_S) %>% 
-  select(name, interval_3_diff = diff)
-
-df_acc_A <- interval_1_A %>% 
-  left_join(interval_2_A, by = "name") %>% 
-  left_join(interval_3_A, by = "name") %>% 
-  pivot_longer(c(interval_1_diff, interval_2_diff, interval_3_diff), names_to = "method", values_to = "diff")
-
-p3 <- df_acc_A %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "interval_1_diff" = "Daily\nsampling", "interval_2_diff" = "2-day\nsampling", "interval_3_diff" = "3-day\nsampling")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = "Error in fractional savings", 
-       subtitle = str_glue("All {A_building} buildings")) +
-  coord_cartesian(ylim = c(0, 15)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-p_bottom <- ggarrange(p3, p1, p2,
-                      ncol = 3, nrow = 1,
-                      labels = c("d)", "e)", "f)"),
-                      align = "hv",
-                      legend="none") +
-  plot_annotation(subtitle = "with typical meteorological weather")
-
-ggarrange(p_top, p_bottom, 
-          ncol = 1, nrow = 2, 
-          align = "hv", 
-          legend = "none") +
-  plot_annotation(title = "M&V accuracy comparison")
-
-ggsave(filename = "interval_sprt_abs.png", path = fig_path, units = "in", height = 9, width = 12, dpi = 300)
-
-# null results
-interval_1_S <- df_FS_null_stable %>% 
-  filter(method != "conv") %>% 
-  pivot_wider(names_from = method, values_from = savings) %>% 
-  mutate(diff = abs(true - rand), 
-         method = "rand_interval_1") %>% 
-  select(name, method, diff)
-
-interval_2_S <- df_interval_null_stable %>% 
-  select(c(name, site, cont_fs_2)) %>% 
-  left_join(df_FS_null_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - cont_fs_2), 
-         method = "rand_interval_2") %>% 
-  select(name, method, diff)
-
-interval_3_S <- df_interval_null_stable %>% 
-  select(c(name, site, cont_fs_3)) %>% 
-  left_join(df_FS_null_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - cont_fs_3), 
-         method = "rand_interval_3") %>% 
-  select(name, method, diff)
-
-df_acc_S <- rbind(interval_1_S, interval_2_S, interval_3_S)
-
-p1 <- df_acc_S %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "rand_interval_1" = "Daily\nsampling", "rand_interval_2" = "2-day\nsampling", "rand_interval_3" = "3-day\nsampling")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.shape = NA, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = NULL, 
-       subtitle = str_glue("{S_building} stable buildings")) +
-  coord_cartesian(ylim = c(0, 15)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text.y = element_blank(),
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-interval_1_V <- df_FS_null_variable %>% 
-  filter(method != "conv") %>% 
-  pivot_wider(names_from = method, values_from = savings) %>% 
-  mutate(diff = abs(true - rand), 
-         method = "rand_interval_1") %>% 
-  select(name, method, diff)
-
-interval_2_V <- df_interval_null_variable %>% 
-  select(c(name, site, cont_fs_2)) %>% 
-  left_join(df_FS_null_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - cont_fs_2), 
-         method = "rand_interval_2") %>% 
-  select(name, method, diff)
-
-interval_3_V <- df_interval_null_variable %>% 
-  select(c(name, site, cont_fs_3)) %>% 
-  left_join(df_FS_null_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - cont_fs_3), 
-         method = "rand_interval_3") %>% 
-  select(name, method, diff)
-
-df_acc_V <- rbind(interval_1_V, interval_2_V, interval_3_V)
-
-p2 <- df_acc_V %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "rand_interval_1" = "Daily\nsampling", "rand_interval_2" = "2-day\nsampling", "rand_interval_3" = "3-day\nsampling")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.shape = NA, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = NULL, 
-       subtitle = str_glue("{V_building} variable buildings")) +
-  coord_cartesian(ylim = c(0, 15)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text.y = element_blank(), 
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-# plot for combined dataset
-interval_1_A <- bind_rows(interval_1_V, interval_1_S) %>% 
-  select(name, interval_1_diff = diff)
-
-interval_2_A <- bind_rows(interval_2_V, interval_2_S) %>% 
-  select(name, interval_2_diff = diff)
-
-interval_3_A <- bind_rows(interval_3_V, interval_3_S) %>% 
-  select(name, interval_3_diff = diff)
-
-df_acc_A <- interval_1_A %>% 
-  left_join(interval_2_A, by = "name") %>% 
-  left_join(interval_3_A, by = "name") %>% 
-  pivot_longer(c(interval_1_diff, interval_2_diff, interval_3_diff), names_to = "method", values_to = "diff")
-
-p3 <- df_acc_A %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "interval_1_diff" = "Daily\nsampling", "interval_2_diff" = "2-day\nsampling", "interval_3_diff" = "3-day\nsampling")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = "Error in fractional savings", 
-       subtitle = str_glue("All {A_building} buildings")) +
-  coord_cartesian(ylim = c(0, 15)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-ggarrange(p3, p1, p2,
-          ncol = 3, nrow = 1,
-          labels = c("a)", "b)", "c)"),
-          align = "hv",
-          legend="none") +
-  plot_annotation(title = "No-saving M&V accuracy comparison", 
-                  subtitle = "with measured weather conditions")
-
-ggsave(filename = "interval_null_abs.png", path = fig_path, units = "in", height = 6, width = 12, dpi = 300)
