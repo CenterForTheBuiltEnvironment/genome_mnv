@@ -113,8 +113,8 @@ seq_run <- function(param, dataframe, tmy){
       
     }
     
-    # start estimation after 2 months for complete ftow profile
-    if (i / 4 > 2 & i %% 4 == 0) {
+    # start estimation after 12 months for complete ftow profile
+    if (i >= 24 & i %% 12 == 0) {
       
       # Update user on the week of update
       # print(paste0("updating TOWT model in week ", i))
@@ -124,6 +124,7 @@ seq_run <- function(param, dataframe, tmy){
     }
     
     # do test
+    skip <- F
     results_seq <- try(seq_ttest(x = value ~ strategy, 
                              data = df_seq,
                              d = 0.5, 
@@ -139,7 +140,7 @@ seq_run <- function(param, dataframe, tmy){
       
     } else {
       
-      skip <- F
+      skip <- skip
     }
     
     # calculate effect size
@@ -156,7 +157,7 @@ seq_run <- function(param, dataframe, tmy){
       
     } else {
       
-      skip <- F
+      skip <- skip
     }
     
     # update user
@@ -174,7 +175,7 @@ seq_run <- function(param, dataframe, tmy){
       
     } else {
       
-      skip <- F
+      skip <- skip
     }
     
     # extract test statistic
