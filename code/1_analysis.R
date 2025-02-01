@@ -58,8 +58,8 @@ source(paste0(function_path, "rand_seq.R"))
 run_params <- list(type = "stable", 
                    sprt = T, 
                    sprt_cont = F, 
-                   interval = F, 
-                   null = T)
+                   interval = T, 
+                   null = F)
 
 # Adding intervention effect as advanced chiller operation
 ctr_params <- list(peak_hours = 10:16,                      # accounts for peak hours

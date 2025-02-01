@@ -1,7 +1,7 @@
 ---
-title: "Reliability Demonstration of A Novel Randomized Measurement and Verification Method for Switchable Control Retrofit Using Large-scale Public Dataset"
+title: "Reliability Demonstration of A Novel Randomized Measurement and Verification Method for Switchable Control Retrofit Using Large Open Source Dataset"
 author:
-  - Aoyu Zou ^[Center for the Built Environment, University of California Berkeley, USA], Paul Raftery ^1^, Stefano Schiavon ^1^, Carlos Durate ^1^
+  - Aoyu Zou ^[Center for the Built Environment, University of California Berkeley, USA], Paul Raftery ^1^, Stefano Schiavon ^1^, Carlos Duarte ^1^, Gail Brager ^1^
 abstract: Conventional measurement and verification (M&V) methods relying on pre- and post-  retrofit comparison for estimating whole-building energy savings are often time-consuming and unreliable, especially when non-routine events such as reduced occupancy occur during the M&V process. Those events are unrelated to the intervention but significantgly affect building energy consumption and thus when the analyst applies conventiona M&V suggested by industry guidelines, the results can be largely confounded. In this study, we demonstrated that switchable interventions, such as most of the control retrofits, can benefit from random sampling, where the analyst randomly selects whether to implement the baseline or the intervention strategy each day. We tested this novel randomized M&V method on a large public dataset covering various climate zones and commercial building types, using a virtual chilled water supply temperature reset based on outdoor weather as the intervention. Our results show that comparing to the conventional method, the randomized method provides faster and more accurate savings estimation. Additionaly we found that the randomized M&V approach estimates much closer to the true savings when non-routine events are present demonstrating much improved reliability.
 
 output:
@@ -43,7 +43,7 @@ knitr::opts_chunk$set(echo = F,
 require(pacman)
 
 # load packages using pacman
-pacman::p_load(tidyverse, lubridate, here, stats, zoo, scales, ggpubr, patchwork, RColorBrewer)
+pacman::p_load(tidyverse, lubridate, here, stats, zoo, scales, lvplot, ggpubr, gridExtra, patchwork, RColorBrewer)
 
 # turn off scientific notation
 options(scipen = 999, digits = 15)
@@ -72,9 +72,18 @@ ls_colors <- c("Baseline" = "#c6dbef",
                "Projected baseline" = "#2171b5",
                "Intervention" = "#fdbb84",
                "Measured interv" = "#fdbb84",
-               "Conventional M&V" = "grey70", 
-               "Randomized M&V" = "#66c2a4", 
-               "Buildings satisfying all criteria" = "#66c2a4", 
+               "Conventional" = "grey70", 
+               "Randomized" = "#99d8c9", 
+               "Randomized\n(24 months)" = "#66c2a4",
+               "Randomized\n(50/50)" = "#66c2a4",
+               "Daily\nsampling" = "#66c2a4",
+               "2-day\nsampling" = "#66c2a4",
+               "3-day\nsampling" = "#66c2a4",
+               "7-day\nsampling" = "#66c2a4",
+               "Dropped" = "#41ae76",
+               "Kept" = "#006d2c",
+               "Randomized\n(20/80)" = "#ccece6",
+               "Buildings finishing randomized M&V" =  "#99d8c9",
                "Buildings satisfying 80% TMY range" = "black", 
                "Buildings satisfying SPRT" = "black")
 
@@ -183,66 +192,79 @@ get_scale <- function(eload, range = 2){
 #### READ DATA ####
 df_loc <- read.csv("../readfiles/loc_map.csv")
 
-# Tidy dataset
-readfile_tidy <- str_glue("../readfiles/tidy/")
+# stable dataset
+readfile_stable <- str_glue("../readfiles/stable/")
 fig_path = "../figs/manuscript/"
 
-df_energy_tidy <- read_rds(paste0(readfile_tidy, "df_energy.rds"))
-df_meta_tidy <- read_rds(paste0(readfile_tidy, "df_meta.rds"))
-df_weather_tidy <- read_rds(paste0(readfile_tidy, "df_weather.rds"))
-df_sprt_all_tidy <- read_rds(paste0(readfile_tidy, "df_sprt_all.rds"))
-df_seq_FS_tidy <- read_rds(paste0(readfile_tidy, "df_seq_FS.rds"))
-df_NRE_occ <- read_rds(paste0(readfile_tidy, "df_NRE_occ.rds"))
-df_MD_tidy <- read_rds(paste0(readfile_tidy, "df_MD.rds"))
-df_FS_tidy <- read_rds(paste0(readfile_tidy, "df_FS.rds"))
-df_eui_tidy <- read_rds(paste0(readfile_tidy, "df_eui.rds"))
-df_cont_MD_tidy <- read_rds(paste0(readfile_tidy, "df_cont_MD.rds"))
-df_cont_FS_tidy <- read_rds(paste0(readfile_tidy, "df_cont_FS.rds"))
-df_model_acc_tidy <- read_rds(paste0(readfile_tidy, "df_model_acc.rds"))
+df_energy_stable <- read_rds(paste0(readfile_stable, "df_energy.rds"))
+df_weather_stable <- read_rds(paste0(readfile_stable, "df_weather.rds"))
+df_sprt_all_stable <- read_rds(paste0(readfile_stable, "df_sprt_all.rds"))
+df_seq_fs_stable <- read_rds(paste0(readfile_stable, "df_seq_fs.rds"))
+df_fs_stable <- read_rds(paste0(readfile_stable, "df_fs.rds"))
+df_cont_stable <- read_rds(paste0(readfile_stable, "df_cont.rds"))
+df_fs_null_stable <- read_rds(paste0(readfile_stable, "df_fs_null.rds"))
+df_seq_fs_null_stable <- read_rds(paste0(readfile_stable, "df_seq_fs_null.rds"))
+df_model_acc_stable <- read_rds(paste0(readfile_stable, "df_model_acc.rds"))
+df_fs_tmy_stable <- read_rds(paste0(readfile_stable, "df_fs_tmy.rds"))
+df_fs_tmy_null_stable <- read_rds(paste0(readfile_stable, "df_fs_tmy_null.rds"))
+df_interval_drop_stable <- read_rds(paste0(readfile_stable, "df_interval_drop.rds"))
+df_interval_keep_stable <- read_rds(paste0(readfile_stable, "df_interval_keep.rds"))
+df_seq_interval_fs_drop_stable <- read_rds(paste0(readfile_stable, "df_seq_interval_fs_drop.rds"))
+df_seq_interval_fs_keep_stable <- read_rds(paste0(readfile_stable, "df_seq_interval_fs_keep.rds"))
+df_seq_interval_nm_drop_stable <- read_rds(paste0(readfile_stable, "df_seq_interval_nm_drop.rds"))
+df_seq_interval_nm_keep_stable <- read_rds(paste0(readfile_stable, "df_seq_interval_nm_keep.rds"))
+df_seq_interval_tl_drop_stable <- read_rds(paste0(readfile_stable, "df_seq_interval_tl_drop.rds"))
+df_seq_interval_tl_keep_stable <- read_rds(paste0(readfile_stable, "df_seq_interval_tl_keep.rds"))
 
-all_sites_tidy <- df_energy_tidy %>%
+
+all_sites_stable <- df_energy_stable %>%
   select(site) %>%
   distinct() %>%
   arrange(site)
 
-all_types_tidy <- df_energy_tidy %>%
+all_types_stable <- df_energy_stable %>%
   select(type) %>%
   mutate(type = as.factor(type)) %>%
   distinct()
 
-all_names_tidy <- df_energy_tidy %>%
+all_names_stable <- df_energy_stable %>%
   select(name) %>%
   distinct(name)
 
-# Messy dataset
-readfile_messy <- str_glue("../readfiles/messy/")
+# variable dataset
+readfile_variable <- str_glue("../readfiles/variable/")
 
-df_energy_messy <- read_rds(paste0(readfile_messy, "df_energy.rds"))
-df_meta_messy <- read_rds(paste0(readfile_messy, "df_meta.rds"))
-df_weather_messy <- read_rds(paste0(readfile_messy, "df_weather.rds"))
-df_sprt_all_messy <- read_rds(paste0(readfile_messy, "df_sprt_all.rds"))
-df_seq_FS_messy <- read_rds(paste0(readfile_messy, "df_seq_FS.rds"))
-df_MD_messy <- read_rds(paste0(readfile_messy, "df_MD.rds"))
-df_FS_messy <- read_rds(paste0(readfile_messy, "df_FS.rds"))
-df_eui_messy <- read_rds(paste0(readfile_messy, "df_eui.rds"))
-df_cont_MD_messy <- read_rds(paste0(readfile_messy, "df_cont_MD.rds"))
-df_cont_FS_messy <- read_rds(paste0(readfile_messy, "df_cont_FS.rds"))
-df_FS_nsprt <- read_rds(paste0(readfile_messy, "df_FS_nsprt.rds"))
-df_MD_nsprt <- read_rds(paste0(readfile_messy, "df_MD_nsprt.rds"))
-df_seq_FS_nsprt <- read_rds(paste0(readfile_messy, "df_seq_FS_nsprt.rds"))
-df_model_acc_messy <- read_rds(paste0(readfile_messy, "df_model_acc.rds"))
+df_energy_variable <- read_rds(paste0(readfile_variable, "df_energy.rds"))
+df_weather_variable <- read_rds(paste0(readfile_variable, "df_weather.rds"))
+df_sprt_all_variable <- read_rds(paste0(readfile_variable, "df_sprt_all.rds"))
+df_seq_fs_variable <- read_rds(paste0(readfile_variable, "df_seq_fs.rds"))
+df_fs_variable <- read_rds(paste0(readfile_variable, "df_fs.rds"))
+df_cont_variable <- read_rds(paste0(readfile_variable, "df_cont.rds"))
+df_fs_null_variable <- read_rds(paste0(readfile_variable, "df_fs_null.rds"))
+df_seq_fs_null_variable <- read_rds(paste0(readfile_variable, "df_seq_fs_null.rds"))
+df_model_acc_variable <- read_rds(paste0(readfile_variable, "df_model_acc.rds"))
+df_fs_tmy_variable <- read_rds(paste0(readfile_variable, "df_fs_tmy.rds"))
+df_fs_tmy_null_variable <- read_rds(paste0(readfile_variable, "df_fs_tmy_null.rds"))
+df_interval_drop_variable <- read_rds(paste0(readfile_variable, "df_interval_drop.rds"))
+df_interval_keep_variable <- read_rds(paste0(readfile_variable, "df_interval_keep.rds"))
+df_seq_interval_fs_drop_variable <- read_rds(paste0(readfile_variable, "df_seq_interval_fs_drop.rds"))
+df_seq_interval_fs_keep_variable <- read_rds(paste0(readfile_variable, "df_seq_interval_fs_keep.rds"))
+df_seq_interval_nm_drop_variable <- read_rds(paste0(readfile_variable, "df_seq_interval_nm_drop.rds"))
+df_seq_interval_nm_keep_variable <- read_rds(paste0(readfile_variable, "df_seq_interval_nm_keep.rds"))
+df_seq_interval_tl_drop_variable <- read_rds(paste0(readfile_variable, "df_seq_interval_tl_drop.rds"))
+df_seq_interval_tl_keep_variable <- read_rds(paste0(readfile_variable, "df_seq_interval_tl_keep.rds"))
 
-all_sites_messy <- df_energy_messy %>%
+all_sites_variable <- df_energy_variable %>%
   select(site) %>%
   distinct() %>%
   arrange(site)
 
-all_types_messy <- df_energy_messy %>%
+all_types_variable <- df_energy_variable %>%
   select(type) %>%
   mutate(type = as.factor(type)) %>%
   distinct()
 
-all_names_messy <- df_energy_messy %>%
+all_names_variable <- df_energy_variable %>%
   select(name) %>%
   distinct(name)
 
@@ -251,6 +273,10 @@ function_path <- "../functions/"
 source(paste0(function_path, "model_fit.R"))
 source(paste0(function_path, "model_pred.R"))
 source(paste0(function_path, "prepost_plot.R"))
+
+S_building <- nrow(df_fs_tmy_stable)
+V_building <- nrow(df_fs_tmy_variable)
+A_building <- S_building + V_building
 ```
 
 # Introduction
@@ -338,17 +364,9 @@ enregy ratings, heating types and floor area) and hourly measurements of
 chilled and hot water, electricity, gas usage as well as site outdoor
 weather conditions.
 
-For the purpose of this study, we only queried whole-building hourly
-electricity usage. All building names and precise locations were erased
-but the climate zone and city name were provided, which are shown in
-Figure \@ref(fig:tidysite) and Figure \@ref(fig:messysite). In addition,
-the measurements were pre-processed by the authors with timestamp
-already converted to local time. We further described the data filtering
-process in Section \@ref(method).
-
 ## Literature review
 
-### Measurement and verification energy-efficient measures
+### Whole building approach
 
 Most research related to M&V for whole-building approach focuses on the
 accuracy of baseline modeling, exploring model performance from simple
@@ -372,7 +390,7 @@ directly associated with calculated savings, for instance, accounting
 for the potential bias that baseline model might deteriorate (i.e.
 becomes 'stale') over an extended period of pre- and post-analysis.
 
-### Impact of non-routine events on building energy usage
+### Non-routine events impact
 
 A common non-routine event in energy-saving M&V projects is a change in
 occupancy or a significant shift in occupant behavior. These changes can
@@ -401,29 +419,6 @@ lack an appropriate adjustment method (e.g., replacing filters before
 the intervention begins), the savings could be underestimated as
 increased energy use is incorrectly attributed to the intervention
 rather than the mechanical issue.
-
-### Randomized experimental design in other scientific fields
-
-To address the research gap identified in existing M&V studies,
-particularly the challenges posed by non-routine events, we applied a
-randomized experimental design method---an approach commonly used in
-other scientific disciplines. In clinical trials, for instance,
-randomization is employed to determine the effect of a medical treatment
-(such as a new drug) by randomly assigning participants to either a
-control group (e.g., receiving a placebo) or a treatment group
-[@angus_adaptive_2019, @burger_importance_2021, @lim_randomization_2019,
-@wiley_crossover_2016]. The primary purpose of randomization is to block
-confounding variables such as age, gender, and socioeconomic status when
-evaluating treatment effects. In the context of buildings, a "treatment"
-refers to a control retrofit, while the "placebo" represents the
-existing baseline control. Unlike clinical trials, where participants
-are randomly assigned, our approach randomizes treatment assignment
-longitudinally for each individual building---an approach known as
-n-of-1 trials [@gabler2011]. Although the BDG2 dataset allows for
-randomization at a population level (e.g., across climate zones),
-building owners are generally more interested in understanding the
-effects of control retrofits specific to their own buildings, rather
-than at a generalized population level.
 
 ## Objectives
 
@@ -480,13 +475,11 @@ and extended several key components in this section.
 knitr::include_graphics(paste0(fig_path, "flowchart.png"))
 ```
 
-## Building filtering
-
-### 'Tidy' subset
+## Data filtering
 
 In this study, we extracted the electricity measurements from the BDG2
-dataset. On a first pass, we filtered out buildings with less noise
-based on the following criteria:
+dataset and filter out all qualified buildings based on the following
+criteria:
 
 1.  Missing values \< 1000: given the hourly resolution of all
     measurements, this is equivalent to 1.5 months of missing days.
@@ -494,37 +487,41 @@ based on the following criteria:
 2.  Mean electricity usage \> 0 kWh: target buildings should have active
     electricity usage.
 
-3.  No statistical significant difference (P-value \> 0.05) between the
-    two-year electricity usage: target buildings should have no change
-    in the electricity usage between the two years.
+3.  $\frac{abs(E_{2017} - E_{2016})}{E_{2016}}< 25\%$: any increase or
+    decrease of building electricity usage in the second year should be
+    less than 25% of that in the first year.
 
-4.  Target buildings should have known site location: buildings with
-    anonymous location are excluded due to unavailable typical
-    meteorological weather.
-
-5.  Warehouse and parking types are excluded: target buildings have less
+4.  Warehouse and parking types are excluded: target buildings have less
     demand flexibility to implement a chilled water setpoint reset
     control.
 
-Therefor the resulting subset contains all buildings with 'tidy'
-measurements. Figure \@ref(fig:tidysite) shows in total, the subset
-contains `r nrow(all_names_tidy)` buildings of `r nrow(all_types_tidy)`
-types.
-
-```{r tidysite, fig.cap = "Site summary of the tidy building subset (counts < 2 are omitted for visualization; left: aggragated counts of buildings for each type; right: breakdown building counts for each building type at each location)", fig.width=8, fig.height=6}
+```{r stablesite, fig.cap = "Site summary of the stable building subset (counts < 2 are omitted for visualization; left: aggragated counts of buildings for each type; right: breakdown building counts for each building type at each location)", fig.width=8, fig.height=6}
 
 set3 <- colorRampPalette(brewer.pal('Set3',n=12))
-type_colors <- setNames(set3(13), all_types_messy$type)
+type_colors <- setNames(set3(13), all_types_variable$type)
   
-p1 <- df_energy_tidy %>%
+stable_set <- df_energy_stable %>%
   group_by(type) %>%
   distinct(name) %>%
-  summarise(n = n()) %>%
-  ungroup() %>%
+  summarise(stable = n()) %>%
+  ungroup()
+
+variable_set <- df_energy_variable %>%
+  group_by(type) %>%
+  distinct(name) %>%
+  summarise(variable = n()) %>%
+  ungroup()
+
+p1 <- variable_set %>% 
+  left_join(stable_set, by = "type") %>% 
+  mutate(stable = replace_na(stable, 0)) %>% 
+  group_by(type) %>% 
+  summarise(n = stable + variable) %>% 
+  ungroup() %>% 
   mutate(type = fct_reorder(type, n, .desc = F)) %>%
   ggplot(aes(x = 1, y = n, fill = as.factor(type))) +
   geom_col() +
-  geom_text(aes(label = ifelse(n > 2, as.character(n), "")), color = "black", position = position_stack(vjust = 0.5)) +
+  geom_text(aes(label = ifelse(n > 10, as.character(n), "")), color = "black", position = position_stack(vjust = 0.5)) +
   scale_y_continuous(expand = c(0, 0),
                      breaks = breaks_pretty(n = 4)) +
   scale_x_discrete(expand = c(0, 0.1)) +
@@ -537,130 +534,76 @@ p1 <- df_energy_tidy %>%
         panel.grid.major.y = element_line(color = "grey80"),
         legend.direction = "horizontal",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-  
-  p2 <- df_energy_tidy %>%
-    left_join(df_loc, by = "site") %>% 
-    group_by(location, type) %>%
-    distinct(name) %>%
-    summarise(n = n()) %>%
-    mutate(proportion = n / sum(n),
-           total = sum(n),
-           ymax = cumsum(proportion),
-           ymin = c(0, head(ymax, n = -1))) %>%
-    mutate(label_pos = (ymax + ymin) / 2) %>%
-    ungroup() %>%
-    group_by(type) %>%
-    mutate(order = sum(n)) %>%
-    ungroup() %>%
-    mutate(type = fct_reorder(type, order, .desc = F)) %>%
-    ggplot(aes(ymax = ymax, ymin = ymin, xmax = 4, xmin = 3, fill = type)) +
-    geom_rect() +
-    coord_polar(theta = "y") +
-    xlim(c(2, 4)) +
-    facet_wrap(~ location, nrow = 3) +
-    labs(x = NULL,
-         y = NULL,
-         subtitle = "For each location",
-         fill = NULL) +
-    scale_fill_manual(values = type_colors) +
-    geom_text(aes(x = 3.5, y = label_pos, label = ifelse(n > 2, as.character(n), ""))) +
-    geom_text(aes(x = 2, y = 0, label = paste0("Total\n", total)), color = "black") +
-    theme(legend.direction = "horizontal",
-          axis.text = element_blank(),
-          plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-  
-  ggarrange(p1, p2,
-            ncol = 2, nrow = 1,
-            widths = c(0.2, 1),
-            common.legend = TRUE,
-            legend = "bottom") +
-    plot_annotation(title = "Summary of building numbers and types for 'tidy' subset")
+
+stable_set <- df_energy_stable %>% 
+  group_by(type, site) %>%
+  distinct(name) %>%
+  summarise(stable = n()) %>%
+  ungroup()
+
+variable_set <- df_energy_variable %>% 
+  group_by(type, site) %>% 
+  distinct(name) %>%
+  summarise(variable = n()) %>%
+  ungroup()
+
+p2 <- variable_set %>% 
+  left_join(stable_set, by = c("type", "site")) %>% 
+  mutate(stable = replace_na(stable, 0)) %>% 
+  group_by(site, type) %>% 
+  summarise(n = stable + variable) %>% 
+  ungroup() %>% 
+  left_join(df_loc, by = "site") %>% 
+  group_by(location) %>%
+  mutate(proportion = n / sum(n),
+         total = sum(n),
+         ymax = cumsum(proportion),
+         ymin = c(0, head(ymax, n = -1))) %>%
+  mutate(label_pos = (ymax + ymin) / 2) %>%
+  ungroup() %>%
+  group_by(type) %>%
+  mutate(order = sum(n)) %>%
+  ungroup() %>%
+  mutate(type = fct_reorder(type, order, .desc = F)) %>%
+  ggplot(aes(ymax = ymax, ymin = ymin, xmax = 4, xmin = 3, fill = type)) +
+  geom_rect() +
+  coord_polar(theta = "y") +
+  xlim(c(2, 4)) +
+  facet_wrap(~ location, nrow = 3) +
+  labs(x = NULL,
+       y = NULL,
+       subtitle = "For each location",
+       fill = NULL) +
+  scale_fill_manual(values = type_colors) +
+  geom_text(aes(x = 3.5, y = label_pos, label = ifelse(n > 10, as.character(n), "")), check_overlap = T) +
+  geom_text(aes(x = 2, y = 0, label = paste0("Total\n", total)), color = "black", check_overlap = T) +
+  theme(legend.direction = "horizontal",
+        axis.text = element_blank(),
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+ggarrange(p1, p2,
+          ncol = 2, nrow = 1,
+          widths = c(0.2, 1),
+          common.legend = TRUE,
+          legend = "bottom") +
+  plot_annotation(title = "Summary of building numbers and types")
 ```
 
-### 'Messy' subset
+For all qualified buildings, we further added one more stringent
+criterion to label all buildings with very stable electricity usage
+between the two years:
 
-In reality, the 'tidy' subset is less representative of the measurements
-typically collected from existing building stock, as whole-building
-electricity measurements collected over two years often show more
-variability the the filtering critieron. These variations can stem from
-issues like sensor calibration errors or inherent changes in the
-building, which, as previously discussed, can bias M&V results.
-Therefore, to more realistically assess the robustness of the two M&V
-method, we included an additional 'messy' subset which first exclude the
-'tidy' subset and then re-apply the filtering rule with one amendment:
+1.  No statistical significant difference (P-value \> 0.05) between the
+    two-year electricity usage.
 
-3.  $\frac{abs(E_{2017} - E_{2016})}{E_{2016}}< 25\%$: any increase or
-    decrease of building electricity usage in the second year should be
-    less than 25% of that in th first year.
+As a results, there are only 66 buildings were labeled in this 'stable'
+subset (out of total of 600 buildings) implying that the assumption made
+by conventional M&V is overly simplified. As mentioned in Section
+\@ref(non-routine-events-impact), such variability is largely associated
+with non-routine events and according to the statistics, is more
+commonly observed in real applications.
 
-Figure \@ref(fig:messysite) shows the summary of the 'messy' dataset,
-which contains `r nrow(all_names_messy)` buildings in
-`r nrow(all_types_messy)` types.
-
-```{r messysite, fig.cap = "Site summary of the messy building subset (counts < 2 are omitted for visualization; left: aggragated counts of buildings for each type; right: breakdown building counts for each building type at each location)", fig.width=8, fig.height=8}
-
-p1 <- df_energy_messy %>%
-    group_by(type) %>%
-    distinct(name) %>%
-    summarise(n = n()) %>%
-    ungroup() %>%
-    mutate(type = fct_reorder(type, n, .desc = F)) %>%
-    ggplot(aes(x = 1, y = n, fill = as.factor(type))) +
-    geom_col() +
-    geom_text(aes(label = ifelse(n > 10, as.character(n), "")), color = "black", position = position_stack(vjust = 0.5)) +
-    scale_y_continuous(expand = c(0, 0),
-                       breaks = breaks_pretty(n = 4)) +
-    scale_x_discrete(expand = c(0, 0.1)) +
-    scale_fill_manual(values = type_colors) +
-    labs(x = NULL,
-         y = NULL,
-         subtitle = "Combining all locations",
-         fill = NULL) +
-    theme(axis.text.x = element_blank(),
-          panel.grid.major.y = element_line(color = "grey80"),
-          legend.direction = "horizontal",
-          plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-  
-  p2 <- df_energy_messy %>%
-    left_join(df_loc, by = "site") %>% 
-    group_by(location, type) %>%
-    distinct(name) %>%
-    summarise(n = n()) %>%
-    mutate(proportion = n / sum(n),
-           total = sum(n),
-           ymax = cumsum(proportion),
-           ymin = c(0, head(ymax, n = -1))) %>%
-    mutate(label_pos = (ymax + ymin) / 2) %>%
-    ungroup() %>%
-    group_by(type) %>%
-    mutate(order = sum(n)) %>%
-    ungroup() %>%
-    mutate(type = fct_reorder(type, order, .desc = F)) %>%
-    ggplot(aes(ymax = ymax, ymin = ymin, xmax = 4, xmin = 3, fill = type)) +
-    geom_rect() +
-    coord_polar(theta = "y") +
-    xlim(c(2, 4)) +
-    facet_wrap(~ location, nrow = 3) +
-    labs(x = NULL,
-         y = NULL,
-         subtitle = "For each location",
-         fill = NULL) +
-    scale_fill_manual(values = type_colors) +
-    geom_text(aes(x = 3.5, y = label_pos, label = ifelse(n > 1, as.character(n), ""))) +
-    geom_text(aes(x = 2, y = 0, label = paste0("Total\n", total)), color = "black") +
-    theme(legend.direction = "horizontal",
-          axis.text = element_blank(),
-          plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-  
-  ggarrange(p1, p2,
-            ncol = 2, nrow = 1,
-            widths = c(0.2, 1),
-            common.legend = TRUE,
-            legend = "bottom") +
-    plot_annotation(title = "Summary of building numbers and types for 'messy' subset")
-```
-
-## Apply control intervention
+## Control intervention implementation
 
 Figure \@ref(fig:chwst) shows the algorithm for the proposed control
 intervention that reset the chiller supply temperature based on the
@@ -746,54 +689,19 @@ for each building, and were used uniformly across the dataset.
 
 : Table 1. Parameters for calculating the intervention savings.
 
-## Apply example non-routine event
+## M&V methods comparison
 
-To illustrate the impact of non-routine events that are not properly
-adjusted for, we developed three scenarios to quantify the energy
-consumption changes associated with a hypothetical increase in
-occupancy. Specifically, we assume that a rise in occupancy in 2016
-(referred to as the "baseline year" when using the conventional method)
-led to a 20% increase in whole-building measured electricity usage. The
-three scenarios describe when this increase occurred: January to April
-(S1), May to August (S2), and September to December (S3). This
-hypothetical change was applied only to buildings in the "tidy" subset,
-as these buildings were initially more likely to be free from
-non-routine events.
+We described more in detail the workflow of both conventional and
+randomized M&V methos in the previous study [@RAFTERY2024111134].
 
-## Run M&V methods
-
-### Conventional M&V
-
-As described in Section \@ref(introduction), conventional method for M&V
-is time-consuming and unable to separate non-routine event impact from
-measured savings. If using conventional method to estimate intervention
-energy savings, the result (after 24 months) is calculated by the
-difference between measured intervention and projected baseline in the
-post-retrofit period. In this study, we leveraged a piece-wise linear
-regression considering time-of-week and outdoor temperature (TOWT) as
-independent variables for projection for the counter-factual baseline in
-the post-retrofit period and normalization on typical meteorological
-year [@mathieu_quantifying_2011].
-
-### Randomized M&V
-
-Compared to the conventional method, the randomized M&V approach offers
-a more rapid and reliable estimation of energy savings. To apply this
-method, analysts first define the target savings and stopping criteria.
-Then they design a randomized switchback schedule and perform sequential
-statistical tests, such as the sequential probability ratio test (SPRT),
-to monitor savings as data is collected. Once the target savings are
-detected, the analysts fit a prediction model (e.g. TOWT) to adjust for
-differences in outdoor temperature, following the same adjustment
-process as the conventional method. We provide example switchback
-experimental design and stopping criteria thresholds below:
+In a similar style, we summarized the experimental design as:
 
 -   The HVAC system operates from 06:00 to 22:00 each day, so we use a
     daily sampling interval with the sampling time at midnight each day.
 
 -   Block by day of the week with a block period of 12 weeks.
 
-Stopping criteria are:
+and stopping criteria:
 
 -   A minimum and maximum of 12 and 108 weeks respectively. The
     randomized schedule covers the entire two-year period but stopping
@@ -814,71 +722,195 @@ Stopping criteria are:
 -   As no baseline data is available, test with an equal sampling ratio
     (50% baseline, 50% intervention).
 
-To remain consistency, savings normalization on typical meteorological
-year is also modeled through TOWT.
-
 # Results
 
-## M&V methods comparison
+```{r abstract, fig.cap="Overall comparison results between the conventional M&V method and the proposed randomized M&V method (both at the stopping criteria and over a two-year period).", fig.height=12, fig.width=10}
 
-In this section, we compare the performance of two M&V methods. The key
-aspects of the assessment include: 1) time required to reach a saving
-estimation: in most cases, a shorter M&V timeline reduces associated
-cost and interruption for the building owner; and 2) saving estimation
-accuracy: this is particularly important for any software-as-a-service
-company to set a reasonable price with their customers.
+#### GA ####
+rand_eob_S <- df_seq_fs_stable %>% 
+  filter(seq == "eob") %>% 
+  left_join(df_fs_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - fs), 
+         method = "rand_eob") %>% 
+  select(name, method, diff)
 
-### Savings estimation time
+conv_S <- df_fs_stable %>% 
+  filter(method != "rand") %>% 
+  pivot_wider(names_from = method, values_from = savings) %>% 
+  mutate(diff = abs(true - conv), 
+         method = "conv") %>% 
+  select(name, method, diff)
 
-ASHRAE Guideline 14 offering minimum requirements for whole-building
-measurement path states that the baseline period is either a full range
-of all independent variables (typically outdoor weather conditions)
-under normal facility operation or a 12-month worth of continuous
-measurements. The same requirements also applies to intervention
-installed in the post-retrofit period. Thus, the conventional M&V method
-is likely to run over 24 months or even longer due to missing data. For
-example if an analyst is asked to determine the energy savings of a
-chilled water plant retrofit but missed most of the cooling season due
-to delay in retrofit deployment, he/she needs to wait until the next
-cooling season to measure the savings. If the randomized M&V method is
-applicable, delays in retrofit deployment pose less risk to the building
-owner since baseline are continuously monitored. Sampling at equal
-probabilities (e.g., 50%/50% between baseline and intervention) helps to
-balance the distribution of independent variables like outdoor weather
-conditions across all sampled control strategies. As long as one
-strategy is not sampled over a large number of consecutive days (e.g., 7
-days or more), it is unlikely that the measurements of independent
-variables will differ significantly between the control strategies.
+rand_final_S <- df_fs_stable %>% 
+  filter(method != "conv") %>% 
+  pivot_wider(names_from = method, values_from = savings) %>% 
+  mutate(diff = abs(true - rand), 
+         method = "rand_final") %>% 
+  select(name, method, diff)
 
-Figure \@ref(fig:timeline) shows the average estimated timeline for each
-building across all sites and climate conditions if using randomized M&V
-for the applied chilled water supply temperature reset intervention. The
-timeline figures for each individual building are attached in the
-supplementary material. The figure shows all buildings can detect a
-saving statistically from sampled measurements within 12 months, which
-is equivalent to the minimum test criterion. Similar to the findings
-from our pervious study, covering a sufficient range of outdoor weather
-condition is the most stringent requirement. If target buildings are
-located in a climate zone with more preferable outdoor weather
-conditions such as California, covering 80% of the TMY range should only
-take 3 \~ 4 months. In this case, the analyst can conclude the M&V
-simultaneously if the blocking period ends at the same time. However,
-given most buildings requires 6 months to achieve 80% of the TMY range,
-all buildings can determine the savings, including associated
-uncertainties, within 9 months---significantly shorter than the baseline
-measurement period required by the conventional method.
+df_MW_S <- rbind(rand_eob_S, conv_S, rand_final_S)
 
-```{r timeline, fig.cap="Randomized M&V timeline of satisfying key stopping criteria for all buildings", fig.width=8, fig.height=4}
+# plot for the variable subset
+rand_eob_V <- df_seq_fs_variable %>% 
+  filter(seq == "eob") %>% 
+  left_join(df_fs_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site"))%>% 
+  mutate(diff = abs(savings - fs), 
+         method = "rand_eob") %>% 
+  select(name, method, diff)
 
-df_time <- df_sprt_all_messy %>% 
+conv_V <- df_fs_variable %>% 
+  filter(method != "rand") %>% 
+  pivot_wider(names_from = method, values_from = savings) %>% 
+  mutate(diff = abs(true - conv), 
+         method = "conv") %>% 
+  select(name, method, diff)
+
+rand_final_V <- df_fs_variable %>% 
+  filter(method != "conv") %>% 
+  pivot_wider(names_from = method, values_from = savings) %>% 
+  mutate(diff = abs(true - rand), 
+         method = "rand_final") %>% 
+  select(name, method, diff)
+
+df_MW_V <- rbind(rand_eob_V, conv_V, rand_final_V)
+
+# plot for combined dataset
+rand_eob_A <- bind_rows(rand_eob_V, rand_eob_S) %>% 
+  select(name, rand_eob_diff = diff)
+
+conv_A <- bind_rows(conv_V, conv_S) %>% 
+  select(name, conv_diff = diff)
+
+rand_final_A <- bind_rows(rand_final_V, rand_final_S) %>% 
+  select(name, rand_final_diff = diff)
+
+df_MW_A <- rand_eob_A %>% 
+  left_join(conv_A, by = "name") %>% 
+  left_join(rand_final_A, by = "name") %>% 
+  pivot_longer(c(rand_eob_diff, conv_diff, rand_final_diff), names_to = "method", values_to = "diff")
+
+p_top <- df_MW_A %>% 
+  mutate(method = as.factor(method), 
+         method = recode_factor(method, "conv_diff" = "Conventional", "rand_eob_diff" = "Randomized", "rand_final_diff" = "Randomized\n(24 months)")) %>% 
+  ggplot(aes(x = method, y = diff, fill = method)) +
+  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
+  geom_lv(k = 4, outlier.shape = NA) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
+  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
+  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
+            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 4), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
+  labs(fill = NULL, 
+       color = NULL, 
+       x = NULL, 
+       y = "Absolute error in fractional savings", 
+       subtitle = str_glue("All {A_building} buildings with measured weather")) +
+  coord_cartesian(ylim = c(0, 23)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "none",
+        axis.text.x = element_blank(),
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+# TMY
+# plot for the stable subset
+rand_eob_S <- df_sprt_all_stable %>% 
+  filter(seq == "eob") %>% 
+  select(-c(seq, n_weeks)) %>% 
+  left_join(df_fs_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - annual), 
+         method = "rand_eob") %>% 
+  select(name, method, diff)
+
+conv_S <- df_fs_tmy_stable %>% 
+  left_join(df_fs_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - conv), 
+         method = "conv") %>% 
+  select(name, method, diff)
+
+rand_final_S <- df_fs_tmy_stable %>% 
+  left_join(df_fs_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - rand), 
+         method = "rand_final") %>% 
+  select(name, method, diff)
+
+df_TW_S <- rbind(rand_eob_S, conv_S, rand_final_S)
+
+# plot for the variable subset
+rand_eob_V <- df_sprt_all_variable %>% 
+  filter(seq == "eob") %>% 
+  select(-c(seq, n_weeks)) %>% 
+  left_join(df_fs_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - annual), 
+         method = "rand_eob") %>% 
+  select(name, method, diff)
+
+conv_V <- df_fs_tmy_variable %>% 
+  left_join(df_fs_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - conv), 
+         method = "conv") %>% 
+  select(name, method, diff)
+
+rand_final_V <- df_fs_tmy_variable %>% 
+  left_join(df_fs_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - rand), 
+         method = "rand_final") %>% 
+  select(name, method, diff)
+
+df_TW_V <- rbind(rand_eob_V, conv_V, rand_final_V)
+
+# plot for combined dataset
+rand_eob_A <- bind_rows(rand_eob_V, rand_eob_S) %>% 
+  select(name, rand_eob_diff = diff)
+
+conv_A <- bind_rows(conv_V, conv_S) %>% 
+  select(name, conv_diff = diff)
+
+rand_final_A <- bind_rows(rand_final_V, rand_final_S) %>% 
+  select(name, rand_final_diff = diff)
+
+df_TW_A <- rand_eob_A %>% 
+  left_join(conv_A, by = "name") %>% 
+  left_join(rand_final_A, by = "name") %>% 
+  pivot_longer(c(rand_eob_diff, conv_diff, rand_final_diff), names_to = "method", values_to = "diff")
+
+p_middle <- df_TW_A %>% 
+  mutate(method = as.factor(method), 
+         method = recode_factor(method, "conv_diff" = "Conventional", "rand_eob_diff" = "Randomized", "rand_final_diff" = "Randomized\n(24 months)")) %>% 
+  ggplot(aes(x = method, y = diff, fill = method)) +
+  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
+  geom_lv(k = 4, outlier.shape = NA) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
+  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
+  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
+            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 4), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
+  labs(fill = NULL, 
+       x = NULL, 
+       y = "Absolute error in fractional savings", 
+       subtitle = str_glue("All {A_building} buildings with TMY weather")) +
+  coord_cartesian(ylim = c(0, 23)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "none",
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+# Timeline plot
+df_time <- df_sprt_all_variable %>% 
   filter(seq != "final") %>% 
-  bind_rows(df_sprt_all_tidy %>% filter(seq != "final")) %>% 
+  bind_rows(df_sprt_all_stable %>% filter(seq != "final")) %>% 
   select(name, seq, n_weeks)
 
 count <- list()
-
-for (i in seq(1, 36, by = 1)){
-
+n <- 1
+for (i in seq(0, 36, by = 3)){
+  
   df_sprt <- df_time %>% 
     filter(seq == "sprt",
            n_weeks <= i)
@@ -891,21 +923,25 @@ for (i in seq(1, 36, by = 1)){
     filter(seq == "temp", 
            n_weeks <= i)
   
-  count[[i]] <- tibble("n_weeks" = i, 
+  count[[n]] <- tibble("n_weeks" = i, 
                        "eob" = nrow(df_eob), 
                        "temp" = nrow(df_temp), 
                        "sprt" = nrow(df_sprt))
+  
+  n <- n + 1
 }
 
 count <- bind_rows(count) 
 
-count %>% 
+p_bottom <- count %>% 
   ggplot() +
-  geom_bar(data = . %>% filter(n_weeks == 24 | n_weeks == 36), 
-           aes(x = n_weeks, y = eob, fill = "Buildings satisfying all criteria"), 
+  geom_bar(data = . %>% 
+             filter(n_weeks == 24 | n_weeks == 36),
+           aes(x = n_weeks, y = eob, fill = "Buildings finishing randomized M&V"), 
            stat = "identity", 
+           position = "stack",
            alpha = 0.8, 
-           width = 1) +
+           width = 3) +
   geom_line(aes(x = n_weeks, y = temp, color = "Buildings satisfying 80% TMY range"),
             alpha = 0.2) +
   geom_point(aes(x = n_weeks, y = temp, color = "Buildings satisfying 80% TMY range"), 
@@ -915,691 +951,178 @@ count %>%
   geom_point(aes(x = n_weeks, y = sprt, color = "Buildings satisfying SPRT"), 
              size = 1.5, 
              shape = 17) +
-  geom_vline(xintercept = seq(12, 36, by = 12), lty = "dashed", color = "grey80") +
+  geom_segment(aes(x = 36.5, y = max(eob), xend = 95.5, yend = max(eob)),
+               arrow = arrow(length = unit(0.25, "in")),   
+               linewidth = 1.1,  
+               color = "#fb8072") + 
   annotate(geom = "text", 
-           x = seq(3, 33, by = 12), 
-           y = 700, 
-           label = paste0("12-week block"), 
+           x = 66, 
+           y = max(count$eob) - 30, 
+           size = 5,
+           label = "Excess time by conventional M&V") +
+  geom_vline(xintercept = c(12, 24, 36, 48, 96), lty = "dashed", color = "grey80") +
+  annotate(geom = "text", 
+           x = seq(6, 48, by = 12), 
+           y = 200, 
+           label = paste0("12-week\nblock"), 
            alpha = 0.5) +
   scale_fill_manual(values = ls_colors) +
   scale_color_manual(values = ls_colors) +
   scale_x_continuous(expand = c(0, 0), 
-                     limits = c(0, 38),
-                     breaks = c(12, 24, 36), 
-                     labels = c("12\nweeks", "24\nweeks", "36\nweeks")) +
-  coord_cartesian(ylim = c(0, 720)) +
+                     limits = c(0, 100),
+                     breaks = c(12, 24, 36, 48, 96), 
+                     labels = c("12 weeks", "24 weeks", "36 weeks", "1 year", "2 years")) +
+  coord_cartesian(ylim = c(0, 650)) +
   labs(x = NULL, 
        y = "Number of buildings", 
        fill = NULL, 
        color = NULL, 
-       title = "Overall timeline for buildings using randomized M&V") +
+       subtitle = "timeline comparison") +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
         legend.direction = "horizontal",
         legend.position = "bottom",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 
+ggarrange(p_top, p_middle, p_bottom, 
+          ncol = 1, nrow = 3,
+          heights = c(1.2, 1.2, 1),
+          labels = c("a)", "b)", "c)"),
+          common.legend = T, 
+          legend = "bottom") +
+  plot_annotation(title = "Overall comparison of conventional and randomized M&V")
 ```
 
-### Savings estimation accuracy
+Figure \@ref(fig:abstract) shows the overall results of M&V methods
+comparison. The estimation error is calculated as the absolute deviation
+from the true savings. Subplot a) shows the savings estimated from
+measured weather condition and subplot b) shows the savings normalized
+on typical meteorological weather file using TOWT model prediction. In
+average, the conventional method could deviate 6% in saving estimation
+while the the deviation from our proposed randomized method is much
+smaller. If the analyst stops right after satisfying all stopping
+criteria, then the deviation is around 2% and it further decreases to 1%
+when the M&V extends over the same period of the convention method. By
+comparing subplot a) and b), we noticed a slight improvement in
+estimation accuracy in model fitting, which is less than 1% on average.
+This implies that baseline projection to post-retrofit period through
+data-driven models is inefficient when the actual baseline changes.
+Subplot c) shows the overall timeline of the two methods. It is clear
+that the all buildings satisfied all stopping criteria in 36 weeks and
+given by the difference in weather conditions, a large portion of the
+buildings can get an accurate M&V results in 24 weeks. Therefore, on
+average a building analyst should expect 1% accuracy improvement over 1
+year extension of the randomized M&V method. However, the red arrow also
+implies the excess time required by the conventional M&V method that
+only leads to more unreliable results.
 
-In this study, we define the overall target savings (i.e., the ground
-truth) that an M&V analyst aims to detect as the mean reduction in
-electricity consumption over a two-year period resulting from the
-implementation of the chilled water supply temperature reset control.
-This target can be expressed in terms of normalized savings, fractional
-savings, or simply the measured difference between baseline and
-intervention measurements. Due to different timeline required by the two
-methods, we compare the conventional M&V savings at the end of the
-two-year period with the randomized M&V savings after all criteria are
-satisfied. Since those are the time in reality, an M&V analyst report
-estimated savings.
+## Non-routine events impact
 
-Figure \@ref(fig:norm) shows the overall comparison of the savings
-estimated for all buildings in both subsets normalized on the typical
-meteorological year weather conditions of each site. In subplot a), the
-narrower range and clustering of the true savings indicates the
-dependence of the intervention effect on the outdoor weather condition,
-which is intended after weather normalization. Sites with mild climate
-all year round such as locations in California shows higher savings
-potential above 10%, while locations with more extreme climate such as
-Washington DC shows only 6% savings annually. In subplot b), the results
-indicate that the conventional M&V method tends to estimate savings with
-greater uncertainty, and its distribution median deviates from the true
-savings. In comparison, the randomized method, which requires much less
-time, shows more accurate and precise estimation results.
+```{r nosaving, fig.cap="Comparison between the two M&V methods in detecting no intervention effect", fig.height=9, fig.width=12}
 
-```{r norm, fig.cap="Comparison of annual fractional savings normalized on TMY weather conditions between conventional and randomized M&V method", fig.width=8, fig.height=4}
-
-p1 <- df_FS_tidy %>% 
-  bind_rows(df_FS_messy) %>% 
-  filter(method == "true") %>% 
-  mutate(method = "True savings") %>% 
-  ggplot(aes(x = method, y = savings, fill = method)) +
-  geom_errorbar(aes(ymin = min(savings), ymax = max(savings)), width = 0.2) +
-  geom_boxplot(outlier.size = 2) +
-  geom_text(aes(x = 1.35, 
-                y = median(savings) + 1.5, 
-                label = paste0("median: ", round(median(savings), digits = 0), "%")), 
-            check_overlap = T) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 3), 
-                     limits = c(0, 28), 
-                     labels = number_format(suffix = "%")) +
-  labs(x = NULL, 
-       y = NULL, 
-       fill = NULL) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.direction = "horizontal",
-        legend.position = "bottom",
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-p2 <- df_FS_tidy %>% 
-  bind_rows(df_FS_messy) %>% 
-  pivot_wider(names_from = method, values_from = savings) %>% 
-  left_join(df_seq_FS_tidy %>% 
-              bind_rows(df_seq_FS_messy) %>% 
-              filter(seq == "eob"), by = c("name", "site")) %>% 
-  pivot_longer(c(conv, rand, FS), names_to = "parameter", values_to = "value") %>% 
-  filter(parameter != "rand") %>% 
-  mutate(parameter = as.factor(parameter), 
-         parameter = recode_factor(parameter, 
-                                   "conv" = "Conventional M&V", 
-                                   "FS" = "Randomized M&V")) %>% 
-  ggplot(aes(x = parameter, y = value, fill = parameter)) +
-  stat_boxplot(geom ='errorbar', width = 0.5) +
-  geom_boxplot(outlier.shape = NA) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 3), 
-                     limits = c(0, 28)) +
-  scale_fill_manual(values = ls_colors) +
-  labs(x = NULL, 
-       y = NULL, 
-       fill = NULL) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.direction = "horizontal",
-        legend.position = "bottom",
-        axis.text.y = element_blank(),
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-  ggarrange(p1, p2,
-            labels = c("a)", "b)"),
-            ncol = 2, nrow = 1,
-            widths = c(0.5, 1),
-            legend = "none") +
-    plot_annotation(title = "Normalized annual fractional savings estimation comparison")
-```
-
-To assess accuracy at the individual building level, we calculated the
-mean absolute difference between the true savings and the estimated
-savings and normalized the results as a fraction of measured baseline
-for generalized comparison. Figure \@ref(fig:tidyfrac) shows the
-comparison between the two methods using the tidy subset. In this
-comparison, we focused on the median and the 95th percentile of the
-plotted distribution to minimize the influence of outliers. The results
-indicate that the conventional method outperforms the randomized method
-in this subset. This is mostly because the tidy subset includes
-buildings with consistent usage patterns throughout the two-year period,
-meaning the data used for regression model fitting closely aligns with
-the conditions during the model prediction phase. In our case, this
-justifies the TOWT model selection when there is no additional
-adjustment needed for such pre- and post-analysis.
-
-```{r tidyfrac, fig.cap="Absolute deviation of fractional savings from true target savings shown for the 'tidy' subset", fig.width=8, fig.height=4}
-
-plot_data <- df_seq_FS_tidy %>% 
+#### MEAN-NULL ####
+rand_eob_S <- df_seq_fs_null_stable %>% 
   filter(seq == "eob") %>% 
-  left_join(df_FS_tidy %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(abs_diff = abs(savings - FS), 
-         plot_max = max(abs_diff))
+  mutate(diff = 0 - fs, 
+         method = "rand_eob") %>% 
+  select(name, method, diff)
 
-median_rand <- median(plot_data$abs_diff)
-upper_rand <- quantile(plot_data$abs_diff, probs = 0.95)
-
-p1 <- plot_data %>% 
-  arrange(abs_diff) %>% 
-  ggplot() +
-  geom_bar(aes(x = seq(1, nrow(all_names_tidy), by = 1), y = abs_diff, fill = "Randomized M&V"), 
-           stat = "identity", alpha = 0.5) +
-  geom_hline(yintercept = median_rand, 
-             linetype = "dashed", 
-             color = "black") +
-  annotate(y = median_rand + 0.5, 
-           x = 20, 
-           geom = "text", 
-           label = paste0("(", "50% buildings: < ", round(median_rand, digits = 1), " %)"),
-           size = 4) +
-  geom_hline(yintercept = upper_rand, 
-             linetype = "dashed", 
-             color = "black") +
-  annotate(y = upper_rand + 0.5, 
-           x = 20, 
-           geom = "text", 
-           label = paste0("(", "95% buildings: < ", round(upper_rand, digits = 1), " %)"),
-           size = 4) +
-  scale_x_continuous(expand = c(0.02, 0), 
-                     breaks = breaks_pretty(n = 3)) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 3), 
-                     labels = number_format(suffix = " %"),
-                     limits = c(0, max(plot_data$plot_max) + 0.5)) +
-  scale_fill_manual(values = ls_colors) +
-  labs(fill = NULL, 
-       x = "Number of buildings", 
-       y = "Absolute difference of fractional savings", 
-       subtitle = "Randomized M&V") +
-  coord_cartesian(ylim = c(0, 10)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.direction = "horizontal",
-        legend.position = "bottom",
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-plot_data <- df_FS_tidy %>% 
+conv_S <- df_fs_null_stable %>% 
   filter(method != "rand") %>% 
-  group_by(name) %>% 
-  summarise(abs_diff = abs(diff(savings))) %>% 
-  ungroup() %>% 
-  mutate(plot_max = max(abs_diff))
-
-median_conv <- median(plot_data$abs_diff)
-upper_conv <- quantile(plot_data$abs_diff, probs = 0.95)
-
-p2 <- plot_data %>% 
-  arrange(abs_diff) %>% 
-  ggplot() +
-  geom_bar(aes(x = seq(1, nrow(all_names_tidy), by = 1), y = abs_diff, fill = "Conventional M&V"), 
-           stat = "identity", alpha = 0.5) +
-  geom_hline(yintercept = median_conv, 
-             linetype = "dashed", 
-             color = "black") +
-  annotate(y = median_conv + 0.5,
-           x = 20, 
-           geom = "text", 
-           label = paste0("(", "50% buildings: < ", round(median_conv, digits = 1), " %)"),
-           size = 4) +
-  geom_hline(yintercept = upper_conv, 
-             linetype = "dashed", 
-             color = "black") +
-  annotate(y = upper_conv + 0.5, 
-           x = 20,
-           geom = "text", 
-           label = paste0("(", "95% buildings: < ", round(upper_conv, digits = 1), " %)"),
-           size = 4) +
-  scale_x_continuous(expand = c(0.02, 0), 
-                     breaks = breaks_pretty(n = 3)) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 3), 
-                     labels = number_format(suffix = " %"),
-                     limits = c(0, max(plot_data$plot_max) + 0.1)) +
-  scale_fill_manual(values = ls_colors) +
-  labs(fill = NULL, 
-       x = "Number of buildings", 
-       y = NULL, 
-       subtitle = "Conventional M&V") +
-  coord_cartesian(ylim = c(0, 10)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.direction = "horizontal",
-        legend.position = "bottom",
-        axis.text.y = element_blank(),
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 0, unit = "mm"))
-
-ggarrange(p1, p2,
-          ncol=2, nrow=1,
-          labels = c("a)", "b)"),
-          align = "hv",
-          legend="none") +
-  plot_annotation(title = "Savings estimation accuracy comparison", 
-                  subtitle = "using 'tidy' subset")
-
-```
-
-While these findings suggest that the conventional M&V method is
-advantageous when a building maintains stable electricity usage over
-time, such stability is rarely guaranteed in real-world scenarios. A
-more realistic condition is shown in the messy subset in Figure
-\@ref(fig:messyfrac). In this case, the randomized method demonstrates
-consistent accuracy in savings estimation, even in the presence of
-random measurement noise, implying strong robustness. In contrast, the
-conventional method shows deviations exceeding 5% in approximately 50%
-of all cases. Non-normalized mean absolute difference comparison plots
-are provided in the supplementary material. The much deteriorated
-performance of the conventional method highlights its vulnerability when
-changes in electricity usage occur. This is because baseline projections
-based on regression models become unreliable when non-routine events are
-present. Non-routine events encompass all influential factors not
-accounted for in the regression model, either due to their
-impracticality to measure---such as hourly occupancy rates---or their
-unpredictability---such as a sudden change in building use where an
-office being converted into a warehouse. We dedicate the following
-section to continue the discussion of the impact.
-
-```{r messyfrac, fig.cap="Absolute deviation of fractional savings from true target savings shown for the 'messy' subset", fig.width=8, fig.height=4}
-
-plot_data <- df_seq_FS_messy %>% 
-  filter(seq == "eob") %>% 
-  left_join(df_FS_messy %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(abs_diff = abs(savings - FS), 
-         plot_max = max(abs_diff))
-
-median_rand <- median(plot_data$abs_diff)
-upper_rand <- quantile(plot_data$abs_diff, probs = 0.95)
-
-p1 <- plot_data %>% 
-  arrange(abs_diff) %>% 
-  ggplot() +
-  geom_bar(aes(x = seq(1, nrow(all_names_messy), by = 1), y = abs_diff, fill = "Randomized M&V"), 
-           stat = "identity", alpha = 0.5) +
-  geom_hline(yintercept = median_rand, 
-             linetype = "dashed", 
-             color = "black") +
-  annotate(y = median_rand + 1, 
-           x = 220, 
-           geom = "text", 
-           label = paste0("(", "50% buildings: < ", round(median_rand, digits = 1), " %)"),
-           size = 4) +
-  geom_hline(yintercept = upper_rand, 
-             linetype = "dashed", 
-             color = "black") +
-  annotate(y = upper_rand + 1, 
-           x = 220, 
-           geom = "text", 
-           label = paste0("(", "95% buildings: < ", round(upper_rand, digits = 1), " %)"),
-           size = 4) +
-  scale_x_continuous(expand = c(0.02, 0), 
-                     breaks = breaks_pretty(n = 3)) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 3), 
-                     labels = number_format(suffix = " %"),
-                     limits = c(0, max(plot_data$plot_max) + 0.5)) +
-  scale_fill_manual(values = ls_colors) +
-  labs(x = "Number of buildings", 
-       y = "Absolute difference of fractional savings", 
-       fill = NULL, 
-       subtitle = "Randomized M&V") +
-  coord_cartesian(ylim = c(0, 25)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.direction = "horizontal",
-        legend.position = "bottom",
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-plot_data <- df_FS_messy %>% 
-  filter(method != "rand") %>% 
-  group_by(name) %>% 
-  summarise(abs_diff = abs(diff(savings))) %>% 
-  ungroup() %>% 
-  mutate(plot_max = max(abs_diff))
-
-
-median_conv <- median(plot_data$abs_diff)
-upper_conv <- quantile(plot_data$abs_diff, probs = 0.95)
-
-p2 <- plot_data %>% 
-  arrange(abs_diff) %>% 
-  ggplot() +
-  geom_bar(aes(x = seq(1, nrow(all_names_messy), by = 1), y = abs_diff, fill = "Conventional M&V"), 
-           stat = "identity", alpha = 0.5) +
-  geom_hline(yintercept = median_conv, 
-             linetype = "dashed", 
-             color = "black") +
-  annotate(y = median_conv + 1,
-           x = 220, 
-           geom = "text", 
-           label = paste0("(", "50% buildings: < ", round(median_conv, digits = 1), " %)"),
-           size = 4) +
-  geom_hline(yintercept = upper_conv, 
-             linetype = "dashed", 
-             color = "black") +
-  annotate(y = upper_conv + 1, 
-           x = 220,
-           geom = "text", 
-           label = paste0("(", "95% buildings: < ", round(upper_conv, digits = 1), " %)"),
-           size = 4) +
-  scale_x_continuous(expand = c(0.02, 0), 
-                     breaks = breaks_pretty(n = 3)) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 3), 
-                     labels = number_format(suffix = " %"),
-                     limits = c(0, max(plot_data$plot_max) + 0.1)) +
-  scale_fill_manual(values = ls_colors) +
-  labs(x = "Number of buildings", 
-       y = NULL, 
-       fill = NULL, 
-       subtitle = "Conventional M&V") +
-  coord_cartesian(ylim = c(0, 25)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.direction = "horizontal",
-        legend.position = "bottom",
-        axis.text.y = element_blank(),
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 0, unit = "mm"))
-
-ggarrange(p1, p2,
-          ncol=2, nrow=1,
-          labels = c("a)", "b)"),
-          align = "hv",
-          legend="none") +
-  plot_annotation(title = "Savings estimation accuracy comparison", 
-                  subtitle = "using 'messy' subset")
-
-```
-
-## Non-routine events impact on savings estimation
-
-We included two examples in this section to illustrate the impact of
-non-routine events on M&V savings estimation. In the first scenario, we
-manually subtracted a portion of the electricity usage for a specific
-period in the tidy subset to simulate occupancy-confounded measurements,
-which were not originally present in the dataset. In the second
-scenario, focusing on the messy subset, which already contains
-underlying changes, we removed the intervention effect and applied both
-M&V methods to assess which method could more accurately detect the
-resulting zero 'savings.'
-
-### Occupancy change
-
-Although occupancy can be estimated in various ways, such as counting
-check-ins, monitoring WiFi connections, or using indoor CO2
-concentrations as a proxy, these methods are often not cost-effective
-for routine operations in most buildings and may raise privacy concerns.
-In the proposed scenario, we hypothesize that during the baseline
-measurement period, one floor of tenants vacated the building, leaving
-the space unoccupied for four months. This led to a fixed reduction in
-electricity usage, approximated as 20% of the yearly average. We showed
-the impact on TOWT model fitting in Figure \@ref(fig:occchange) where
-from May 1st 2016 to August 31st 2016, the target building electricity
-dropped. Subplot (a) displays the measured baseline data, including the
-occupancy-related change, used as input for model training. Subplot (b)
-shows the model's prediction results for the post-retrofit period. For
-reference, we also plotted the correctly adjusted baseline (labeled as
-'adjusted baseline') in the post-retrofit period. Since occupancy was
-not considered an independent variable in the model, the baseline change
-was incorrectly attributed to temperature and time variations shown as
-the 'projected baseline', leading to underestimated savings estimation.
-
-```{r occ}
-
-n = 6
-
-site_info <- df_energy_tidy %>%
-    filter(name == all_names_tidy$name[n]) %>%
-    select(site, type) %>%
-    distinct()
-  
-site <- site_info$site
-  
-site_weather <- df_weather_tidy %>%
-    filter(site == site_info$site) %>%
-    select(timestamp, t_out) %>%
-    group_by(timestamp) %>%
-    summarise(t_out = mean(t_out)) %>%
-    ungroup()
-
-df_all <- df_energy_tidy %>%
-    filter(name == all_names_tidy$name[n]) %>%
-    select(timestamp, eload) %>%
-    left_join(site_weather, by = "timestamp")
-  
-# Linear interpolation of baseline
-df_all <- df_all %>%
-  run_interpo()
-
-plot_scale <- get_scale(df_all$base_eload)
-
-df_hourly_conv <- df_all %>%
-  run_reset()
-  
-df_base_conv <- df_hourly_conv %>%
-    select(datetime,
-           eload = base_eload,
-           t_out) %>% 
-    drop_na()
-
-df_interv_conv <- df_hourly_conv %>%
-    select(datetime,
-           eload = interv_eload,
-           t_out) %>% 
-    drop_na()
-
-    
-change_start <- occ_params$change_start
-change_end <- occ_params$change_end
-change <- mean(df_base_conv$eload) * occ_params$change / 100
-
-base_pre_meas <- df_base_conv %>%
-  filter(datetime < as.Date("2017-01-01")) %>%
-  mutate(eload = ifelse(month(datetime) >= month(change_start) & month(datetime) <= month(change_end), eload - change, eload))
-
-# Baseline projection
-towt_base <- base_pre_meas %>%
-  model_fit()
-
-df_towt <- df_interv_conv %>%
-  filter(datetime >= as.Date("2017-01-01")) %>%
-  select(time = datetime,
-         temp = t_out,
-         eload)
-
-base_pos_proj <- model_pred(df_towt, towt_base) %>%
-  rename("datetime" = "time") %>%
-  select(datetime, towt, eload)
-
-base_pos_true <- df_base_conv %>%
-  filter(datetime >= as.Date("2017-01-01"))
-
-interv_pos_meas <- df_interv_conv %>%
-  filter(datetime >= as.Date("2017-01-01"))
-```
-
-```{r occchange, fig.cap="Illustration of occupancy change impact on TOWT model fitting and baseline projection in the post-retrofit period", fig.width=9, fig.height=4}
-
-p1 <- ggplot() +
-    geom_point(data = base_pre_meas %>%
-                 slice_sample(n = 500),
-               aes(x = datetime, y = eload, color = "Measured baseline"),
-               size = 0.5,
-               alpha = 0.3) +
-    geom_smooth(data = base_pre_meas,
-                aes(x = datetime, y = eload, color = "Measured baseline"), 
-                formula = y ~ x, method = "loess") +
-    scale_x_datetime(date_breaks = "2 months",
-                     date_labels = "%b")  +
-    scale_y_continuous(expand = c(0, 0),
-                       breaks = breaks_pretty(n = 3),
-                       labels = number_format(suffix = " kW")) +
-    scale_color_manual(values = ls_colors) +
-    coord_cartesian(ylim = plot_scale) +
-    labs(x = NULL,
-         y = NULL,
-         color = NULL,
-         title = NULL,
-         subtitle = "Pre-retrofit period") +
-    theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-          legend.direction = "horizontal",
-          legend.position = "bottom",
-          plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-  
-p2 <- ggplot() +
-  geom_point(data = base_pos_proj %>%
-               slice_sample(n = 500),
-             aes(x = datetime, y = towt, color = "Projected baseline"),
-             size = 0.5,
-             alpha = 0.3) +
-  geom_smooth(data = base_pos_proj,
-              aes(x = datetime, y = towt, color = "Projected baseline"), 
-              formula = y ~ x, method = "loess") +
-  geom_point(data = base_pos_true %>%
-               slice_sample(n = 500),
-             aes(x = datetime, y = eload, color = "Adjusted baseline"),
-             size = 0.5,
-             alpha = 0.3) +
-  geom_smooth(data = base_pos_true,
-              aes(x = datetime, y = eload, color = "Adjusted baseline"), 
-              formula = y ~ x, method = "loess") +
-  geom_point(data = interv_pos_meas %>%
-               slice_sample(n = 500),
-             aes(x = datetime, y = eload, color = "Measured interv"),
-             size = 0.5,
-             alpha = 0.3) +
-  geom_smooth(data = interv_pos_meas,
-              aes(x = datetime, y = eload, color = "Measured interv"), 
-              formula = y ~ x, method = "loess") +
-  scale_x_datetime(date_breaks = "2 months",
-                   date_labels = "%b")  +
-  scale_y_continuous(expand = c(0, 0),
-                     breaks = breaks_pretty(n = 3),
-                     labels = number_format(suffix = " kW")) +
-  scale_color_manual(values = ls_colors) +
-  coord_cartesian(ylim = plot_scale) +
-  labs(x = NULL,
-       y = NULL,
-       color = NULL,
-       title = NULL,
-       subtitle = "post-retrofit period") +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        axis.text.y = element_blank(),
-        legend.direction = "horizontal",
-        legend.position = "bottom",
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-ggarrange(p1, p2,
-          ncol=2, nrow=1,
-          labels = c("a)", "b)"),
-          widths = c(1, 1),
-          align = "v",
-          legend="bottom") +
-  plot_annotation(title = "Building energy consumption with added occupancy change")
-```
-
-Figure \@ref(fig:occsavings) shows the overall estimation accuracy
-between the two M&V methods where the accuracy is indicated as a
-difference-in-difference value:
-
-$$
-|FS_{conv} - FS_{true}| - |FS_{rand} - FS_{true}|
-$$
-
-Therefore, a positive value indicates that the randomized method
-provides an estimation more closely aligned with the true target
-savings. The bar plot shows the difference-in-difference of the
-calculated fractional savings ($FS$) for each target building and the
-dotted line shows the absolute deviation of randomized method (i.e.
-$|FS_{rand} - FS_{true}|$ ) as a reference. In addition, we showed the
-averaged difference-in-difference metric for each site in the figure,
-quantifying how much more accurate the randomized method is compared to
-the conventional method. As a result, across all sites, the randomized
-method consistently outperforms the conventional method and the values
-of dotted line show similar results compared to Figure
-\@ref(fig:tidyfrac) further implying that the non-routine event has
-negligible influence on the randomized method.
-
-```{r occsavings, fig.cap="Savings estimation accuracy comparison between two M&V methods with added occupancy change (with the average difference-in-difference average on each location displayed at the bottom).", fig.width=9, fig.height=4}
-s <- 'S2'
-dev_conv <- df_NRE_occ %>%
-  left_join(df_loc, by = "site") %>% 
-  filter(scenario == s) %>%
-  filter(method != "rand") %>%
-  group_by(name, location, scenario) %>%
-  summarise(conv = abs(diff(savings))) %>%
-  ungroup()
-
-dev_rand <- df_NRE_occ %>%
-  left_join(df_loc, by = "site") %>% 
-  filter(scenario == s) %>%
-  filter(method != "conv") %>%
-  group_by(name, location, scenario) %>%
-  summarise(rand = abs(diff(savings))) %>%
-  ungroup()
-
-dev_FS <- dev_rand %>%
-  left_join(dev_conv, by = c("name", "location", "scenario")) %>% 
-  mutate(diff_in_diff = conv - rand)
-
-mean_diff <- dev_FS %>%
-  group_by(location) %>%
-  summarise(mean = round(mean(diff_in_diff), digits = 1),
-            pos = round(n() / 2) + 1,
-            .groups = 'keep')
-
-dev_FS %>%
-  ggplot(aes(group = location)) +
-  geom_line(aes(x = name, y = rand, color = "Randomized M&V")) +
-  geom_point(aes(x = name, y = rand, color = "Randomized M&V"), alpha = 0.8) +
-  geom_col(aes(x = name, y = diff_in_diff), position = "identity", alpha = 0.2, fill = "#78c679") +
-  facet_wrap(~location, nrow = 1, scales = "free_x") +
-  scale_y_continuous(expand = c(0.1, 0),
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = "%")) +
-  geom_text(data = mean_diff,
-            aes(x = pos, y = -.5, group = location, label = paste0(mean, "%"))) +
-  scale_color_manual(values = ls_colors) +
-  labs(x = NULL,
-       fill = NULL,
-       y = "Difference-in-difference of fractional savings",
-       color = NULL, 
-       title = "Savings estimation accuracy comparison for non-routine events", 
-       subtitle = "using 'tidy' subset") +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        axis.text.x = element_blank(),
-        legend.direction = "horizontal",
-        legend.position = "bottom",
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-```
-
-### No-saving detection
-
-As previously mentioned, the 'savings' detected in commercial buildings
-during the pandemic were largely confounded by null occupancy. In other
-words, if no intervention is applied or the intervention effect is known
-to be null (e.g., constantly overridden by the baseline), an ideal M&V
-method should detect no savings. Given that the messy dataset allows for
-up to a 25% annual usage change in the original dataset, a more reliable
-M&V method should inform the analyst that no savings occurred prior to
-the addition of the intervention. To test this, we removed the chilled
-water plant reset effect from the sampled days and assessed whether the
-M&V methods could correctly detect zero savings.
-
-```{r nosavings, fig.cap="Comparison of no intervention effect detection results (with 0% as true annual fractional savings) between conventional and randomized M&V method.", fig.width=6, fig.height=3}
-
-df_FS_nsprt %>% 
   pivot_wider(names_from = method, values_from = savings) %>% 
-  left_join(df_seq_FS_nsprt %>% filter(seq == "eob"), by = c("name", "site")) %>% 
-  pivot_longer(c(true, conv, rand, FS), names_to = "parameter", values_to = "value") %>% 
-  filter(parameter != "true" & parameter != "rand") %>% 
-  mutate(parameter = as.factor(parameter), 
-         parameter = recode_factor(parameter, 
-                                   "conv" = "Conventional M&V", 
-                                   "FS" = "Randomized M&V")) %>% 
-  ggplot(aes(x = parameter, y = value, fill = parameter)) +
-  stat_boxplot(geom ='errorbar', width = 0.2) +
-  geom_boxplot(outlier.shape = NA, width = 0.5) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "black", linewidth = 1.2) +
-  annotate(geom = "text", 
-           x = 0.7, 
-           y = 0.5, 
-           color = "black",
-           label = "True savings = 0") +
+  mutate(diff = true - conv, 
+         method = "conv") %>% 
+  select(name, method, diff)
+
+rand_final_S <- df_fs_null_stable %>% 
+  filter(method != "conv") %>% 
+  pivot_wider(names_from = method, values_from = savings) %>% 
+  mutate(diff = true - rand, 
+         method = "rand_final") %>% 
+  select(name, method, diff)
+
+df_MW_S <- rbind(rand_eob_S, conv_S, rand_final_S)
+
+# plot for the variable subset
+rand_eob_V <- df_seq_fs_null_variable %>% 
+  filter(seq == "eob") %>% 
+  mutate(diff = 0 - fs, 
+         method = "rand_eob") %>% 
+  select(name, method, diff)
+
+conv_V <- df_fs_null_variable %>% 
+  filter(method != "rand") %>% 
+  pivot_wider(names_from = method, values_from = savings) %>% 
+  mutate(diff = true - conv, 
+         method = "conv") %>% 
+  select(name, method, diff)
+
+rand_final_V <- df_fs_null_variable %>% 
+  filter(method != "conv") %>% 
+  pivot_wider(names_from = method, values_from = savings) %>% 
+  mutate(diff = true - rand, 
+         method = "rand_final") %>% 
+  select(name, method, diff)
+
+df_MW_V <- rbind(rand_eob_V, conv_V, rand_final_V)
+
+# plot for combined dataset
+rand_eob_A <- bind_rows(rand_eob_V, rand_eob_S) %>% 
+  select(name, rand_eob_diff = diff)
+
+conv_A <- bind_rows(conv_V, conv_S) %>% 
+  select(name, conv_diff = diff)
+
+rand_final_A <- bind_rows(rand_final_V, rand_final_S) %>% 
+  select(name, rand_final_diff = diff)
+
+df_MW_A <- rand_eob_A %>% 
+  left_join(conv_A, by = "name") %>% 
+  left_join(rand_final_A, by = "name") %>% 
+  pivot_longer(c(rand_eob_diff, conv_diff, rand_final_diff), names_to = "method", values_to = "diff")
+
+df_MW_A %>% 
+  mutate(method = as.factor(method), 
+         method = recode_factor(method, 
+                                "conv_diff" = "Conventional", 
+                                "rand_eob_diff" = "Randomized", 
+                                "rand_final_diff" = "Randomized\n(24 months)")) %>% 
+  ggplot(aes(x = method, y = diff, fill = method)) +
+  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
+  geom_lv(k = 4, outlier.shape = NA) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
+  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
+  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
+            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
   scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 5), 
-                     limits = c(0, 16), 
-                     labels = number_format(suffix = "%")) +
+                     breaks = breaks_pretty(n = 6), 
+                     labels = number_format(suffix = " %")) +
   scale_fill_manual(values = ls_colors) +
-  labs(x = NULL, 
-       y = NULL, 
-       fill = NULL, 
-       title = "Normalized confounded annual fractional savings comparison") +
+  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
+  labs(fill = NULL, 
+       x = NULL, 
+       y = "Mean effect in fractional savings",
+       title = "Mean effect of non-routine events when using different M&V methods", 
+       subtitle = str_glue("All {A_building} buildings with measured weather")) +
+  coord_cartesian(ylim = c(-18, 18)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.direction = "horizontal",
         legend.position = "none",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 ```
 
-Figure \@ref(fig:nosavings) shows that the conventional M&V method in
-average detected 5% savings when there should be none. The randomized
-method on the other hand is able to provide an estimation much closer to
-0% with reduced uncertainty. This improvement is largely due to the
-randomized sampling approach, where the two strategies (baseline and
-intervention) are sampled at a 50%/50% ratio. This ensures that any
-changes or disturbances additional to the intervention implementation,
-such as concurrent lighting retrofits, are evenly distributed across
-both strategies, balancing their effects.
+As mentioned in Section \@ref(data-filtering), the majority of the
+selected buildings are affected by non-routine events. To assess the
+reliability of the two M&V methods, we repeated the M&V procedure on the
+dataset before applying the reset control. In other words, the
+intervention has no effect on building electricity usage and our
+objective is to compare which method can provide an estimation closer to
+0 savings. Figure \@ref(fig:nosaving) shows the randomized M&V method
+(both at the time of satisfying all stopping criteria and at the end of
+two-year period) produced consistent results. We included the absolute
+deviation in the appendix. Similarly, stopping early can lead to larger
+uncertainty similar to Figure \@ref(fig:abstract). As for conventional
+method, the uncertainty range is much larger than the randomized method
+and it shows on average the deviation is 1.3% meaning a building analyst
+can claim 1.3% energy savings were detected when there isn't any.
 
 # Discussion
 
@@ -1627,9 +1150,9 @@ pre-processing described in Section \@ref(method).
 
 ```{r towtacc, fig.cap="TOWT model fitting accuracy distribution for all buildings included (with each data point representing one building)", fig.width=8, fig.height=4}
 
-df_model_acc_messy %>% 
-  mutate(group = "Messy subset") %>% 
-  rbind(df_model_acc_tidy %>% mutate(group = "Tidy subset")) %>% 
+df_model_acc_variable %>% 
+  mutate(group = "variable subset") %>% 
+  rbind(df_model_acc_stable %>% mutate(group = "stable subset")) %>% 
   mutate(group = as.factor(group)) %>% 
   ggplot(aes(x = group, y = cvrmse)) +
   stat_boxplot(geom ='errorbar', width = 0.1) +
@@ -1661,7 +1184,333 @@ the mean building energy consumption but can underestimate the 15-min
 daily peak load [@granderson2021], which is not useful for assessing
 savings for demand response events.
 
-## Sampling ratio for randomized M&V
+## Sampling interval impact
+
+```{r absinterv2, fig.cap="Comparison of different sampling interval impact on M&V estimation accuracy", fig.height=9, fig.width=12}
+
+#### ABS-INT ####
+# dropped version
+df_interval_keep_stable %<>% 
+  left_join(df_fs_stable %>% filter(method == "rand"), by = c("name", "site")) %>% 
+  select(-c("scenario", "method")) %>% 
+  rename("interval_fs_1" = "savings") %>% 
+  left_join(df_fs_tmy_stable, by = c("name", "site")) %>% 
+  select(-conv) %>% 
+  rename("interval_tmy_1" = "rand")
+
+df_interval_keep_variable %<>% 
+  left_join(df_fs_variable %>% filter(method == "rand"), by = c("name", "site")) %>% 
+  select(-c("scenario", "method")) %>% 
+  rename("interval_fs_1" = "savings") %>% 
+  left_join(df_fs_tmy_variable, by = c("name", "site")) %>% 
+  select(-conv) %>% 
+  rename("interval_tmy_1" = "rand")
+
+df_drop <- df_interval_drop_stable %>% 
+  bind_rows(df_interval_drop_variable) %>% 
+  select(name, contains("fs")) %>% 
+  rename("drop_1" = "interval_fs_1", 
+         "drop_2" = "interval_fs_2", 
+         "drop_3" = "interval_fs_3", 
+         "drop_7" = "interval_fs_7")  
+
+df_keep <- df_interval_keep_stable %>% 
+  bind_rows(df_interval_keep_variable) %>% 
+  select(name, contains("fs")) %>% 
+  rename("keep_1" = "interval_fs_1",
+         "keep_2" = "interval_fs_2", 
+         "keep_3" = "interval_fs_3", 
+         "keep_7" = "interval_fs_7")
+
+df_MW_A <- df_drop %>% 
+  left_join(df_keep, by = c("name")) %>%
+  left_join(rbind(df_fs_stable %>% 
+              filter(scenario == "ref" & method == "true"), 
+              df_fs_variable %>% 
+              filter(scenario == "ref" & method == "true")), by = "name") %>% 
+  mutate(drop_1 = abs(drop_1 - savings),
+         drop_2 = abs(drop_2 - savings), 
+         drop_3 = abs(drop_3 - savings), 
+         drop_7 = abs(drop_7 - savings), 
+         keep_1 = abs(keep_1 - savings),
+         keep_2 = abs(keep_2 - savings), 
+         keep_3 = abs(keep_3 - savings), 
+         keep_7 = abs(keep_7 - savings)) %>% 
+  pivot_longer(cols = contains("drop") | contains("keep"),  
+               names_to = c("group", "interval"),
+               names_pattern = "(drop|keep)_(\\d+)",
+               values_to = "diff")
+
+p_top <- df_MW_A %>% 
+  mutate(interval = as.factor(interval), 
+         interval = recode_factor(interval, 
+                                  "1" = "1-day\nsampling",
+                                  "2" = "2-day\nsampling", 
+                                  "3" = "3-day\nsampling", 
+                                  "7" = "7-day\nsampling"), 
+         group = as.factor(group), 
+         group = recode_factor(group, "drop" = "Dropped", "keep" = "Kept")) %>% 
+  ggplot(aes(x = interval, y = diff, fill = group)) +
+  geom_jitter(alpha = 0.8, 
+              size = 0.5, 
+              position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.2)) +
+  geom_lv(k = 4, outlier.shape = NA, position = position_dodge(width = 0.8)) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group), width = 0.8) +
+  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
+  geom_text(data = . %>% group_by(group, interval) %>% summarise(mean = mean(diff, na.rm = T)) %>% ungroup(), 
+            aes(x = interval, y = mean, group = group,
+                label = paste0(round(mean, digits = 1), " %")), 
+            position = position_dodge(width = 0.75)) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 4), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80")) + 
+  labs(fill = NULL, 
+       color = NULL, 
+       x = NULL, 
+       y = "Absolute error in fractional savings", 
+       subtitle = str_glue("All {A_building} buildings with measured weather")) +
+  coord_cartesian(ylim = c(0, 10)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "bottom",
+        axis.text.x = element_blank(),
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+# TMY version
+df_drop <- df_interval_drop_stable %>% 
+  bind_rows(df_interval_drop_variable) %>% 
+  select(name, contains("tmy")) %>% 
+  rename("drop_1" = "interval_tmy_1",
+         "drop_2" = "interval_tmy_2", 
+         "drop_3" = "interval_tmy_3", 
+         "drop_7" = "interval_tmy_7")  
+
+df_keep <- df_interval_keep_stable %>% 
+  bind_rows(df_interval_keep_variable) %>% 
+  select(name, contains("tmy")) %>% 
+  rename("keep_1" = "interval_tmy_1",
+         "keep_2" = "interval_tmy_2", 
+         "keep_3" = "interval_tmy_3", 
+         "keep_7" = "interval_tmy_7")
+
+df_TW_A <- df_drop %>% 
+  left_join(df_keep, by = c("name")) %>%
+  left_join(rbind(df_fs_stable %>% 
+              filter(scenario == "ref" & method == "true"), 
+              df_fs_variable %>% 
+              filter(scenario == "ref" & method == "true")), by = "name") %>% 
+  mutate(drop_1 = abs(drop_1 - savings), 
+         drop_2 = abs(drop_2 - savings), 
+         drop_3 = abs(drop_3 - savings), 
+         drop_7 = abs(drop_7 - savings), 
+         keep_1 = abs(keep_1 - savings), 
+         keep_2 = abs(keep_2 - savings), 
+         keep_3 = abs(keep_3 - savings), 
+         keep_7 = abs(keep_7 - savings)) %>% 
+  pivot_longer(cols = contains("drop") | contains("keep"),  
+               names_to = c("group", "interval"),
+               names_pattern = "(drop|keep)_(\\d+)",
+               values_to = "diff")
+
+p_bottom <- df_TW_A %>% 
+  mutate(interval = as.factor(interval), 
+         interval = recode_factor(interval, 
+                                  "1" = "1-day\nsampling",
+                                  "2" = "2-day\nsampling", 
+                                  "3" = "3-day\nsampling", 
+                                  "7" = "7-day\nsampling"), 
+         group = as.factor(group), 
+         group = recode_factor(group, "drop" = "Dropped", "keep" = "Kept")) %>% 
+  ggplot(aes(x = interval, y = diff, fill = group)) +
+  geom_jitter(alpha = 0.8, 
+              size = 0.5, 
+              position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.2)) +
+  geom_lv(k = 4, outlier.shape = NA, position = position_dodge(width = 0.8)) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group), width = 0.8) +
+  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
+  geom_text(data = . %>% group_by(group, interval) %>% summarise(mean = mean(diff, na.rm = T)) %>% ungroup(), 
+            aes(x = interval, y = mean, group = group,
+                label = paste0(round(mean, digits = 1), " %")), 
+            position = position_dodge(width = 0.75)) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 4), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80")) + 
+  labs(fill = NULL, 
+       color = NULL, 
+       x = NULL, 
+       y = "Absolute error in fractional savings", 
+       subtitle = str_glue("All {A_building} buildings with TMY weather")) +
+  coord_cartesian(ylim = c(0, 10)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "bottom",
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+ggarrange(p_top, p_bottom, 
+          ncol = 1, nrow = 2, 
+          align = "hv", 
+          common.legend = T, 
+          legend = "bottom") +
+  plot_annotation(title = "Absolute error in savings estimation of ranodmized M&V by different sampling intervals")
+
+```
+
+```{r absinterv, fig.cap="Comparison of different sampling interval impact on M&V estimation accuracy", fig.height=9, fig.width=12}
+
+# sprt sequence plot for different sampling intervals
+df_seq_interval_fs_keep_stable %<>% 
+  select(-c(sprt, temp, final)) %>% 
+  bind_rows(df_seq_fs_stable %>% 
+              filter(seq == "eob") %>% 
+              select(-seq) %>% 
+              mutate(interval = 1) %>% 
+              rename(eob = "fs"))  
+
+df_seq_interval_fs_keep_variable %<>% 
+  select(-c(sprt, temp, final)) %>% 
+  bind_rows(df_seq_fs_variable %>% 
+              filter(seq == "eob") %>% 
+              select(-seq) %>% 
+              mutate(interval = 1) %>% 
+              rename(eob = "fs")) 
+
+df_drop <- df_seq_interval_fs_drop_stable %>% 
+  bind_rows(df_seq_interval_fs_drop_variable) %>% 
+  select(name, eob, interval) %>% 
+  mutate(group = "drop")
+
+df_keep <- df_seq_interval_fs_keep_stable %>% 
+  bind_rows(df_seq_interval_fs_keep_variable) %>% 
+  select(name, eob, interval) %>% 
+  mutate(group = "keep")
+
+df_MW_A <- df_drop %>% 
+  bind_rows(df_keep) %>% 
+  left_join(rbind(df_fs_stable %>% 
+                    filter(scenario == "ref" & method == "true"), 
+                  df_fs_variable %>% 
+                    filter(scenario == "ref" & method == "true")), by = "name") %>% 
+  mutate(diff = abs(eob - savings)) %>% 
+  filter(is.finite(diff))
+
+p_top <- df_MW_A %>% 
+  mutate(interval = as.factor(interval), 
+         interval = recode_factor(interval, 
+                                  "1" = "1-day\nsampling",
+                                  "2" = "2-day\nsampling", 
+                                  "3" = "3-day\nsampling", 
+                                  "7" = "7-day\nsampling"), 
+         group = as.factor(group), 
+         group = recode_factor(group, "drop" = "Dropped", "keep" = "Kept")) %>% 
+   ggplot(aes(x = interval, y = diff, fill = group)) +
+  geom_jitter(alpha = 0.8, 
+              size = 0.5, 
+              position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.2)) +
+  geom_lv(k = 4, outlier.shape = NA, position = position_dodge(width = 0.8)) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group), width = 0.8) +
+  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
+  geom_text(data = . %>% group_by(group, interval) %>% summarise(mean = mean(diff, inf.rm = T)) %>% ungroup(), 
+            aes(x = interval, y = mean, group = group,
+                label = paste0(round(mean, digits = 1), " %")), 
+            position = position_dodge(width = 0.75)) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 4), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80")) + 
+  labs(fill = NULL, 
+       color = NULL, 
+       x = NULL, 
+       y = "Absolute error in fractional savings", 
+       subtitle = str_glue("All {A_building} buildings with measured weather")) +
+  coord_cartesian(ylim = c(0, 20)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "bottom",
+        axis.text.x = element_blank(),
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+# with tmy version
+df_seq_interval_nm_keep_stable %<>% 
+  select(-c(sprt, temp, final)) %>% 
+  bind_rows(df_sprt_all_stable %>% 
+             filter(seq == "eob") %>% 
+              select(-c(seq, n_weeks)) %>% 
+              mutate(interval = 1) %>% 
+              rename(eob = "annual")) 
+
+df_seq_interval_nm_keep_variable %<>% 
+  select(-c(sprt, temp, final)) %>% 
+  bind_rows(df_sprt_all_variable %>% 
+              filter(seq == "eob") %>% 
+              select(-c(seq, n_weeks)) %>% 
+              mutate(interval = 1) %>% 
+              rename(eob = "annual")) 
+
+df_drop <- df_seq_interval_nm_drop_stable %>% 
+  bind_rows(df_seq_interval_nm_drop_variable) %>% 
+  select(name, eob, interval) %>% 
+  mutate(group = "drop")
+
+df_keep <- df_seq_interval_nm_keep_stable %>% 
+  bind_rows(df_seq_interval_nm_keep_variable) %>% 
+  select(name, eob, interval) %>% 
+  mutate(group = "keep")
+
+df_TW_A <- df_drop %>% 
+  bind_rows(df_keep) %>% 
+  left_join(rbind(df_fs_stable %>% 
+                    filter(scenario == "ref" & method == "true"), 
+                  df_fs_variable %>% 
+                    filter(scenario == "ref" & method == "true")), by = "name") %>% 
+  mutate(diff = abs(eob - savings)) %>% 
+  filter(is.finite(diff))
+
+p_bottom <- df_TW_A %>% 
+  mutate(interval = as.factor(interval), 
+         interval = recode_factor(interval, 
+                                  "1" = "1-day\nsampling",
+                                  "2" = "2-day\nsampling", 
+                                  "3" = "3-day\nsampling", 
+                                  "7" = "7-day\nsampling"), 
+         group = as.factor(group), 
+         group = recode_factor(group, "drop" = "Dropped", "keep" = "Kept")) %>% 
+  ggplot(aes(x = interval, y = diff, fill = group)) +
+  geom_jitter(alpha = 0.8, 
+              size = 0.5, 
+              position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.2)) +
+  geom_lv(k = 4, outlier.shape = NA, position = position_dodge(width = 0.8)) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group), width = 0.8) +
+  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
+  geom_text(data = . %>% group_by(group, interval) %>% summarise(mean = mean(diff, na.rm = T)) %>% ungroup(), 
+            aes(x = interval, y = mean, group = group,
+                label = paste0(round(mean, digits = 1), " %")), 
+            position = position_dodge(width = 0.75)) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 4), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80")) + 
+  labs(fill = NULL, 
+       color = NULL, 
+       x = NULL, 
+       y = "Absolute error in fractional savings", 
+       subtitle = str_glue("All {A_building} buildings with TMY weather")) +
+  coord_cartesian(ylim = c(0, 20)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "bottom",
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+ggarrange(p_top, p_bottom, 
+          ncol = 1, nrow = 2, 
+          align = "hv", 
+          common.legend = T, 
+          legend = "bottom") +
+  plot_annotation(title = "Absolute error in savings estimation of randomized M&V after satisfying all stopping criteria")
+```
+
+## Sampling ratio impact
 
 Another advantage of using randomized M&V is the flexibility of changing
 sampling ratio after the target savings detected. For instance, the
@@ -1680,126 +1529,19 @@ at 20%/80% was implemented till the end of the year. Similarly, we
 calculated the accuracy metric as the absolute deviation from the annual
 true savings.
 
-```{r cont, fig.cap="Randomized M&V absolute deviation of fractional savings from true target savings for a whole year with more intervention days sampled after all stopping criteria satisfied", fig.width=8, fig.height=4}
+The plot shows the deviation remains consistent in the stable subset
+comapred to Figure \@ref(fig:stablefrac) but increased slightly in the
+variable subset compare to to Figure \@ref(fig:variablefrac). With
+unbalanced sampling ratio, there is a trade-off for estimation accuracy.
+But compared with conventional method, this is still a preferred
+approach. Most importantly, this approach allows customers to realize a
+proportion of expected savings while documenting baseline measurement.
+For example, opting for an early stop at 24 or 36 weeks with 50%
+intervention, followed by re-sampling at 80% until the year's end
+(\~another 20 weeks), would enable customers to capture about 65% of the
+full-range savings.
 
-plot_data <- df_cont_FS_tidy %>% 
-  rename(cont = FS) %>% 
-  left_join(df_FS_tidy %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(abs_diff = abs(savings - cont), 
-         plot_max = max(abs_diff))
-
-median_rand <- median(plot_data$abs_diff)
-upper_rand <- quantile(plot_data$abs_diff, probs = 0.95)
-
-p1 <- plot_data %>% 
-  arrange(abs_diff) %>% 
-  ggplot() +
-  geom_bar(aes(x = seq(1, nrow(all_names_tidy), by = 1), y = abs_diff, fill = "Randomized M&V"), 
-           stat = "identity", alpha = 0.5) +
-  geom_hline(yintercept = median_rand, 
-             linetype = "dashed", 
-             color = "black") +
-  annotate(y = median_rand + 0.5, 
-           x = 20, 
-           geom = "text", 
-           label = paste0("(", "50% buildings: < ", round(median_rand, digits = 1), " %)"),
-           size = 4) +
-  geom_hline(yintercept = upper_rand, 
-             linetype = "dashed", 
-             color = "black") +
-  annotate(y = upper_rand + 0.5, 
-           x = 20, 
-           geom = "text", 
-           label = paste0("(", "95% buildings: < ", round(upper_rand, digits = 1), " %)"),
-           size = 4) +
-  scale_x_continuous(expand = c(0.02, 0), 
-                     breaks = breaks_pretty(n = 3)) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 3), 
-                     labels = number_format(suffix = " %"),
-                     limits = c(0, max(plot_data$plot_max) + 0.5)) +
-  scale_fill_manual(values = ls_colors) +
-  labs(x = "Number of buildings", 
-       y = "Absolute difference of fractional savings", 
-       fill = NULL, 
-       subtitle = "Tidy subset") +
-  coord_cartesian(ylim = c(0, 25)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.direction = "horizontal",
-        legend.position = "bottom",
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-
-plot_data <- df_cont_FS_messy %>% 
-  rename(cont = FS) %>% 
-  left_join(df_FS_messy %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(abs_diff = abs(savings - cont), 
-         plot_max = max(abs_diff))
-
-median_rand <- median(plot_data$abs_diff)
-upper_rand <- quantile(plot_data$abs_diff, probs = 0.95)
-
-p2 <- plot_data %>% 
-  arrange(abs_diff) %>% 
-  ggplot() +
-  geom_bar(aes(x = seq(1, nrow(all_names_messy), by = 1), y = abs_diff, fill = "Randomized M&V"), 
-           stat = "identity", alpha = 0.5) +
-  geom_hline(yintercept = median_rand, 
-             linetype = "dashed", 
-             color = "black") +
-  annotate(y = median_rand + 0.5, 
-           x = 220, 
-           geom = "text", 
-           label = paste0("(", "50% buildings: < ", round(median_rand, digits = 1), " %)"),
-           size = 4) +
-  geom_hline(yintercept = upper_rand, 
-             linetype = "dashed", 
-             color = "black") +
-  annotate(y = upper_rand + 0.5, 
-           x = 220, 
-           geom = "text", 
-           label = paste0("(", "95% buildings: < ", round(upper_rand, digits = 1), " %)"),
-           size = 4) +
-  scale_x_continuous(expand = c(0.02, 0), 
-                     breaks = breaks_pretty(n = 3)) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 3), 
-                     labels = number_format(suffix = " %"),
-                     limits = c(0, max(plot_data$plot_max) + 0.1)) +
-  scale_fill_manual(values = ls_colors) +
-  labs(x = "Number of buildings", 
-       y = NULL, 
-       fill = NULL, 
-       subtitle = "Messy subset") +
-  coord_cartesian(ylim = c(0, 25)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.direction = "horizontal",
-        legend.position = "bottom",
-        axis.text.y = element_blank(),
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 0, unit = "mm"))
-
-ggarrange(p1, p2,
-          ncol=2, nrow=1,
-          labels = c("a)", "b)"),
-          align = "hv",
-          legend="none") +
-  plot_annotation(title = "Randomized M&V savings estimation accuracy comparison with continue sampling included", 
-                  subtitle = "20%/80% baseline/intervention")
-```
-
-The plot shows the deviation remains consistent in the tidy subset
-comapred to Figure \@ref(fig:tidyfrac) but increased slightly in the
-messy subset compare to to Figure \@ref(fig:messyfrac). With unbalanced
-sampling ratio, there is a trade-off for estimation accuracy. But
-compared with conventional method, this is still a preferred approach.
-Most importantly, this approach allows customers to realize a proportion
-of expected savings while documenting baseline measurement. For example,
-opting for an early stop at 24 or 36 weeks with 50% intervention,
-followed by re-sampling at 80% until the year's end (\~another 20
-weeks), would enable customers to capture about 65% of the full-range
-savings.
-
-## Limitations and future study
+## Limitations
 
 We identify two key limitations in this study:
 
@@ -1826,19 +1568,6 @@ We identify two key limitations in this study:
     this study does not account for carryover effects, we recommend
     using a 3-day sampling interval and excluding non-consecutive days
     in practice to 'wash out' residual effects from previous strategies.
-
-For future work, our main objective is to extend the application of the
-proposed randomized M&V approach. For instance, a customer may want to
-know whether Model Predictive Control (MPC) can reduce energy bills
-under a dynamic pricing structure or estimate the Return on Investment
-(ROI) for a retrofit. Or whether a load shift control can save
-operational cost by shifting load out of a given time window such grid
-peak price/emissions period. We also believe that this approach could be
-adapted to analyze the effects of other retrofit interventions at a
-population level. Additionally, we aim to demonstrate that the
-randomized method and sequential analysis framework can be applied to
-various performance metrics, including indoor air quality, operational
-carbon emissions, and thermal comfort.
 
 # Conclusion
 
@@ -1877,7 +1606,7 @@ robustness of savings estimations.
 Although the limitation of the method is that it only applies to a
 subset of all M&V use cases (i.e., strategies that can be switched on
 and off), we believe its true value lies in the usefulness and
-conviencience for most control retrofit validation in the field test.
+convenience for most control retrofit validation in the field test.
 
 # Acknowledgements
 
