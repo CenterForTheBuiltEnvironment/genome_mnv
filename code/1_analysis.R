@@ -55,10 +55,10 @@ source(paste0(function_path, "rand_seq.R"))
 
 # define parameters
 # section run control
-run_params <- list(type = "stable", 
+run_params <- list(type = "variable", 
                    sprt = T, 
                    sprt_cont = F, 
-                   interval = T, 
+                   interval = F, 
                    null = F)
 
 # Adding intervention effect as advanced chiller operation
@@ -315,7 +315,8 @@ df_tmy <- get_tmy(all_sites$site)
 #### INDIVIDUAL ####
 # storing results
 fs_ref <- list()
-model_acc <- list()
+model_acc_rand <- list()
+model_acc_conv <- list()
 seq_timeline <- list()
 seq_frsaving <- list()
 seq_nmsaving <- list()
@@ -396,7 +397,7 @@ for (n in 1:(nrow(all_names))){
     model_fit()
   
   df_towt <- df_base_conv %>%
-    filter(datetime < as.Date("2017-01-01")) %>%
+    filter(datetime >= as.Date("2017-01-01")) %>%
     select(time = datetime,
            temp = t_out,
            eload)
@@ -407,9 +408,9 @@ for (n in 1:(nrow(all_names))){
   
   cv_rmse <- mean(sqrt(base_proj$error ^ 2)) / mean(base_proj$eload) * 100
   
-  model_acc[[n]] <- tibble("name" = name,
-                           "site" = site, 
-                           "cvrmse" = cv_rmse)
+  model_acc_conv[[n]] <- tibble("name" = name,
+                                "site" = site, 
+                                "conv" = cv_rmse)
   
   # base_proj %>%
   #   ggplot() +
@@ -452,6 +453,7 @@ for (n in 1:(nrow(all_names))){
   base_proj <- model_pred(df_towt, towt_base) %>%
     rename("datetime" = "time")
   
+  fs_conv <- (mean(base_proj$towt) - mean(base_proj$eload)) / mean(base_proj$towt) * 100
   
   
   
@@ -482,9 +484,35 @@ for (n in 1:(nrow(all_names))){
     select(-eload_type) %>% 
     drop_na()
   
+  # separate baseline and intervention
+  towt_base <- df_rand %>% 
+    filter(strategy == 1) %>%
+    select(-strategy) %>%
+    model_fit()
+  
+  df_towt <- df_hourly_conv %>% 
+    left_join(df_schedule, by = "datetime") %>%
+    fill(strategy, .direction = "down") %>%
+    filter(datetime <= as.Date("2016-01-01") + weeks(block_params$n_weeks)) %>%
+    pivot_longer(c(base_eload, interv_eload), names_to = "eload_type", values_to = "eload") %>%
+    filter(strategy == 2 & eload_type == "base_eload") %>%
+    select(time = datetime,
+           temp = t_out,
+           eload)
+  
+  base_proj <- model_pred(df_towt, towt_base) %>%
+    rename("datetime" = "time") %>%
+    mutate(error = eload - towt)
+  
+  cv_rmse <- mean(sqrt(base_proj$error ^ 2)) / mean(base_proj$eload) * 100
+  
+  model_acc_rand[[n]] <- tibble("name" = name,
+                                "site" = site, 
+                                "rand" = cv_rmse)
+  
   # saving calculation as mean difference
   fs_true <- (mean(df_base_conv$eload) - mean(df_interv_conv$eload)) / mean(df_base_conv$eload) * 100
-  fs_conv <- (mean(base_proj$towt) - mean(base_proj$eload)) / mean(base_proj$towt) * 100
+
   fs_rand <- (mean(df_rand %>% filter(strategy == 1) %>% .$eload) -
                 mean(df_rand %>% filter(strategy == 2) %>% .$eload)) /
     mean(df_rand %>% filter(strategy == 1) %>% .$eload) * 100
@@ -1183,7 +1211,8 @@ df_sprt_all <- bind_rows(seq_nmsaving) %>%
               pivot_longer(-c(name, site), names_to = "seq", values_to = "n_weeks"),
             by = c("name", "site", "seq"))
 
-df_model_acc <- bind_rows(model_acc) 
+df_model_acc <- bind_rows(model_acc_conv) %>% 
+  left_join(bind_rows(model_acc_rand), by = c("name", "site"))
 
 df_fs_tmy <- bind_rows(fs_tmy)
 
