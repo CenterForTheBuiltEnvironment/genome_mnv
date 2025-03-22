@@ -1854,45 +1854,7 @@ df_keep <- bind_rows(df_seq_interval_tl_keep_stable, df_seq_interval_tl_keep_var
   bind_rows(interval_1_keep)
 
 df_MW_A <- bind_rows(df_keep, df_drop) %>% 
-  filter(seq != "final")
-
-p_top <- df_MW_A %>% 
-  filter(seq != "eob") %>% 
-  mutate(seq = as.factor(seq), 
-         seq = recode_factor(seq, 
-                             "sprt" = "Buildings satisfying SPRT", 
-                             "temp" = "Buildings satisfying temperature range", 
-                             "eob" = "Buildings finishing all criteria"), 
-         interval = as.factor(interval), 
-         interval = recode_factor(interval, 
-                                  "1" = "1-day\nsampling",
-                                  "2" = "2-day\nsampling", 
-                                  "3" = "3-day\nsampling", 
-                                  "7" = "7-day\nsampling"), 
-         group = as.factor(group), 
-         group = recode_factor(group, "drop" = "Dropped", "keep" = "Kept")) %>% 
-  ggplot(aes(x = interval, y = n_weeks, fill = group)) +
-  geom_jitter(alpha = 0.8,
-              size = 0.5,
-              position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.2)) +
-  geom_lv(k = 4, outlier.shape = NA, position = position_dodge(width = 0.8)) +
-  geom_boxplot(outlier.shape = NA, coef = 0, color = "grey50", width = 0.8) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = ls_colors) +
-  scale_y_continuous(expand = c(0, 0),
-                     breaks = seq(0, 50, by = 12), 
-                     labels = number_format(suffix = " weeks")) +
-  coord_cartesian(ylim = c(0, 50)) +
-  facet_wrap(~seq, nrow = 1) +
-  labs(x = NULL,
-       y = NULL,
-       fill = NULL,
-       subtitle = "Satisfying EACH stopping criterion") +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "bottom",
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-p_bottom <- df_MW_A %>% 
+  filter(seq != "final") %>% 
   filter(seq == "eob") %>% 
   mutate(seq = as.factor(seq), 
          seq = recode_factor(seq, 
@@ -1904,35 +1866,52 @@ p_bottom <- df_MW_A %>%
                                   "3" = "3-day\nsampling", 
                                   "7" = "7-day\nsampling"), 
          group = as.factor(group), 
-         group = recode_factor(group, "drop" = "Dropped", "keep" = "Kept")) %>% 
+         group = recode_factor(group, "drop" = "Dropped", "keep" = "Kept"), 
+         n_weeks = as.factor(n_weeks), 
+         n_weeks = recode_factor(n_weeks, 
+                                 "12" = "12\nweeks", 
+                                 "24" = "24\nweeks", 
+                                 "36" = "36\nweeks", 
+                                 "48" = "48\nweeks")) %>% 
   group_by(n_weeks, group, interval) %>% 
   summarise(n = n()) %>%
-  ungroup() %>% 
+  ungroup()
+
+levA <- levels(df_MW_A$n_weeks)
+levB <- levels(df_MW_A$group)
+levC <- levels(df_MW_A$interval)
+
+# 2. Expand to all combinations of factorA and factorB
+all_combinations <- expand_grid(
+  n_weeks = levA,
+  group = levB, 
+  interval = levC, 
+)
+
+df_MW_A <- all_combinations %>%
+  left_join(df_MW_A, by = c("n_weeks", "group", "interval")) %>% 
+  mutate(n = ifelse(is.na(n), 0, n)) %>% 
   group_by(group, interval) %>% 
-  mutate(n = n, 
+  mutate(n = ifelse(n > sum(n) * 0.01, n, 0), 
          perc = n / sum(n) * 100) %>% 
-  ungroup() %>% 
+  ungroup()
+
+df_MW_A %>% 
   ggplot(aes(x = n_weeks, y = perc, fill = group)) +
   geom_bar(stat = "identity", position = "dodge") +
   facet_wrap(~interval, nrow = 1) +
+  geom_text(aes(x = n_weeks, y = perc + 2, label = paste0(round(perc, digits = 0), "%"), group = group), position = position_dodge(1)) +
   scale_fill_manual(values = ls_colors) +
   scale_color_manual(values = ls_colors) +
-  scale_x_continuous(breaks = c(12, 24, 36, 48), 
-                     labels = number_format(suffix = "\nweeks")) +
   scale_y_continuous(breaks = breaks_pretty(n = 4), 
                      labels = number_format(suffix = " %")) +
   labs(x = NULL,
-       y = "Percentage of buildings finishing randomized M&V",
+       y = NULL,
        fill = NULL,
-       subtitle = "Satisfying ALL stopping criteria") +
+       title = "Percentage of buildings satisfying all stopping critiera", 
+       subtitle = "Counted at the end of each 12-week blocking period") +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
         legend.position = "bottom",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-ggarrange(p_top, p_bottom, 
-          ncol = 1, 
-          common.legend = T, 
-          legend = "bottom") +
-  plot_annotation("Overall M&V timeline by different sampling intervals")
 
 ggsave(filename = "timeline_interval_sprt.png", path = fig_path, units = "in", height = 6, width = 9, dpi = 300)
