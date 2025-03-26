@@ -55,11 +55,10 @@ source(paste0(function_path, "rand_seq.R"))
 
 # define parameters
 # section run control
-run_params <- list(type = "variable", 
+run_params <- list(type = "stable", 
+                   start_time = "2016-03-01", 
                    sprt = T, 
-                   sprt_cont = F, 
-                   interval = F, 
-                   null = F)
+                   interval = F)
 
 # Adding intervention effect as advanced chiller operation
 ctr_params <- list(peak_hours = 10:16,                      # accounts for peak hours
@@ -74,9 +73,9 @@ ctr_params <- list(peak_hours = 10:16,                      # accounts for peak 
 
 
 # adding random sampling schedules
-block_params <- list(start_date = "2016-01-01",
-                     n_weeks = 108,
-                     n_seasons = 9, 
+block_params <- list(start_date = run_params$start_time,
+                     n_weeks = 96,
+                     n_seasons = 8, 
                      block_unit = 12)
 
 # adding sprt criteria
@@ -360,19 +359,10 @@ for (n in 1:(nrow(all_names))){
   df_all <- df_energy %>%
     filter(name == all_names$name[n]) %>%
     select(timestamp, eload) %>%
-    left_join(site_weather, by = "timestamp")
-  
-  # length check
-  if (nrow(df_all) != (366 + 365) * 24){
-    print("Incomplete/duplicate timestamp, please check")
-  } else {
-    print(paste0(name, " at ", site_info$site, " start"))
-  }
-  
-  # Linear interpolation of baseline
-  df_all <- df_all %>%
+    left_join(site_weather, by = "timestamp") %>% 
+    filter(timestamp >= as.Date(run_params$start_time)) %>% 
     run_interpo()
-  
+    
   plot_scale <- get_scale(df_all$base_eload)
   
   df_hourly_conv <- df_all %>%
@@ -393,11 +383,11 @@ for (n in 1:(nrow(all_names))){
   
   # Check prediction accuracy
   towt_base <- df_base_conv %>%
-    filter(datetime < as.Date("2017-01-01")) %>%
+    filter(datetime < (years(1) + as.Date(run_params$start_time))) %>%
     model_fit()
   
   df_towt <- df_base_conv %>%
-    filter(datetime >= as.Date("2017-01-01")) %>%
+    filter(datetime >= (years(1) + as.Date(run_params$start_time))) %>%
     select(time = datetime,
            temp = t_out,
            eload)
@@ -441,11 +431,11 @@ for (n in 1:(nrow(all_names))){
   
   # TOWT baseline project for post retrofit period
   towt_base <- df_base_conv %>%
-    filter(datetime < as.Date("2017-01-01")) %>%
+    filter(datetime < (years(1) + as.Date(run_params$start_time))) %>%
     model_fit()
   
   df_towt <- df_interv_conv %>%
-    filter(datetime >= as.Date("2017-01-01")) %>%
+    filter(datetime >= (years(1) + as.Date(run_params$start_time))) %>%
     select(time = datetime,
            temp = t_out,
            eload)
@@ -478,7 +468,7 @@ for (n in 1:(nrow(all_names))){
   df_rand <- df_hourly_conv %>%
     left_join(df_schedule, by = "datetime") %>%
     fill(strategy, .direction = "down") %>%
-    filter(datetime <= as.Date("2016-01-01") + weeks(block_params$n_weeks)) %>%
+    filter(datetime <= as.Date(run_params$start_time) + weeks(block_params$n_weeks)) %>%
     pivot_longer(c(base_eload, interv_eload), names_to = "eload_type", values_to = "eload") %>%
     filter((strategy == 1 & eload_type == "base_eload") | (strategy == 2 & eload_type == "interv_eload")) %>%
     select(-eload_type) %>% 
@@ -493,7 +483,7 @@ for (n in 1:(nrow(all_names))){
   df_towt <- df_hourly_conv %>% 
     left_join(df_schedule, by = "datetime") %>%
     fill(strategy, .direction = "down") %>%
-    filter(datetime <= as.Date("2016-01-01") + weeks(block_params$n_weeks)) %>%
+    filter(datetime <= as.Date(run_params$start_time) + weeks(block_params$n_weeks)) %>%
     pivot_longer(c(base_eload, interv_eload), names_to = "eload_type", values_to = "eload") %>%
     filter(strategy == 2 & eload_type == "base_eload") %>%
     select(time = datetime,
@@ -627,64 +617,13 @@ for (n in 1:(nrow(all_names))){
   
   
   
-  if (run_params$sprt_cont){
-    for (r in 1:length(cont_param$resamp)) {
-      ratio <- cont_param$resamp[[r]]
-      
-      cont_param$last_weeks <- block_params$n_weeks - eob
-      cont_param$n_weeks <- block_params$n_weeks
-      cont_param$start_date <- as.Date("2016-01-01") + weeks(eob)
-      cont_param$n_seasons <- round(cont_param$last_weeks / block_params$block_unit)
-      date_seq <- seq(from = cont_param$start_date, by = "day", length.out = cont_param$last_weeks * 7)
-      strategy <- sample(c(1, 2), size = length(date_seq), replace = TRUE, prob = ratio)
-      
-      df_schedule_cont <- data.frame(datetime = date_seq,
-                                     strategy = strategy)
-      
-      df_rand_old <- df_rand %>% 
-        filter(datetime < cont_param$start_date)
-      
-      df_rand_new <- df_hourly_conv %>%
-        filter(datetime >= cont_param$start_date) %>% 
-        left_join(df_schedule_cont, by = "datetime") %>%
-        fill(strategy, .direction = "down") %>%
-        pivot_longer(c(base_eload, interv_eload), names_to = "eload_type", values_to = "eload") %>%
-        filter((strategy == 1 & eload_type == "base_eload") | (strategy == 2 & eload_type == "interv_eload")) %>%
-        select(-eload_type) %>% 
-        drop_na()
-      
-      df_rand_cont <- rbind(df_rand_old, df_rand_new)
-      
-      rand_tmy <- saving_norm(df_rand_cont %>% mutate(week = NA), site_tmy)
-      
-      # saving calculation as mean difference
-      rand_fs <- (mean(df_rand_cont %>% filter(strategy == 1) %>% .$eload) -
-                    mean(df_rand_cont %>% filter(strategy == 2) %>% .$eload)) /
-        mean(df_rand_cont %>% filter(strategy == 1) %>% .$eload) * 100
-      
-      cont <- data.frame("name" = name,
-                         "site" = site,
-                         "ratio" = r, 
-                         "cont_fs" = rand_fs, 
-                         "cont_tmy" = rand_tmy)
-      
-      cont_saving <- rbind(cont_saving, cont)
-    }
-    
-    
-    
-  }
-  
-  
-  
-  
   
   #### TMY ####
   rand_tmy <- saving_norm(df_rand %>% mutate(week = NA), site_tmy)
   
   df_conv_tmy <- df_hourly_conv %>% 
-    mutate(strategy = ifelse(year(datetime) == "2016", 1, 2), 
-           eload = ifelse(year(datetime) == "2016", base_eload, interv_eload), 
+    mutate(strategy = ifelse(datetime < (as.Date(run_params$start_time) + years(1)), 1, 2), 
+           eload = ifelse(datetime <= (as.Date(run_params$start_time) + years(1)), base_eload, interv_eload), 
            week = NA) %>% 
     select(datetime, eload, strategy, t_out, week)
   
@@ -975,224 +914,6 @@ for (n in 1:(nrow(all_names))){
 
 
 
-#### NULL ####
-if (run_params$null) {
-  
-  fs_ref_null <- list()
-  fs_tmy_null <- list()
-  seq_timeline_null <- list()
-  seq_nmsaving_null <- list()
-  seq_frsaving_null <- list()
-  interval_null_drop <- list()
-  interval_null_keep <- list()
-  
-  failed_sprt <- 0
-  
-  # for (n in 1:10){
-  for (n in 1:(nrow(all_names))){
-    
-    name <- all_names$name[n]
-    
-    site_info <- df_energy %>%
-      filter(name == all_names$name[n]) %>%
-      select(site, type) %>%
-      distinct()
-    
-    site <- site_info$site
-    
-    ifelse(!dir.exists(file.path(str_glue("../figs/{run_params$type}/site_analysis/{site}/{name}"))), dir.create(file.path(str_glue("../figs/{run_params$type}/site_analysis/{site}/{name}"))), FALSE)
-    sitefigs_path <- str_glue("../figs/{run_params$type}/site_analysis/{site}/{name}")
-    
-    site_weather <- df_weather %>%
-      filter(site == site_info$site) %>%
-      select(timestamp, t_out) %>%
-      group_by(timestamp) %>%
-      summarise(t_out = mean(t_out)) %>%
-      ungroup()
-    
-    site_tmy <- df_tmy %>% 
-      filter(site == site_info$site)
-    
-    df_all <- df_energy %>%
-      filter(name == all_names$name[n]) %>%
-      select(timestamp, eload) %>%
-      left_join(site_weather, by = "timestamp")
-    
-    # length check
-    if (nrow(df_all) != (366 + 365) * 24){
-      print("Incomplete/duplicate timestamp, please check")
-    } else {
-      print(paste0(name, " at ", site_info$site, " start"))
-    }
-    
-    # Linear interpolation of baseline
-    df_all <- df_all %>%
-      run_interpo()
-    
-    plot_scale <- get_scale(df_all$base_eload)
-    
-    df_hourly_conv <- df_all %>%
-      mutate(interv_eload = base_eload)
-    
-    # separate baseline and intervention
-    df_base_conv <- df_hourly_conv %>%
-      select(datetime,
-             eload = base_eload,
-             t_out) %>% 
-      drop_na()
-    
-    df_interv_conv <- df_hourly_conv %>%
-      select(datetime,
-             eload = interv_eload,
-             t_out) %>% 
-      drop_na()
-    
-    # Check prediction accuracy
-    towt_base <- df_base_conv %>%
-      filter(datetime < as.Date("2017-01-01")) %>%
-      model_fit()
-    
-    df_towt <- df_base_conv %>%
-      filter(datetime < as.Date("2017-01-01")) %>%
-      select(time = datetime,
-             temp = t_out,
-             eload)
-    
-    base_proj <- model_pred(df_towt, towt_base) %>%
-      rename("datetime" = "time")
-    
-    
-    # TOWT baseline project for post retrofit period
-    towt_base <- df_base_conv %>%
-      filter(datetime < as.Date("2017-01-01")) %>%
-      model_fit()
-    
-    df_towt <- df_interv_conv %>%
-      filter(datetime >= as.Date("2017-01-01")) %>%
-      select(time = datetime,
-             temp = t_out,
-             eload)
-    
-    base_proj <- model_pred(df_towt, towt_base) %>%
-      rename("datetime" = "time")
-    
-    # Repeat randomization
-    schedule <- blocking(start_date = block_params$start_date,
-                         n_weeks = block_params$n_weeks,
-                         n_seasons = block_params$n_seasons,
-                         seed = sample(1: 2^15, 1),
-                         searches = 20,
-                         jumps = 20,
-                         treatments = 2,
-                         consec = 1)
-    
-    # schedule summary
-    schedule$weekday_summary
-    
-    df_schedule <- schedule$schedule %>%
-      select(datetime = date,
-             strategy)
-    
-    df_rand <- df_hourly_conv %>%
-      left_join(df_schedule, by = "datetime") %>%
-      fill(strategy, .direction = "down") %>%
-      filter(datetime <= as.Date("2016-01-01") + weeks(block_params$n_weeks)) %>%
-      pivot_longer(c(base_eload, interv_eload), names_to = "eload_type", values_to = "eload") %>%
-      filter((strategy == 1 & eload_type == "base_eload") | (strategy == 2 & eload_type == "interv_eload")) %>%
-      select(-eload_type) %>% 
-      drop_na()
-    
-    # saving calculation as mean difference
-    fs_true <- (mean(df_base_conv$eload) - mean(df_interv_conv$eload)) / mean(df_base_conv$eload) * 100
-    fs_conv <- (mean(base_proj$towt) - mean(base_proj$eload)) / mean(base_proj$towt) * 100
-    fs_rand <- (mean(df_rand %>% filter(strategy == 1) %>% .$eload) -
-                  mean(df_rand %>% filter(strategy == 2) %>% .$eload)) /
-      mean(df_rand %>% filter(strategy == 1) %>% .$eload) * 100
-    
-    
-    fs_ref_null[[n]] <- tibble("name" = name,
-                          "site" = site, 
-                          "ref_true" = fs_true,
-                          "ref_conv" = fs_conv,
-                          "ref_rand" = fs_rand)
-    
-    # get true savings
-    df_week <- df_base_conv %>% 
-      select(datetime, 
-             base_eload = eload) %>% 
-      left_join(df_interv_conv, by = "datetime") %>% 
-      mutate(savings = eload - base_eload) %>% 
-      mutate(week = interval(min(datetime), datetime) %>% as.numeric('weeks') %>% floor()) %>% 
-      filter(week <= sprt_param$n_weeks)
-    
-    true_saving_null <- list()
-    
-    for (i in 2:sprt_param$n_weeks){
-      saving <- df_week %>% 
-        filter(week <= i)
-      
-      true_saving_null[[i]] <- tibble("n_weeks" = i, 
-                                       savings = mean(saving %>% .$savings))
-    }
-    
-    true_saving_null <- bind_rows(true_saving_null)
-    
-    seq_res <- try(seq_run(sprt_param, df_rand, site_tmy), silent = TRUE)  
-    
-    if (inherits(seq_res, "try-error")) {
-      
-      message("An error occurred. Skipping this part...")
-      failed_sprt <- failed_sprt + 1
-      
-    } else {
-      
-      annual_saving <- seq_res$annual_saving
-      df_means <- seq_res$df_means
-      sprt_res <- seq_res$sprt_res
-      sprt_overlap_base <- seq_res$sprt_overlap_base
-      sprt_overlap_interv <- seq_res$sprt_overlap_interv
-      
-      # get sequential test timeline
-      eob <- get_eob(sprt_res, sprt_overlap_base, sprt_overlap_interv)
-      seq_timeline_null[[n]] <- get_timeline(sprt_res, sprt_overlap_base, sprt_overlap_interv)
-      
-      # plot overall results
-      seq_plot(df_means, sprt_res, sprt_overlap_base, sprt_overlap_interv, annual_saving, true_saving_null, eob)
-      ggsave(filename = "overall_seq_null.png", path = sitefigs_path, units = "in", height = 9, width = 8, dpi = 300)
-      
-      # savings at timeline
-      seq_nmsaving_null[[n]] <- get_nmsaving(seq_timeline_null[[n]], sprt_res)
-      seq_frsaving_null[[n]] <- get_frsaving(seq_timeline_null[[n]], df_rand)
-      
-    }
-    
-    # TMY
-    rand_tmy <- saving_norm(df_rand %>% mutate(week = NA), site_tmy)
-    
-    df_conv_tmy <- df_hourly_conv %>% 
-      mutate(strategy = ifelse(year(datetime) == "2016", 1, 2), 
-             eload = ifelse(year(datetime) == "2016", base_eload, interv_eload), 
-             week = NA) %>% 
-      select(datetime, eload, strategy, t_out, week)
-    
-    conv_tmy <- saving_norm(df_conv_tmy %>% mutate(week = NA), site_tmy)
-    
-    
-    fs_tmy_null[[n]] <- tibble("name" = name,
-                                "site" = site, 
-                                "rand" = rand_tmy, 
-                                "conv" = conv_tmy)
-
-    print(paste0("Finished: ", n, "/", nrow(all_names)))
-  
-  }
-
-}
-
-
-
-
-
 
 #### BIND ####
 # savings calculation
@@ -1223,13 +944,6 @@ write_rds(df_fs, paste0(readfile_path, "df_fs.rds"), compress = "gz")
 write_rds(df_model_acc, paste0(readfile_path, "df_model_acc.rds"), compress = "gz")
 write_rds(df_fs_tmy, paste0(readfile_path, "df_fs_tmy.rds"), compress = "gz")
 
-
-if (run_params$sprt_cont){
-  
-  write_rds(cont_saving, paste0(readfile_path, "df_cont.rds"), compress = "gz")
-  
-}
-
 if (run_params$interval){
   
   df_interval_drop <- bind_rows(interval_saving_drop)
@@ -1245,31 +959,3 @@ if (run_params$interval){
   write_rds(seq_nmsaving_interval_keep, paste0(readfile_path, "df_seq_interval_nm_keep.rds"), compress = "gz")
   
 }
-
-if (run_params$null){
-  
-  df_seq_fs_null <- bind_rows(seq_frsaving_null) %>%
-    pivot_longer(-c(name, site), names_to = "seq", values_to = "fs")
-  
-  df_null_all <- bind_rows(seq_nmsaving_null) %>%
-    pivot_longer(-c(name, site), names_to = "seq", values_to = "annual") %>%
-    left_join(bind_rows(seq_timeline_null) %>%
-                mutate(temp = pmax(base_temp, interv_temp)) %>%
-                select(-c(base_temp, interv_temp)) %>%
-                pivot_longer(-c(name, site), names_to = "seq", values_to = "n_weeks"),
-              by = c("name", "site", "seq"))
-  
-  
-  df_fs_null <- bind_rows(fs_ref_null) %>%
-    pivot_longer(-c(name, site), names_to = "type", values_to = "savings") %>%
-    separate(type, into = c("scenario", "method"), sep = "_")
-  
-  df_fs_tmy_null <- bind_rows(fs_tmy_null)
-  
-  write_rds(df_seq_fs_null, paste0(readfile_path, "df_seq_fs_null.rds"), compress = "gz")
-  write_rds(df_null_all, paste0(readfile_path, "df_null_all.rds"), compress = "gz")
-  write_rds(df_fs_null, paste0(readfile_path, "df_fs_null.rds"), compress = 'gz')
-  write_rds(df_fs_tmy_null, paste0(readfile_path, "df_fs_tmy_null.rds"), compress = "gz")
-  
-}
-
