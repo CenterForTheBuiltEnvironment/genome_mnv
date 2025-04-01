@@ -58,7 +58,7 @@ source(paste0(function_path, "rand_seq.R"))
 run_params <- list(type = "stable", 
                    start_time = "2016-03-01", 
                    sprt = T, 
-                   interval = F)
+                   interval = T)
 
 # Adding intervention effect as advanced chiller operation
 ctr_params <- list(peak_hours = 10:16,                      # accounts for peak hours
@@ -83,7 +83,7 @@ sprt_param <- list(baseline = "Baseline",
                    strategy = "Intervention",
                    parameter = "power_ave",
                    label = "power",
-                   n_weeks = 48)
+                   n_weeks = 60)
 
 cont_param <- list(baseline = "Baseline",
                    strategy = "Intervention",
@@ -668,7 +668,6 @@ for (n in 1:(nrow(all_names))){
           mean(df_rand_new %>% filter(strategy == 1) %>% .$eload) * 100
         
         # savings at timeline
-        
         rand_tmy_1 <- saving_norm(df_rand_new %>% mutate(week = NA), site_tmy)
         
         seq_res <- seq_run(sprt_param, df_rand_new, site_tmy)

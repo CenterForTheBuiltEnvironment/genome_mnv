@@ -400,7 +400,7 @@ p_middle <- df_TW_A %>%
   geom_lv(k = 4, outlier.shape = NA) +
   geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
+  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff, na.rm = T)) %>% ungroup(), 
             aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
@@ -430,7 +430,7 @@ df_time <- df_sprt_all_variable %>%
 
 count <- list()
 n <- 1
-for (i in seq(0, 36, by = 3)){
+for (i in seq(0, 48, by = 3)){
   
   df_sprt <- df_time %>% 
     filter(seq == "sprt",
@@ -457,7 +457,7 @@ count <- bind_rows(count)
 p_timeline <- count %>% 
   ggplot() +
   geom_bar(data = . %>% 
-             filter(n_weeks == 24 | n_weeks == 36),
+             filter(n_weeks %in% c(12, 24, 36, 48)),
            aes(x = n_weeks, y = eob, fill = "Buildings finishing randomized M&V"), 
            stat = "identity", 
            position = "stack",
@@ -472,12 +472,12 @@ p_timeline <- count %>%
   geom_point(aes(x = n_weeks, y = sprt, color = "Buildings satisfying SPRT"), 
              size = 1.5, 
              shape = 17) +
-  geom_segment(aes(x = 36.5, y = max(eob), xend = 95.5, yend = max(eob)),
+  geom_segment(aes(x = 48.5, y = max(eob), xend = 95.5, yend = max(eob)),
                arrow = arrow(length = unit(0.25, "in")),   
                linewidth = 1.1,  
                color = "#fb8072") + 
   annotate(geom = "text", 
-           x = 66, 
+           x = 70, 
            y = max(count$eob) - 30, 
            size = 5,
            label = "Excess time by conventional M&V") +
@@ -615,7 +615,7 @@ p1 <- df_TW_S %>%
   geom_lv(k = 4, outlier.shape = NA) +
   geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
+  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff, na.rm = T)) %>% ungroup(), 
             aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
@@ -641,7 +641,7 @@ p2 <- df_TW_V %>%
   geom_lv(k = 4, outlier.shape = NA) +
   geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
+  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff, na.rm = T)) %>% ungroup(), 
             aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
