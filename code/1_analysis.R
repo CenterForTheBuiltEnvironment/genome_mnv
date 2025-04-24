@@ -55,7 +55,7 @@ source(paste0(function_path, "rand_seq.R"))
 
 # define parameters
 # section run control
-run_params <- list(type = "stable", 
+run_params <- list(type = "variable", 
                    start_time = "2016-03-01", 
                    sprt = T, 
                    interval = T)
@@ -75,8 +75,8 @@ ctr_params <- list(peak_hours = 10:16,                      # accounts for peak 
 # adding random sampling schedules
 block_params <- list(start_date = run_params$start_time,
                      n_weeks = 96,
-                     n_seasons = 8, 
-                     block_unit = 12)
+                     n_seasons = 16, 
+                     block_unit = 6)
 
 # adding sprt criteria
 sprt_param <- list(baseline = "Baseline",
@@ -914,6 +914,7 @@ for (n in 1:(nrow(all_names))){
 
 
 
+
 #### BIND ####
 # savings calculation
 df_seq_fs <- bind_rows(seq_frsaving) %>%
@@ -958,3 +959,4 @@ if (run_params$interval){
   write_rds(seq_nmsaving_interval_keep, paste0(readfile_path, "df_seq_interval_nm_keep.rds"), compress = "gz")
   
 }
+

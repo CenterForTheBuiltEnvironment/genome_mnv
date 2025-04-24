@@ -723,7 +723,7 @@ Interested readers can also change the parameters in our open-source
 code to simulate different scenarios.
 
 |                        |                                                                  |       |
-|------------------|------------------------------------|------------------|
+|------------------|-----------------------------------|------------------|
 | Parameter              | Description                                                      | Value |
 | $\beta_{temp}$         | \% savings from setting $T_{interv}$ 1 °C higher than $T_{base}$ | 0.08  |
 | $\beta_{occ}$          | \% savings adjustment during occupied hours                      | 1.2   |
@@ -1308,7 +1308,7 @@ table, highlighting that the model and overall building datasets are
 performing similarly.
 
 |                 | Reference study results [@granderson_accuracy_2016] | Our study results      |
-|-------------------|-----------------------------------|-------------------|
+|-------------------|----------------------------------|-------------------|
 | 25th percentile | -5.85                                               | `r percentiles$Q1`     |
 | 50th percentile | -1.25                                               | `r percentiles$Median` |
 | 75th percentile | 3.86                                                | `r percentiles$Q3`     |
@@ -1942,6 +1942,34 @@ df_MW_A %>%
         legend.position = "none",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 ```
+
+## Blocking period length impact
+
+Selecting different blocking periods affects the timing of evaluating
+stopping criteria, thus influencing the duration of the measurement and
+verification (M&V) process. Here, we summarize the advantages and
+disadvantages of shorter versus longer blocking periods. As discussed in
+our previous study, the second step of this randomized M&V method
+involves choosing an appropriate blocking period to minimize potential
+biases caused by 'bad' randomization. For most practical scenarios, we
+recommend a blocking period of approximately 12 to 16 weeks, as it
+typically covers the duration of a season, ensuring a representative
+sampling of operational conditions. Opting for a shorter blocking
+period, such as 6 weeks, has the potential benefit of allowing the
+stopping criteria to be met earlier. However, this also means that the
+analyst should perform the hypothesis tests more frequently. To avoid
+false positive due to frequent testing, adjusting the significance level
+using methods such as the Bonferroni correction can control for
+increased type-I error risk [@vickerstaff_methods_2019]. Additionally, a
+shorter blocking period can reduce the adverse impact of missing or
+problematic data. For example, if the intervention requires fine-tuning
+after initial implementation, removing data from the first blocking
+period would have less damage compared to when the switchback experiment
+was designed with longer blocking period. On the other hand, longer
+blocking periods are advantageous when evaluating multiple intervention
+strategies or using sampling intervals greater than one day. In such
+cases, a longer block can more easily ensure a balanced distribution of
+both day-of-week and outdoor weather conditions.
 
 ## Limitations
 

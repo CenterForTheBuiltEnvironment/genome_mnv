@@ -57,10 +57,6 @@ ctr_params <- list(peak_hours = 10:16,
                    coe_off = 1.2,
                    enable_temp = 8)
 
-occ_params <- list(change_start = 5,
-                   change_end = 8,
-                   change = 20)
-
 
 
 
@@ -430,7 +426,7 @@ df_time <- df_sprt_all_variable %>%
 
 count <- list()
 n <- 1
-for (i in seq(0, 48, by = 3)){
+for (i in seq(0, 60, by = 3)){
   
   df_sprt <- df_time %>% 
     filter(seq == "sprt",
@@ -457,7 +453,7 @@ count <- bind_rows(count)
 p_timeline <- count %>% 
   ggplot() +
   geom_bar(data = . %>% 
-             filter(n_weeks %in% c(12, 24, 36, 48)),
+             filter(n_weeks %in% seq(12, 60, by = 6)),
            aes(x = n_weeks, y = eob, fill = "Buildings finishing randomized M&V"), 
            stat = "identity", 
            position = "stack",
@@ -472,27 +468,27 @@ p_timeline <- count %>%
   geom_point(aes(x = n_weeks, y = sprt, color = "Buildings satisfying SPRT"), 
              size = 1.5, 
              shape = 17) +
-  geom_segment(aes(x = 48.5, y = max(eob), xend = 95.5, yend = max(eob)),
+  geom_segment(aes(x = 60.5, y = max(eob), xend = 104.5, yend = max(eob)),
                arrow = arrow(length = unit(0.25, "in")),   
                linewidth = 1.1,  
                color = "#fb8072") + 
   annotate(geom = "text", 
-           x = 70, 
+           x = 80, 
            y = max(count$eob) - 30, 
            size = 5,
            label = "Excess time by conventional M&V") +
-  geom_vline(xintercept = c(12, 24, 36, 48, 96), lty = "dashed", color = "grey80") +
+  geom_vline(xintercept = seq(6, 60, by = 6), lty = "dashed", color = "grey80") +
   annotate(geom = "text", 
-           x = seq(6, 48, by = 12), 
+           x = 3, 
            y = 200, 
-           label = paste0("12-week\nblock"), 
+           label = paste0("6-week\nblock"), 
            alpha = 0.5) +
   scale_fill_manual(values = ls_colors) +
   scale_color_manual(values = ls_colors) +
   scale_x_continuous(expand = c(0, 0), 
-                     limits = c(0, 100),
-                     breaks = c(12, 24, 36, 48, 96), 
-                     labels = c("12 weeks", "24 weeks", "36 weeks", "1 year", "2 years")) +
+                     limits = c(0, 105),
+                     breaks = c(12, 24, 36, 48, 60, 104), 
+                     labels = c("12 weeks", "24 weeks", "36 weeks", "48 weeks", "60 weeks", "2 years")) +
   coord_cartesian(ylim = c(0, 650)) +
   labs(x = NULL, 
        y = "Number of buildings", 
@@ -1516,6 +1512,12 @@ df_keep <- bind_rows(df_seq_interval_tl_keep_stable, df_seq_interval_tl_keep_var
 df_MW_A <- bind_rows(df_keep, df_drop) %>% 
   filter(seq != "final") %>% 
   filter(seq == "eob") %>% 
+  mutate(category = ifelse(n_weeks <= 12, 12, 
+                           ifelse(n_weeks > 12 & n_weeks <= 24, 24, 
+                                  ifelse(n_weeks > 24 & n_weeks <= 48, 48, 
+                                         ifelse(n_weeks > 48, 60, n_weeks))))) %>% 
+  select(-n_weeks) %>% 
+  rename(n_weeks = category) %>% 
   mutate(seq = as.factor(seq), 
          seq = recode_factor(seq, 
                              "eob" = "Buildings finishing all criteria"), 
@@ -1532,7 +1534,8 @@ df_MW_A <- bind_rows(df_keep, df_drop) %>%
                                  "12" = "12\nweeks", 
                                  "24" = "24\nweeks", 
                                  "36" = "36\nweeks", 
-                                 "48" = "48\nweeks")) %>% 
+                                 "48" = "48\nweeks", 
+                                 "60" = "60\nweeks")) %>% 
   group_by(n_weeks, group, interval) %>% 
   summarise(n = n()) %>%
   ungroup()
@@ -1574,4 +1577,5 @@ df_MW_A %>%
         legend.position = "bottom",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 
-ggsave(filename = "timeline_interval_sprt.png", path = fig_path, units = "in", height = 6, width = 9, dpi = 300)
+ggsave(filename = "timeline_interval_sprt.png", path = fig_path, units = "in", height = 6, width = 12, dpi = 300)
+
