@@ -55,7 +55,7 @@ source(paste0(function_path, "rand_seq.R"))
 
 # define parameters
 # section run control
-run_params <- list(type = "stable", 
+run_params <- list(type = "variable", 
                    start_time = "2016-03-01", 
                    sprt = T, 
                    interval = T)
@@ -188,8 +188,19 @@ run_interpo <- function(df_all){
 get_eob <- function(sprt_res, sprt_overlap_base, sprt_overlap_interv){
   
   sprt_check <- sprt_res %>% filter(flag == 1) %>% slice(1) %>% .$n_weeks
-  bt_check <- sprt_overlap_base %>% filter(flag == 1) %>% .$n_weeks
-  it_check <- sprt_overlap_interv %>% filter(flag == 1) %>% .$n_weeks
+  
+  if (identical(sprt_overlap_base %>% filter(flag == 1) %>% .$n_weeks, integer(0))) {
+    bt_check <- sprt_param$n_weeks
+  } else {
+    bt_check <- sprt_overlap_base %>% filter(flag == 1) %>% .$n_weeks
+  }
+  
+  if (identical(sprt_overlap_interv %>% filter(flag == 1) %>% .$n_weeks, integer(0))) {
+    it_check <- sprt_param$n_weeks
+  } else {
+    it_check <- sprt_overlap_interv %>% filter(flag == 1) %>% .$n_weeks
+  }
+  
   eob <- seq(block_params$block_unit, sprt_param$n_weeks, by = block_params$block_unit)
   
   return(eob[eob >= max(c(sprt_check, bt_check, it_check))][1])
