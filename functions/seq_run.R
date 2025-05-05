@@ -89,7 +89,7 @@ seq_run <- function(param, dataframe, tmy){
                                   ol_est(., quantile_tmy)), silent = T)
     if (inherits(overlap, "try-error")) {
       
-      message("An error occurred. Skipping this part...")
+      message(str_glue("An error occurred in baseline weather overlap calculation at week {i}, skipping..."))
       overlap_base[[i]] <- NULL
       
     } else {
@@ -105,7 +105,7 @@ seq_run <- function(param, dataframe, tmy){
     
     if (inherits(overlap, "try-error")) {
       
-      message("An error occurred. Skipping this part...")
+      message(str_glue("An error occurred in intervention weather overlap calculation at week {i}, skipping..."))
       overlap_interv[[i]] <- NULL
       
     } else {
@@ -114,7 +114,7 @@ seq_run <- function(param, dataframe, tmy){
     }
     
     # start estimation after 12 months for complete ftow profile
-    if (i >= 24 & i %% 12 == 0) {
+    if (i >= 12 & i %% 6 == 0) {
       
       # Update user on the week of update
       # print(paste0("updating TOWT model in week ", i))
@@ -135,7 +135,7 @@ seq_run <- function(param, dataframe, tmy){
     
     if (inherits(results_seq, "try-error")) {
       
-      message("An error occurred. Skipping this part...")
+      message(str_glue("An error occurred in sprt calculation at week {i}, skipping..."))
       skip <- T
       
     } else {
@@ -152,7 +152,7 @@ seq_run <- function(param, dataframe, tmy){
     
     if (inherits(results_ci, "try-error")) {
       
-      message("An error occurred. Skipping this part...")
+      message(str_glue("An error occurred in effect size calculation at week {i}, skipping..."))
       skip <- T
       
     } else {
@@ -170,7 +170,7 @@ seq_run <- function(param, dataframe, tmy){
     
     if (inherits(results_bs, "try-error")) {
       
-      message("An error occurred. Skipping this part...")
+      message(str_glue("An error occurred in bootstrap effect size calculation at week {i}, skipping..."))
       skip <- T
       
     } else {

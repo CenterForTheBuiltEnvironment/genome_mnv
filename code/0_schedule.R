@@ -48,8 +48,8 @@ source(paste0(function_path, "rand_seq.R"))
 # adding random sampling schedules
 block_params <- list(start_date = "2016-01-01",
                      n_weeks = 108,
-                     n_seasons = 9, 
-                     block_unit = 12, 
+                     n_seasons = 18, 
+                     block_unit = 6, 
                      pool = 20)
 
 # schedule generation

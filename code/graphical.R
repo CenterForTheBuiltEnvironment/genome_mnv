@@ -302,7 +302,8 @@ rand_final_A <- bind_rows(rand_final_V, rand_final_S) %>%
 df_MW_A <- rand_eob_A %>% 
   left_join(conv_A, by = "name") %>% 
   left_join(rand_final_A, by = "name") %>% 
-  pivot_longer(c(rand_eob_diff, conv_diff, rand_final_diff), names_to = "method", values_to = "diff")
+  pivot_longer(c(rand_eob_diff, conv_diff, rand_final_diff), names_to = "method", values_to = "diff") %>% 
+  mutate(diff = ifelse(diff == Inf, NA, diff))
 
 p_top <- df_MW_A %>% 
   mutate(method = as.factor(method), 
@@ -310,10 +311,10 @@ p_top <- df_MW_A %>%
   ggplot(aes(x = method, y = diff, fill = method)) +
   geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
   geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method), linewidth = 0.15) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  geom_text(data = . %>% group_by(method) %>% summarise(median = median(diff, na.rm = T)) %>% ungroup(), 
+            aes(x = method, y = median, label = paste0(round(median, digits = 1), " %"))) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
                      labels = number_format(suffix = " %")) +
@@ -390,7 +391,8 @@ rand_final_A <- bind_rows(rand_final_V, rand_final_S) %>%
 df_TW_A <- rand_eob_A %>% 
   left_join(conv_A, by = "name") %>% 
   left_join(rand_final_A, by = "name") %>% 
-  pivot_longer(c(rand_eob_diff, conv_diff, rand_final_diff), names_to = "method", values_to = "diff")
+  pivot_longer(c(rand_eob_diff, conv_diff, rand_final_diff), names_to = "method", values_to = "diff") %>% 
+  mutate(diff = ifelse(diff == Inf, NA, diff))
 
 p_middle <- df_TW_A %>% 
   mutate(method = as.factor(method), 
@@ -398,10 +400,10 @@ p_middle <- df_TW_A %>%
   ggplot(aes(x = method, y = diff, fill = method)) +
   geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
   geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method), linewidth = 0.15) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  geom_text(data = . %>% group_by(method) %>% summarise(median = median(diff, na.rm = T)) %>% ungroup(), 
+            aes(x = method, y = median, label = paste0(round(median, digits = 1), " %"))) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
                      labels = number_format(suffix = " %")) +
@@ -430,7 +432,7 @@ df_time <- df_sprt_all_variable %>%
 
 count <- list()
 n <- 1
-for (i in seq(0, 36, by = 3)){
+for (i in seq(0, 48, by = 3)){
   
   df_sprt <- df_time %>% 
     filter(seq == "sprt",
@@ -457,7 +459,7 @@ count <- bind_rows(count)
 p_timeline <- count %>% 
   ggplot() +
   geom_bar(data = . %>% 
-             filter(n_weeks == 24 | n_weeks == 36),
+             filter(n_weeks %in% seq(12, 36, by = 6)),
            aes(x = n_weeks, y = eob, fill = "Buildings finishing randomized M&V"), 
            stat = "identity", 
            position = "stack",
@@ -481,17 +483,17 @@ p_timeline <- count %>%
            y = max(count$eob) - 30, 
            size = 5,
            label = "Excess time by conventional M&V") +
-  geom_vline(xintercept = c(12, 24, 36, 48, 96), lty = "dashed", color = "grey80") +
+  geom_vline(xintercept = c(6, 12, 18, 24, 30, 36, 42, 52, 96), lty = "dashed", color = "grey80") +
   annotate(geom = "text", 
-           x = seq(6, 48, by = 12), 
+           x = 3, 
            y = 200, 
-           label = paste0("12-week\nblock"), 
+           label = paste0("6-week\nblock"), 
            alpha = 0.5) +
   scale_fill_manual(values = ls_colors) +
   scale_color_manual(values = ls_colors) +
   scale_x_continuous(expand = c(0, 0), 
                      limits = c(0, 100),
-                     breaks = c(12, 24, 36, 48, 96), 
+                     breaks = c(12, 24, 36, 52, 96), 
                      labels = c("12 weeks", "24 weeks", "36 weeks", "1 year", "2 years")) +
   coord_cartesian(ylim = c(0, 650)) +
   labs(x = NULL, 
@@ -526,10 +528,10 @@ p1 <- df_MW_S %>%
   ggplot(aes(x = method, y = diff, fill = method)) +
   geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
   geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.shape = NA, coef = 0, fill = "#00000000", aes(color = method)) +
+  geom_boxplot(outlier.shape = NA, coef = 0, fill = "#00000000", aes(color = method), linewidth = 0.15) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  geom_text(data = . %>% group_by(method) %>% summarise(median = median(diff)) %>% ungroup(), 
+            aes(x = method, y = median, label = paste0(round(median, digits = 1), " %"))) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
                      labels = number_format(suffix = " %")) +
@@ -552,10 +554,10 @@ p2 <- df_MW_V %>%
   ggplot(aes(x = method, y = diff, fill = method)) +
   geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
   geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method), linewidth = 0.15) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  geom_text(data = . %>% group_by(method) %>% summarise(median = median(diff)) %>% ungroup(), 
+            aes(x = method, y = median, label = paste0(round(median, digits = 1), " %"))) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
                      labels = number_format(suffix = " %")) +
@@ -579,10 +581,10 @@ p3 <- df_MW_A %>%
   ggplot(aes(x = method, y = diff, fill = method)) +
   geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
   geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method), linewidth = 0.15) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  geom_text(data = . %>% group_by(method) %>% summarise(median = median(diff, na.rm = T)) %>% ungroup(), 
+            aes(x = method, y = median, label = paste0(round(median, digits = 1), " %"))) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
                      labels = number_format(suffix = " %")) +
@@ -613,10 +615,10 @@ p1 <- df_TW_S %>%
   ggplot(aes(x = method, y = diff, fill = method)) +
   geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
   geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method), linewidth = 0.15) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  geom_text(data = . %>% group_by(method) %>% summarise(median = median(diff)) %>% ungroup(), 
+            aes(x = method, y = median, label = paste0(round(median, digits = 1), " %"))) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
                      labels = number_format(suffix = " %")) +
@@ -639,10 +641,10 @@ p2 <- df_TW_V %>%
   ggplot(aes(x = method, y = diff, fill = method)) +
   geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
   geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method), linewidth = 0.15) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  geom_text(data = . %>% group_by(method) %>% summarise(median = median(diff)) %>% ungroup(), 
+            aes(x = method, y = median, label = paste0(round(median, digits = 1), " %"))) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
                      labels = number_format(suffix = " %")) +
@@ -665,10 +667,10 @@ p3 <- df_TW_A %>%
   ggplot(aes(x = method, y = diff, fill = method)) +
   geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
   geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method), linewidth = 0.15) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  geom_text(data = . %>% group_by(method) %>% summarise(median = median(diff, na.rm = T)) %>% ungroup(), 
+            aes(x = method, y = median, label = paste0(round(median, digits = 1), " %"))) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
                      labels = number_format(suffix = " %")) +
@@ -769,10 +771,10 @@ df_MW_A %>%
   ggplot(aes(x = method, y = diff, fill = method)) +
   geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
   geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method), linewidth = 0.15) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  geom_text(data = . %>% group_by(method) %>% summarise(median = median(diff)) %>% ungroup(), 
+            aes(x = method, y = median, label = paste0(round(median, digits = 1), " %"))) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
                      labels = number_format(suffix = " %")) +
@@ -841,13 +843,13 @@ df_MW_A %>%
   ggplot(aes(x = ratio, y = diff, fill = "Randomized")) +
   geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
   geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = ratio)) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = ratio), linewidth = 0.15) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
   geom_text(data = . %>% 
               group_by(ratio) %>% 
-              summarise(mean = mean(diff)) %>% 
+              summarise(median = median(diff)) %>% 
               ungroup(), 
-            aes(x = ratio, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+            aes(x = ratio, y = median, label = paste0(round(median, digits = 1), " %"))) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
                      labels = number_format(suffix = " %")) +
@@ -937,11 +939,11 @@ p_top <- df_MW_A %>%
               size = 0.5, 
               position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.2)) +
   geom_lv(k = 4, outlier.shape = NA, position = position_dodge(width = 0.8)) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group), width = 0.8) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group), width = 0.8, linewidth = 0.15) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(group, interval) %>% summarise(mean = mean(diff, na.rm = T)) %>% ungroup(), 
-            aes(x = interval, y = mean, group = group,
-                label = paste0(round(mean, digits = 1), " %")), 
+  geom_text(data = . %>% group_by(group, interval) %>% summarise(median = median(diff, na.rm = T)) %>% ungroup(), 
+            aes(x = interval, y = median, group = group,
+                label = paste0(round(median, digits = 1), " %")), 
             position = position_dodge(width = 0.75), color = "white") +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
@@ -1009,11 +1011,11 @@ p_bottom <- df_TW_A %>%
               size = 0.5, 
               position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.2)) +
   geom_lv(k = 4, outlier.shape = NA, position = position_dodge(width = 0.8)) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group), width = 0.8) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group), width = 0.8, linewidth = 0.15) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(group, interval) %>% summarise(mean = mean(diff, na.rm = T)) %>% ungroup(), 
-            aes(x = interval, y = mean, group = group,
-                label = paste0(round(mean, digits = 1), " %")), 
+  geom_text(data = . %>% group_by(group, interval) %>% summarise(median = median(diff, na.rm = T)) %>% ungroup(), 
+            aes(x = interval, y = median, group = group,
+                label = paste0(round(median, digits = 1), " %")), 
             position = position_dodge(width = 0.75), color = "white") +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
@@ -1089,11 +1091,12 @@ p_top <- df_MW_A %>%
               size = 0.5, 
               position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.2)) +
   geom_lv(k = 4, outlier.shape = NA, position = position_dodge(width = 0.8)) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group), width = 0.8) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group), width = 0.8, linewidth = 0.15) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(group, interval) %>% summarise(mean = mean(diff, inf.rm = T)) %>% ungroup(), 
-            aes(x = interval, y = mean, group = group,
-                label = paste0(round(mean, digits = 1), " %")), 
+  geom_text(data = . %>% group_by(group, interval) %>% summarise(median = median(diff, inf.rm = T)) %>% ungroup(), 
+            aes(x = interval, y = median, group = group,
+                label = paste0(round(median, digits = 1), " %")), 
+            color = "white", 
             position = position_dodge(width = 0.75)) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
@@ -1161,12 +1164,13 @@ p_bottom <- df_TW_A %>%
               size = 0.5, 
               position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.2)) +
   geom_lv(k = 4, outlier.shape = NA, position = position_dodge(width = 0.8)) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group), width = 0.8) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group), width = 0.8, linewidth = 0.15) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(group, interval) %>% summarise(mean = mean(diff, na.rm = T)) %>% ungroup(), 
-            aes(x = interval, y = mean, group = group,
-                label = paste0(round(mean, digits = 1), " %")), 
-            position = position_dodge(width = 0.75)) +
+  geom_text(data = . %>% group_by(group, interval) %>% summarise(median = median(diff, na.rm = T)) %>% ungroup(), 
+            aes(x = interval, y = median, group = group,
+                label = paste0(round(median, digits = 1), " %")), 
+            position = position_dodge(width = 0.75), 
+            color = "white") +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
                      labels = number_format(suffix = " %")) +
@@ -1266,10 +1270,10 @@ p_top <- df_MW_A %>%
   ggplot(aes(x = method, y = diff, fill = method)) +
   geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
   geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method), linewidth = 0.15) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  geom_text(data = . %>% group_by(method) %>% summarise(median = median(diff)) %>% ungroup(), 
+            aes(x = method, y = median, label = paste0(round(median, digits = 1), " %"))) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
                      labels = number_format(suffix = " %")) +
@@ -1354,10 +1358,10 @@ p_middle <- df_TW_A %>%
   ggplot(aes(x = method, y = diff, fill = method)) +
   geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
   geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method), linewidth = 0.15) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  geom_text(data = . %>% group_by(method) %>% summarise(median = median(diff)) %>% ungroup(), 
+            aes(x = method, y = median, label = paste0(round(median, digits = 1), " %"))) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
                      labels = number_format(suffix = " %")) +
@@ -1454,10 +1458,10 @@ df_MW_A %>%
   ggplot(aes(x = method, y = diff, fill = method)) +
   geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
   geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method), linewidth = 0.15) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  geom_text(data = . %>% group_by(method) %>% summarise(median = median(diff)) %>% ungroup(), 
+            aes(x = method, y = median, label = paste0(round(median, digits = 1), " %"))) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 6), 
                      labels = number_format(suffix = " %")) +
@@ -1528,10 +1532,10 @@ df_MW_A %>%
   ggplot(aes(x = ratio, y = diff, fill = "Randomized")) +
   geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
   geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = ratio)) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = ratio), linewidth = 0.15) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(ratio) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = ratio, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  geom_text(data = . %>% group_by(ratio) %>% summarise(median = median(diff)) %>% ungroup(), 
+            aes(x = ratio, y = median, label = paste0(round(median, digits = 1), " %"))) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
                      labels = number_format(suffix = " %")) +
@@ -1605,12 +1609,13 @@ p_top <- df_MW_A %>%
               size = 0.5, 
               position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.2)) +
   geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group)) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group), linewidth = 0.15) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(group, interval) %>% summarise(mean = mean(diff, na.rm = T)) %>% ungroup(), 
-            aes(x = interval, y = mean, group = group,
-                label = paste0(round(mean, digits = 1), " %")), 
-            position = position_dodge(width = 0.75)) +
+  geom_text(data = . %>% group_by(group, interval) %>% summarise(median = median(diff, na.rm = T)) %>% ungroup(), 
+            aes(x = interval, y = median, group = group,
+                label = paste0(round(median, digits = 1), " %")), 
+            position = position_dodge(width = 0.75), 
+            color = "white") +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 5), 
                      labels = number_format(suffix = " %")) +
@@ -1677,12 +1682,13 @@ p_bottom <- df_TW_A %>%
               size = 0.5, 
               position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.2)) +
   geom_lv(k = 4, outlier.shape = NA, position = position_dodge(width = 0.8)) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group), width = 0.8) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group), width = 0.8, linewidth = 0.15) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(group, interval) %>% summarise(mean = mean(diff, na.rm = T)) %>% ungroup(), 
-            aes(x = interval, y = mean, group = group,
-                label = paste0(round(mean, digits = 1), " %")), 
-            position = position_dodge(width = 0.75)) +
+  geom_text(data = . %>% group_by(group, interval) %>% summarise(median = median(diff, na.rm = T)) %>% ungroup(), 
+            aes(x = interval, y = median, group = group,
+                label = paste0(round(median, digits = 1), " %")), 
+            position = position_dodge(width = 0.75), 
+            color = "white") +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 5), 
                      labels = number_format(suffix = " %")) +
@@ -1741,12 +1747,13 @@ p_top <- df_MW_A %>%
               size = 0.5, 
               position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.2)) +
   geom_lv(k = 4, outlier.shape = NA, position = position_dodge(width = 0.8)) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group), width = 0.8) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group), width = 0.8, linewidth = 0.15) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(group, interval) %>% summarise(mean = mean(diff, inf.rm = T)) %>% ungroup(), 
-            aes(x = interval, y = mean, group = group,
-                label = paste0(round(mean, digits = 1), " %")), 
-            position = position_dodge(width = 0.75)) +
+  geom_text(data = . %>% group_by(group, interval) %>% summarise(median = median(diff, inf.rm = T)) %>% ungroup(), 
+            aes(x = interval, y = median, group = group,
+                label = paste0(round(median, digits = 1), " %")), 
+            position = position_dodge(width = 0.75), 
+            color = "white") +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 5), 
                      labels = number_format(suffix = " %")) +
@@ -1797,12 +1804,13 @@ p_bottom <- df_TW_A %>%
               size = 0.5, 
               position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.2)) +
   geom_lv(k = 4, outlier.shape = NA, position = position_dodge(width = 0.8)) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group), width = 0.8) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group), width = 0.8, linewidth = 0.15) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(group, interval) %>% summarise(mean = mean(diff, na.rm = T)) %>% ungroup(), 
-            aes(x = interval, y = mean, group = group,
-                label = paste0(round(mean, digits = 1), " %")), 
-            position = position_dodge(width = 0.75)) +
+  geom_text(data = . %>% group_by(group, interval) %>% summarise(median = median(diff, na.rm = T)) %>% ungroup(), 
+            aes(x = interval, y = median, group = group,
+                label = paste0(round(median, digits = 1), " %")), 
+            position = position_dodge(width = 0.75), 
+            color = "white") +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 5), 
                      labels = number_format(suffix = " %")) +
@@ -1845,7 +1853,7 @@ interval_1_keep <- bind_rows(df_sprt_all_stable, df_sprt_all_variable) %>%
   mutate(seq = as.factor(seq)) %>%
   mutate(interval = 1, 
          group = "keep")
-  
+
 df_keep <- bind_rows(df_seq_interval_tl_keep_stable, df_seq_interval_tl_keep_variable) %>%
   mutate(group = "keep", 
          temp = ifelse(base_temp >= interv_temp, base_temp, interv_temp)) %>% 
@@ -1856,6 +1864,12 @@ df_keep <- bind_rows(df_seq_interval_tl_keep_stable, df_seq_interval_tl_keep_var
 df_MW_A <- bind_rows(df_keep, df_drop) %>% 
   filter(seq != "final") %>% 
   filter(seq == "eob") %>% 
+  mutate(category = ifelse(n_weeks <= 12, 12, 
+                           ifelse(n_weeks > 12 & n_weeks <= 24, 24, 
+                                  ifelse(n_weeks > 24 & n_weeks <= 48, 48, 
+                                         ifelse(n_weeks > 48, 60, n_weeks))))) %>% 
+  select(-n_weeks) %>% 
+  rename(n_weeks = category) %>% 
   mutate(seq = as.factor(seq), 
          seq = recode_factor(seq, 
                              "eob" = "Buildings finishing all criteria"), 
@@ -1872,7 +1886,8 @@ df_MW_A <- bind_rows(df_keep, df_drop) %>%
                                  "12" = "12\nweeks", 
                                  "24" = "24\nweeks", 
                                  "36" = "36\nweeks", 
-                                 "48" = "48\nweeks")) %>% 
+                                 "48" = "48\nweeks", 
+                                 "60" = "60\nweeks")) %>% 
   group_by(n_weeks, group, interval) %>% 
   summarise(n = n()) %>%
   ungroup()
@@ -1914,4 +1929,4 @@ df_MW_A %>%
         legend.position = "bottom",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 
-ggsave(filename = "timeline_interval_sprt.png", path = fig_path, units = "in", height = 6, width = 9, dpi = 300)
+ggsave(filename = "timeline_interval_sprt.png", path = fig_path, units = "in", height = 6, width = 12, dpi = 300)

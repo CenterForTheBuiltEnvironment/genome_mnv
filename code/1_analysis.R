@@ -76,8 +76,8 @@ ctr_params <- list(peak_hours = 10:16,                      # accounts for peak 
 # adding random sampling schedules
 block_params <- list(start_date = "2016-01-01",
                      n_weeks = 108,
-                     n_seasons = 9, 
-                     block_unit = 12)
+                     n_seasons = 18, 
+                     block_unit = 6)
 
 # adding sprt criteria
 sprt_param <- list(baseline = "Baseline",
@@ -138,6 +138,7 @@ get_scale <- function(eload, range = 2){
 
 # Function defined to add chwst reset intervention
 run_reset <- function(df_baseline){
+  
   
   mean <- mean(df_baseline$base_eload, na.rm = T) * ctr_params$chwl_perc
   
