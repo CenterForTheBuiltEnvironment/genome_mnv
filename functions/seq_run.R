@@ -75,7 +75,7 @@ seq_run <- function(param, dataframe, tmy){
   annual_saving <- list()
   
   # do sample
-  for (i in seq(2, param$n_weeks)) {
+  for (i in seq(3, param$n_weeks)) {
     
     # subset data by week
     df_seq <- df_sprt %>%
@@ -84,12 +84,12 @@ seq_run <- function(param, dataframe, tmy){
     
     # Calculate overlapping temperature range
     overlap <- try(tibble("n_weeks" = i, 
-                                overlap_base = sprt_hourly %>%
-                                  filter(week <= i & strategy == 1) %>% 
-                                  ol_est(., quantile_tmy)), silent = T)
+                          overlap_base = sprt_hourly %>%
+                            filter(week <= i & strategy == 1) %>% 
+                            ol_est(., quantile_tmy)), silent = T)
     if (inherits(overlap, "try-error")) {
       
-      message("An error occurred. Skipping this part...")
+      message(str_glue("An error occurred in baseline weather overlap calculation at week {i}, skipping..."))
       overlap_base[[i]] <- NULL
       
     } else {
@@ -99,13 +99,13 @@ seq_run <- function(param, dataframe, tmy){
     
     
     overlap <- try(tibble("n_weeks" = i, 
-                                  overlap_interv = sprt_hourly %>%
-                                    filter(week <= i & strategy == 2) %>% 
-                                    ol_est(., quantile_tmy)), silent = T)
+                          overlap_interv = sprt_hourly %>%
+                            filter(week <= i & strategy == 2) %>% 
+                            ol_est(., quantile_tmy)), silent = T)
     
     if (inherits(overlap, "try-error")) {
       
-      message("An error occurred. Skipping this part...")
+      message(str_glue("An error occurred in intervention weather overlap calculation at week {i}, skipping..."))
       overlap_interv[[i]] <- NULL
       
     } else {
@@ -114,28 +114,40 @@ seq_run <- function(param, dataframe, tmy){
     }
     
     # start estimation after 12 months for complete ftow profile
-    if (i >= 24 & i %% 12 == 0) {
+    if (i >= 12 & i %% 6 == 0) {
       
       # Update user on the week of update
       # print(paste0("updating TOWT model in week ", i))
-      annual_saving[[i]] <- tibble("n_weeks" = i,
-                                   annual_saving = saving_norm(sprt_hourly %>% filter(week <= i), tmy))
+      
+      annual_est <- try(saving_norm(sprt_hourly %>% filter(week <= i), tmy), silent = T)
+      
+      if (inherits(annual_est, "try-error")) {
+        
+        message(str_glue("An error occurred in annual towt calculation at week {i}, skipping..."))
+        annual_saving[[i]] <- NULL
+        
+      } else {
+        
+        annual_saving[[i]] <- tibble("n_weeks" = i,
+                                     annual_saving = annual_est)
+        
+      }
       
     }
     
     # do test
     skip <- F
     results_seq <- try(seq_ttest(x = value ~ strategy, 
-                             data = df_seq,
-                             d = 0.5, 
-                             power = 0.9, 
-                             alternative = "less", # greater
-                             paired = FALSE,
-                             verbose = TRUE), silent = T)
+                                 data = df_seq,
+                                 d = 0.5, 
+                                 power = 0.9, 
+                                 alternative = "less", # greater
+                                 paired = FALSE,
+                                 verbose = TRUE), silent = T)
     
     if (inherits(results_seq, "try-error")) {
       
-      message("An error occurred. Skipping this part...")
+      message(str_glue("An error occurred in sprt calculation at week {i}, skipping..."))
       skip <- T
       
     } else {
@@ -145,14 +157,14 @@ seq_run <- function(param, dataframe, tmy){
     
     # calculate effect size
     results_ci <- try(effsize::cohen.d(d = df_seq$value,
-                                   f = df_seq$strategy,
-                                   conf.level = 0.90,
-                                   paired = FALSE,
-                                   na.rm = TRUE), silent = T)
+                                       f = df_seq$strategy,
+                                       conf.level = 0.90,
+                                       paired = FALSE,
+                                       na.rm = TRUE), silent = T)
     
     if (inherits(results_ci, "try-error")) {
       
-      message("An error occurred. Skipping this part...")
+      message(str_glue("An error occurred in effect size calculation at week {i}, skipping..."))
       skip <- T
       
     } else {
@@ -165,12 +177,12 @@ seq_run <- function(param, dataframe, tmy){
     
     # bootstrap effect size
     results_bs <- try(bootES::bootES(data = df_seq, R = 1000, 
-                                 contrast = c(param$baseline, param$strategy),
-                                 data.col = "value", group.col = "strategy"), silent = T)
+                                     contrast = c(param$baseline, param$strategy),
+                                     data.col = "value", group.col = "strategy"), silent = T)
     
     if (inherits(results_bs, "try-error")) {
       
-      message("An error occurred. Skipping this part...")
+      message(str_glue("An error occurred in bootstrap effect size calculation at week {i}, skipping..."))
       skip <- T
       
     } else {
