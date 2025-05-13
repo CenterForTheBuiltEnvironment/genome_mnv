@@ -1865,9 +1865,12 @@ df_MW_A <- bind_rows(df_keep, df_drop) %>%
   filter(seq != "final") %>% 
   filter(seq == "eob") %>% 
   mutate(category = ifelse(n_weeks <= 12, 12, 
-                           ifelse(n_weeks > 12 & n_weeks <= 24, 24, 
-                                  ifelse(n_weeks > 24 & n_weeks <= 48, 48, 
-                                         ifelse(n_weeks > 48, 60, n_weeks))))) %>% 
+                           ifelse(n_weeks > 12 & n_weeks <= 18, 18,
+                                  ifelse(n_weeks > 18 & n_weeks <= 24, 24,
+                                         ifelse(n_weeks > 24 & n_weeks <= 30, 30,
+                                                ifelse(n_weeks > 30 & n_weeks <= 36, 36, 
+                                                       ifelse(n_weeks > 36 & n_weeks <= 42, 42, 
+                                                              ifelse(n_weeks > 42, 48, n_weeks)))))))) %>% 
   select(-n_weeks) %>% 
   rename(n_weeks = category) %>% 
   mutate(seq = as.factor(seq), 
@@ -1884,10 +1887,12 @@ df_MW_A <- bind_rows(df_keep, df_drop) %>%
          n_weeks = as.factor(n_weeks), 
          n_weeks = recode_factor(n_weeks, 
                                  "12" = "12\nweeks", 
-                                 "24" = "24\nweeks", 
+                                 "18" = "18\nweeks",
+                                 "24" = "24\nweeks",
+                                 "30" = "30\nweeks",
                                  "36" = "36\nweeks", 
-                                 "48" = "48\nweeks", 
-                                 "60" = "60\nweeks")) %>% 
+                                 "42" = "42\nweeks", 
+                                 "48" = "48\nweeks")) %>% 
   group_by(n_weeks, group, interval) %>% 
   summarise(n = n()) %>%
   ungroup()
@@ -1914,7 +1919,7 @@ df_MW_A <- all_combinations %>%
 df_MW_A %>% 
   ggplot(aes(x = n_weeks, y = perc, fill = group)) +
   geom_bar(stat = "identity", position = "dodge") +
-  facet_wrap(~interval, nrow = 1) +
+  facet_wrap(~interval, nrow = 2) +
   geom_text(aes(x = n_weeks, y = perc + 2, label = paste0(round(perc, digits = 0), "%"), group = group), position = position_dodge(1)) +
   scale_fill_manual(values = ls_colors) +
   scale_color_manual(values = ls_colors) +
@@ -1924,9 +1929,9 @@ df_MW_A %>%
        y = NULL,
        fill = NULL,
        title = "Percentage of buildings satisfying all stopping critiera", 
-       subtitle = "Counted at the end of each 12-week blocking period") +
+       subtitle = "Counted at the end of each 6-week blocking period") +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
         legend.position = "bottom",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 
-ggsave(filename = "timeline_interval_sprt.png", path = fig_path, units = "in", height = 6, width = 12, dpi = 300)
+ggsave(filename = "timeline_interval_sprt.png", path = fig_path, units = "in", height = 8, width = 12, dpi = 300)
