@@ -419,7 +419,7 @@ p_accuracy <- ggarrange(p_top, p_middle,
                         labels = c("a)", "b)"),
                         common.legend = T, 
                         legend = "bottom")
-  
+
 # Timeline plot
 df_time <- df_sprt_all_variable %>% 
   filter(seq != "final") %>% 
@@ -695,6 +695,8 @@ ggarrange(p_top, p_bottom,
   plot_annotation(title = "Absolute error in savings estimation by different M&V methods")
 
 ggsave(filename = "abs.png", path = fig_path, units = "in", height = 9, width = 12, dpi = 300)
+
+
 
 
 
@@ -1495,7 +1497,6 @@ ggsave(filename = "mean_interval_sprt.png", path = fig_path, units = "in", heigh
 
 
 
-
 #### TIME-INT ####
 # timeline to finish sequential test
 df_drop <- bind_rows(df_seq_interval_tl_drop_stable, df_seq_interval_tl_drop_variable) %>%
@@ -1510,7 +1511,7 @@ interval_1_keep <- bind_rows(df_sprt_all_stable, df_sprt_all_variable) %>%
   mutate(seq = as.factor(seq)) %>%
   mutate(interval = 1, 
          group = "keep")
-  
+
 df_keep <- bind_rows(df_seq_interval_tl_keep_stable, df_seq_interval_tl_keep_variable) %>%
   mutate(group = "keep", 
          temp = ifelse(base_temp >= interv_temp, base_temp, interv_temp)) %>% 
@@ -1522,12 +1523,14 @@ df_MW_A <- bind_rows(df_keep, df_drop) %>%
   filter(seq != "final") %>% 
   filter(seq == "eob") %>% 
   mutate(category = ifelse(n_weeks <= 12, 12, 
-                           ifelse(n_weeks > 12 & n_weeks <= 18, 18, 
-                                  ifelse(n_weeks > 18 & n_weeks <= 24, 24, 
-                                         ifelse(n_weeks > 24 & n_weeks <= 30, 30,
-                                                ifelse(n_weeks > 30 & n_weeks <= 36, 36,
-                                                       ifelse(n_weeks > 36 & n_weeks <= 42, 42, 
-                                                              ifelse(n_weeks > 42, 48, n_weeks)))))))) %>% 
+                           ifelse(n_weeks > 12 & n_weeks <= 18, 18,
+                                  ifelse(n_weeks > 18 & n_weeks <= 24, 24,
+                                    ifelse(n_weeks > 24 & n_weeks <= 30, 30,
+                                           ifelse(n_weeks > 30 & n_weeks <= 36, 36, 
+                                                  ifelse(n_weeks > 36 & n_weeks <= 42, 42, 
+                                                         ifelse(n_weeks > 42 & n_weeks <= 48, 48, 
+                                                                ifelse(n_weeks > 48 & n_weeks <= 54, 54, 
+                                                                    ifelse(n_weeks > 54, 60, n_weeks)))))))))) %>% 
   select(-n_weeks) %>% 
   rename(n_weeks = category) %>% 
   mutate(seq = as.factor(seq), 
@@ -1544,12 +1547,14 @@ df_MW_A <- bind_rows(df_keep, df_drop) %>%
          n_weeks = as.factor(n_weeks), 
          n_weeks = recode_factor(n_weeks, 
                                  "12" = "12\nweeks", 
-                                 "18" = "18\nweeks", 
-                                 "24" = "24\nweeks", 
-                                 "30" = "30\nweeks", 
+                                 "18" = "18\nweeks",
+                                 "24" = "24\nweeks",
+                                 "30" = "30\nweeks",
                                  "36" = "36\nweeks", 
                                  "42" = "42\nweeks", 
-                                 "48" = "48\nweeks")) %>% 
+                                 "48" = "48\nweeks", 
+                                 "54" = "54\nweeks",
+                                 "60" = "60\nweeks")) %>% 
   group_by(n_weeks, group, interval) %>% 
   summarise(n = n()) %>%
   ungroup()
@@ -1576,8 +1581,8 @@ df_MW_A <- all_combinations %>%
 df_MW_A %>% 
   ggplot(aes(x = n_weeks, y = perc, fill = group)) +
   geom_bar(stat = "identity", position = "dodge") +
-  facet_wrap(~interval, nrow = 1) +
-  geom_text(aes(x = n_weeks, y = perc + 2, label = paste0(round(perc, digits = 0), "%"), group = group), position = position_dodge(1), size = 3.5) +
+  facet_wrap(~interval, nrow = 2) +
+  geom_text(aes(x = n_weeks, y = perc + 2, label = paste0(round(perc, digits = 0), "%"), group = group), position = position_dodge(1)) +
   scale_fill_manual(values = ls_colors) +
   scale_color_manual(values = ls_colors) +
   scale_y_continuous(breaks = breaks_pretty(n = 4), 
@@ -1591,5 +1596,5 @@ df_MW_A %>%
         legend.position = "bottom",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 
-ggsave(filename = "timeline_interval_sprt.png", path = fig_path, units = "in", height = 6, width = 18, dpi = 300)
+ggsave(filename = "timeline_interval_sprt.png", path = fig_path, units = "in", height = 8, width = 12, dpi = 300)
 
