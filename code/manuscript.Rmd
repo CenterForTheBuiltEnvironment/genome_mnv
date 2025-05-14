@@ -723,7 +723,7 @@ Interested readers can also change the parameters in our open-source
 code to simulate different scenarios.
 
 |                        |                                                                  |       |
-|------------------|------------------------------------|------------------|
+|-------------------|------------------------------------|-------------------|
 | Parameter              | Description                                                      | Value |
 | $\beta_{temp}$         | \% savings from setting $T_{interv}$ 1 °C higher than $T_{base}$ | 0.08  |
 | $\beta_{occ}$          | \% savings adjustment during occupied hours                      | 1.2   |
@@ -1308,7 +1308,7 @@ table, highlighting that the model and overall building datasets are
 performing similarly.
 
 |                 | Reference study results [@granderson_accuracy_2016] | Our study results      |
-|-------------------|-----------------------------------|-------------------|
+|-------------------|----------------------------------|-------------------|
 | 25th percentile | -5.85                                               | `r percentiles$Q1`     |
 | 50th percentile | -1.25                                               | `r percentiles$Median` |
 | 75th percentile | 3.86                                                | `r percentiles$Q3`     |
@@ -1941,6 +1941,90 @@ df_MW_A %>%
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
         legend.position = "none",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+```
+
+## Blocking period impact
+
+Selecting different blocking periods affects how frequently the a M&V
+analyst evaluats stopping criteria, thus influencing the duration of the
+measurement and verification (M&V) process. Here, we summarize the
+advantages and disadvantages of shorter versus longer blocking periods.
+As discussed in our previous study, the second step of this randomized
+M&V method involves choosing an appropriate blocking period to minimize
+potential biases caused by incomplete randomization. For most practical
+scenarios, we recommend a blocking period of approximately 12 to 16
+weeks, as it typically covers the duration of a season, ensuring a
+representative sampling of operational conditions. In general, longer
+blocking periods are advantageous when evaluating multiple intervention
+strategies or using sampling intervals greater than one day. In such
+cases, extended blocking ensures a balanced distribution of both
+day-of-week and outdoor weather conditions.
+
+Opting for a shorter blocking period, such as 6 weeks, has the potential
+benefit of allowing the stopping criteria to be met more rapidly. We
+plotted the percentage of buildings finishing all stopping criteria when
+the blocking period is 6 weeks in Figure \@ref(fig:6weekblock). As a
+result, when compared to Figure \@ref(fig:intervaltime), the only
+difference we found is when sampling at daily interval and not dropping
+non-consecutive days, 22% of buildings can get an estimate earlier. This
+indicates most buildings require 9 months to meet outdoor weather
+conditions starting from January.
+
+```{r 6weekblock, fig.cap = "Time required to satisfy all stopping criteria when using a 6-week blocking period"}
+
+knitr::include_graphics(paste0(fig_path, "6week_time.png"))
+```
+
+Sampling at a shorter blocking period also means that the analyst must
+perform the hypothesis tests more frequently, which can necessitate
+adjusting the significance level using methods such as the Bonferroni
+correction to control for increased type-I error risk. On the plus side,
+a shorter blocking period can reduce the adverse impact of missing or
+problematic data. For example, if an intervention requires fine-tuning
+after initial implementation, removing data from the first blocking
+period would be less detrimental compared to longer blocking periods,
+preserving the overall integrity of the experiment.
+
+## M&V starting time impact
+
+In this study, we consistently set the baseline period to begin on
+January 1st, which offers the advantage of capturing colder outdoor
+weather conditions early in the M&V process. However, when the baseline
+measurements misses the initial winter period, meeting the required
+weather condition criteria can potentially take a longer time. To assess
+this impact, we repeated the randomized M&V analysis for all buildings
+using a new start date in March. As shown in Figure  \@ref(fig:startT),
+the new M&V process results in a noticeable delay in satisfying the
+stopping criteria. Compared to Figure  \@ref(fig:intervaltime), where a
+January start allowed most buildings to finish within 36 weeks, a March
+start extended the required duration to 48 weeks for the majority of
+buildings. Furthermore, when a longer sampling interval is used or
+non-consecutive days are excluded (to avoid carryover effects), some
+buildings may require up to 60 weeks to complete the randomized M&V. As
+expected, to collect sufficient data representing winter conditions, the
+sampling may need to continue until the next January. However, as the
+overall data collection period extends, the influence of dropping
+non-consecutive days diminishes and becomes less of a concern.
+
+```{r startT, fig.cap = "Time required to satisfy all stopping criteria starting from March"}
+
+knitr::include_graphics(paste0(fig_path, "startT.png"))
+```
+
+Similarly, we evaluated the time required to satisfy all stopping
+criteria when using a shorter blocking period, as shown in Figure
+ \@ref(fig:6weekstartT). Compared to Figure  \@ref(fig:startT), a
+significant proportion of buildings completed the randomized M&V by week
+42 (mid-December), which is one blocking period earlier than having a
+12-week blocking period. This result further highlights that the overall
+duration of the randomized M&V process is strongly driven by outdoor
+weather. Accordingly, selecting an optimal blocking period should
+consider historical or typical meteorological weather file to
+effectively minimize the time required.
+
+```{r 6weekstartT, fig.cap = "Time required to satisfy all stopping criteria starting from March and using a shorter blocking period of 6 weeks"}
+
+knitr::include_graphics(paste0(fig_path, "6week_start_time.png"))
 ```
 
 ## Limitations
