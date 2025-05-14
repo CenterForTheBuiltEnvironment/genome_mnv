@@ -1524,7 +1524,8 @@ df_MW_A <- bind_rows(df_keep, df_drop) %>%
                                  "12" = "12\nweeks", 
                                  "24" = "24\nweeks", 
                                  "36" = "36\nweeks", 
-                                 "48" = "48\nweeks")) %>% 
+                                 "48" = "48\nweeks", 
+                                 "60" = "60\nweeks")) %>% 
   group_by(n_weeks, group, interval) %>% 
   summarise(n = n()) %>%
   ungroup()
@@ -1551,7 +1552,7 @@ df_MW_A <- all_combinations %>%
 df_MW_A %>% 
   ggplot(aes(x = n_weeks, y = perc, fill = group)) +
   geom_bar(stat = "identity", position = "dodge") +
-  facet_wrap(~interval, nrow = 1) +
+  facet_wrap(~interval, nrow = 2) +
   geom_text(aes(x = n_weeks, y = perc + 2, label = paste0(round(perc, digits = 0), "%"), group = group), position = position_dodge(1)) +
   scale_fill_manual(values = ls_colors) +
   scale_color_manual(values = ls_colors) +
@@ -1566,4 +1567,4 @@ df_MW_A %>%
         legend.position = "bottom",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 
-ggsave(filename = "timeline_interval_sprt.png", path = fig_path, units = "in", height = 6, width = 12, dpi = 300)
+ggsave(filename = "timeline_interval_sprt.png", path = fig_path, units = "in", height = 8, width = 12, dpi = 300)
