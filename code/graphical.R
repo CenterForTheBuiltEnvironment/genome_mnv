@@ -312,8 +312,8 @@ p_top <- df_MW_A %>%
   geom_lv(k = 4, outlier.shape = NA) +
   geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  geom_text(data = . %>% group_by(method) %>% summarise(median = median(diff)) %>% ungroup(), 
+            aes(x = method, y = median, label = paste0(round(median, digits = 1), " %"))) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
                      labels = number_format(suffix = " %")) +
@@ -400,8 +400,8 @@ p_middle <- df_TW_A %>%
   geom_lv(k = 4, outlier.shape = NA) +
   geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  geom_text(data = . %>% group_by(method) %>% summarise(median = median(diff)) %>% ungroup(), 
+            aes(x = method, y = median, label = paste0(round(median, digits = 1), " %"))) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
                      labels = number_format(suffix = " %")) +
@@ -528,8 +528,8 @@ p1 <- df_MW_S %>%
   geom_lv(k = 4, outlier.shape = NA) +
   geom_boxplot(outlier.shape = NA, coef = 0, fill = "#00000000", aes(color = method)) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  geom_text(data = . %>% group_by(method) %>% summarise(median = median(diff)) %>% ungroup(), 
+            aes(x = method, y = median, label = paste0(round(median, digits = 1), " %"))) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
                      labels = number_format(suffix = " %")) +
@@ -554,8 +554,8 @@ p2 <- df_MW_V %>%
   geom_lv(k = 4, outlier.shape = NA) +
   geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  geom_text(data = . %>% group_by(method) %>% summarise(median = median(diff)) %>% ungroup(), 
+            aes(x = method, y = median, label = paste0(round(median, digits = 1), " %"))) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
                      labels = number_format(suffix = " %")) +
@@ -581,8 +581,8 @@ p3 <- df_MW_A %>%
   geom_lv(k = 4, outlier.shape = NA) +
   geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  geom_text(data = . %>% group_by(method) %>% summarise(median = median(diff)) %>% ungroup(), 
+            aes(x = method, y = median, label = paste0(round(median, digits = 1), " %"))) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
                      labels = number_format(suffix = " %")) +
@@ -615,8 +615,8 @@ p1 <- df_TW_S %>%
   geom_lv(k = 4, outlier.shape = NA) +
   geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  geom_text(data = . %>% group_by(method) %>% summarise(median = median(diff)) %>% ungroup(), 
+            aes(x = method, y = median, label = paste0(round(median, digits = 1), " %"))) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
                      labels = number_format(suffix = " %")) +
@@ -641,8 +641,8 @@ p2 <- df_TW_V %>%
   geom_lv(k = 4, outlier.shape = NA) +
   geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  geom_text(data = . %>% group_by(method) %>% summarise(median = median(diff)) %>% ungroup(), 
+            aes(x = method, y = median, label = paste0(round(median, digits = 1), " %"))) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
                      labels = number_format(suffix = " %")) +
@@ -667,8 +667,8 @@ p3 <- df_TW_A %>%
   geom_lv(k = 4, outlier.shape = NA) +
   geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  geom_text(data = . %>% group_by(method) %>% summarise(median = median(diff)) %>% ungroup(), 
+            aes(x = method, y = median, label = paste0(round(median, digits = 1), " %"))) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
                      labels = number_format(suffix = " %")) +
@@ -771,8 +771,8 @@ df_MW_A %>%
   geom_lv(k = 4, outlier.shape = NA) +
   geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  geom_text(data = . %>% group_by(method) %>% summarise(median = median(diff)) %>% ungroup(), 
+            aes(x = method, y = median, label = paste0(round(median, digits = 1), " %"))) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
                      labels = number_format(suffix = " %")) +
@@ -795,75 +795,215 @@ ggsave(filename = "abs_null.png", path = fig_path, units = "in", height = 6, wid
 
 
 #### ABS-CONT ####
-rand_cont_S <- df_cont_stable %>% 
-  select(-cont_tmy) %>% 
+df_MW_S <- df_cont_stable %>% 
   left_join(df_fs_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - cont_fs)) %>% 
-  select(name, diff, ratio)
+  mutate(diff = abs(savings - cont_fs), 
+         diff_all = abs(savings - cont_fs_all)) %>% 
+  select(name, diff, diff_all, ratio) %>% 
+  pivot_longer(c(diff, diff_all), names_to = "type", values_to = "values") %>% 
+  mutate(ratio = ifelse(ratio == 1 & type == "diff", "1_1", 
+                        ifelse(ratio == 1 & type == "diff_all", "1_2", 
+                               ifelse(ratio == 2 & type == "diff", "2_1", 
+                                      ifelse(ratio == 2 & type == "diff_all", "2_2", ratio)))))
 
-rand_final_S <- df_fs_stable %>% 
-  filter(method != "conv") %>% 
-  pivot_wider(names_from = method, values_from = savings) %>% 
-  mutate(diff = abs(true - rand), 
-         ratio = 0) %>% 
-  select(name, diff, ratio)
-
-df_MW_S <- rbind(rand_cont_S, rand_final_S)
 
 # plot for the variable subset
-rand_cont_V <- df_cont_variable %>% 
-  select(-cont_tmy) %>% 
+df_MW_V <- df_cont_variable %>% 
   left_join(df_fs_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - cont_fs)) %>% 
-  select(name, diff, ratio)
+  mutate(diff = abs(savings - cont_fs), 
+         diff_all = abs(savings - cont_fs_all)) %>% 
+  select(name, diff, diff_all, ratio) %>% 
+  pivot_longer(c(diff, diff_all), names_to = "type", values_to = "values") %>% 
+  mutate(ratio = ifelse(ratio == 1 & type == "diff", "1_1", 
+                        ifelse(ratio == 1 & type == "diff_all", "1_2", 
+                               ifelse(ratio == 2 & type == "diff", "2_1", 
+                                      ifelse(ratio == 2 & type == "diff_all", "2_2", ratio)))))
 
-rand_final_V <- df_fs_variable %>% 
-  filter(method != "conv") %>% 
-  pivot_wider(names_from = method, values_from = savings) %>% 
-  mutate(diff = abs(true - rand), 
-         ratio = 0) %>% 
-  select(name, diff, ratio)
-
-df_MW_V <- rbind(rand_cont_V, rand_final_V)
-
-# plot for combined dataset
-rand_cont_A <- bind_rows(rand_cont_V, rand_cont_S) %>% 
-  select(name, rand_cont_diff = diff)
-
-rand_final_A <- bind_rows(rand_final_V, rand_final_S) %>% 
-  select(name, rand_final_diff = diff)
-
-df_MW_A <- rbind(df_MW_S, df_MW_V)
-
-df_MW_A %>% 
+df_MW_V %>% 
   mutate(ratio = as.factor(ratio), 
-         ratio = recode_factor(ratio, "0" = "Randomized\n(50/50)", "1" = "Randomized\n(20/80)", "2" = "Randomized\n(10/90)")) %>% 
-  ggplot(aes(x = ratio, y = diff, fill = "Randomized")) +
+         ratio = recode_factor(ratio, "1_1" = "Continued\n(20/80)", "1_2" = "Randomized\n(20/80)", "2_1" = "Continued\n(10/90)", "2_2" = "Randomized\n(10/90)")) %>% 
+  ggplot(aes(x = ratio, y = values, fill = "Randomized")) +
   geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
   geom_lv(k = 4, outlier.shape = NA) +
   geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = ratio)) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
   geom_text(data = . %>% 
               group_by(ratio) %>% 
-              summarise(mean = mean(diff)) %>% 
+              summarise(median = median(values)) %>% 
               ungroup(), 
-            aes(x = ratio, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+            aes(x = ratio, y = median, label = paste0(round(median, digits = 1), " %"))) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
                      labels = number_format(suffix = " %")) +
   scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
+  scale_color_manual(values = c("grey80", "grey80", "grey80", "grey80")) + 
   labs(fill = NULL, 
        x = NULL, 
        y = "Absolute error in fractional savings", 
-       title = "Absolute error in savings estimation by different sampling ratio",
+       title = str_glue("All {V_building} buildings with measured weather conditions")) +
+  coord_cartesian(ylim = c(0, 15)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "none",
+        axis.text.x = element_blank(), 
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+# plot for combined dataset
+df_MW_A <- rbind(df_MW_S, df_MW_V)
+
+p_top <- df_MW_A %>% 
+  mutate(ratio = as.factor(ratio), 
+         ratio = recode_factor(ratio, "1_1" = "Continued\n(20/80)", "1_2" = "Randomized\n(20/80)", "2_1" = "Continued\n(10/90)", "2_2" = "Randomized\n(10/90)")) %>% 
+  ggplot(aes(x = ratio, y = values, fill = "Randomized")) +
+  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
+  geom_lv(k = 4, outlier.shape = NA) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = ratio)) +
+  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
+  geom_text(data = . %>% 
+              group_by(ratio) %>% 
+              summarise(median = median(values)) %>% 
+              ungroup(), 
+            aes(x = ratio, y = median, label = paste0(round(median, digits = 1), " %"))) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 4), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80", "grey80", "grey80")) + 
+  labs(fill = NULL, 
+       x = NULL, 
+       y = "Absolute error in fractional savings", 
        subtitle = str_glue("All {A_building} buildings with measured weather conditions")) +
+  coord_cartesian(ylim = c(0, 15)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "none",
+        axis.text.x = element_blank(), 
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+# TMY
+# plot for the stable subset
+df_TW_S <- df_cont_stable %>% 
+  left_join(df_fs_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - cont_tmy), 
+         diff_all = abs(savings - cont_tmy_all)) %>% 
+  select(name, diff, diff_all, ratio) %>% 
+  pivot_longer(c(diff, diff_all), names_to = "type", values_to = "values") %>% 
+  mutate(ratio = ifelse(ratio == 1 & type == "diff", "1_1", 
+                        ifelse(ratio == 1 & type == "diff_all", "1_2", 
+                               ifelse(ratio == 2 & type == "diff", "2_1", 
+                                      ifelse(ratio == 2 & type == "diff_all", "2_2", ratio)))))
+
+# plot for the variable subset
+df_TW_V <- df_cont_variable %>% 
+  left_join(df_fs_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - cont_tmy), 
+         diff_all = abs(savings - cont_tmy_all)) %>% 
+  select(name, diff, diff_all, ratio) %>% 
+  pivot_longer(c(diff, diff_all), names_to = "type", values_to = "values") %>% 
+  mutate(ratio = ifelse(ratio == 1 & type == "diff", "1_1", 
+                        ifelse(ratio == 1 & type == "diff_all", "1_2", 
+                               ifelse(ratio == 2 & type == "diff", "2_1", 
+                                      ifelse(ratio == 2 & type == "diff_all", "2_2", ratio)))))
+
+# plot for combined dataset
+df_TW_A <- rbind(df_TW_S, df_TW_V)
+
+p_bottom <- df_TW_A %>% 
+  mutate(ratio = as.factor(ratio), 
+         ratio = recode_factor(ratio, "1_1" = "Continued\n(20/80)", "1_2" = "Randomized\n(20/80)", "2_1" = "Continued\n(10/90)", "2_2" = "Randomized\n(10/90)")) %>% 
+  ggplot(aes(x = ratio, y = values, fill = "Randomized")) +
+  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
+  geom_lv(k = 4, outlier.shape = NA) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = ratio)) +
+  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
+  geom_text(data = . %>% 
+              group_by(ratio) %>% 
+              summarise(median = median(values)) %>% 
+              ungroup(), 
+            aes(x = ratio, y = median, label = paste0(round(median, digits = 1), " %"))) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 4), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80", "grey80", "grey80")) + 
+  labs(fill = NULL, 
+       x = NULL, 
+       y = "Absolute error in fractional savings", 
+       subtitle = str_glue("All {A_building} buildings with TOWT model and TMY weather")) +
   coord_cartesian(ylim = c(0, 15)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
         legend.position = "none",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 
-ggsave(filename = "abs_cont.png", path = fig_path, units = "in", height = 6, width = 12, dpi = 300)
+ggarrange(p_top, p_bottom, 
+          ncol = 1, nrow = 2,
+          labels = c("a)", "b)")) +
+  plot_annotation(title = "Absolute error in savings estimation by different sampling ratio")
+
+
+ggsave(filename = "abs_cont.png", path = fig_path, units = "in", height = 9, width = 12, dpi = 300)
+
+
+p_top <- df_MW_S %>% 
+  mutate(ratio = as.factor(ratio), 
+         ratio = recode_factor(ratio, "1_1" = "Continued\n(20/80)", "1_2" = "Randomized\n(20/80)", "2_1" = "Continued\n(10/90)", "2_2" = "Randomized\n(10/90)")) %>% 
+  ggplot(aes(x = ratio, y = values, fill = "Randomized")) +
+  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
+  geom_lv(k = 4, outlier.shape = NA) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = ratio)) +
+  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
+  geom_text(data = . %>% 
+              group_by(ratio) %>% 
+              summarise(median = median(values)) %>% 
+              ungroup(), 
+            aes(x = ratio, y = median, label = paste0(round(median, digits = 1), " %"))) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 4), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80", "grey80", "grey80")) + 
+  labs(fill = NULL, 
+       x = NULL, 
+       y = "Absolute error in fractional savings", 
+       subtitle = str_glue("All {S_building} buildings with measured weather conditions")) +
+  coord_cartesian(ylim = c(0, 12)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "none",
+        axis.text.x = element_blank(), 
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+p_bottom <- df_TW_S %>% 
+  mutate(ratio = as.factor(ratio), 
+         ratio = recode_factor(ratio, "1_1" = "Continued\n(20/80)", "1_2" = "Randomized\n(20/80)", "2_1" = "Continued\n(10/90)", "2_2" = "Randomized\n(10/90)")) %>% 
+  ggplot(aes(x = ratio, y = values, fill = "Randomized")) +
+  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
+  geom_lv(k = 4, outlier.shape = NA) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = ratio)) +
+  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
+  geom_text(data = . %>% 
+              group_by(ratio) %>% 
+              summarise(median = median(values)) %>% 
+              ungroup(), 
+            aes(x = ratio, y = median, label = paste0(round(median, digits = 1), " %"))) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 4), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80", "grey80", "grey80")) + 
+  labs(fill = NULL, 
+       x = NULL, 
+       y = "Absolute error in fractional savings", 
+       subtitle = str_glue("All {S_building} buildings with TOWT model and TMY weather")) +
+  coord_cartesian(ylim = c(0, 12)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "none",
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+ggarrange(p_top, p_bottom, 
+          ncol = 1, nrow = 2,
+          labels = c("a)", "b)")) +
+  plot_annotation(title = "Absolute error for the subset buildings with 2-year stable usage")
+
+
+ggsave(filename = "abs_cont_S.png", path = fig_path, units = "in", height = 9, width = 12, dpi = 300)
 
 
 
@@ -939,9 +1079,9 @@ p_top <- df_MW_A %>%
   geom_lv(k = 4, outlier.shape = NA, position = position_dodge(width = 0.8)) +
   geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group), width = 0.8) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(group, interval) %>% summarise(mean = mean(diff, na.rm = T)) %>% ungroup(), 
-            aes(x = interval, y = mean, group = group,
-                label = paste0(round(mean, digits = 1), " %")), 
+  geom_text(data = . %>% group_by(group, interval) %>% summarise(median = median(diff, na.rm = T)) %>% ungroup(), 
+            aes(x = interval, y = median, group = group,
+                label = paste0(round(median, digits = 1), " %")), 
             position = position_dodge(width = 0.75), color = "white") +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
@@ -1011,9 +1151,9 @@ p_bottom <- df_TW_A %>%
   geom_lv(k = 4, outlier.shape = NA, position = position_dodge(width = 0.8)) +
   geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group), width = 0.8) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(group, interval) %>% summarise(mean = mean(diff, na.rm = T)) %>% ungroup(), 
-            aes(x = interval, y = mean, group = group,
-                label = paste0(round(mean, digits = 1), " %")), 
+  geom_text(data = . %>% group_by(group, interval) %>% summarise(median = median(diff, na.rm = T)) %>% ungroup(), 
+            aes(x = interval, y = median, group = group,
+                label = paste0(round(median, digits = 1), " %")), 
             position = position_dodge(width = 0.75), color = "white") +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
@@ -1091,10 +1231,11 @@ p_top <- df_MW_A %>%
   geom_lv(k = 4, outlier.shape = NA, position = position_dodge(width = 0.8)) +
   geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group), width = 0.8) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(group, interval) %>% summarise(mean = mean(diff, inf.rm = T)) %>% ungroup(), 
-            aes(x = interval, y = mean, group = group,
-                label = paste0(round(mean, digits = 1), " %")), 
-            position = position_dodge(width = 0.75)) +
+  geom_text(data = . %>% group_by(group, interval) %>% summarise(median = median(diff, inf.rm = T)) %>% ungroup(), 
+            aes(x = interval, y = median, group = group,
+                label = paste0(round(median, digits = 1), " %")), 
+            position = position_dodge(width = 0.75), 
+            color = "white") +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
                      labels = number_format(suffix = " %")) +
@@ -1163,10 +1304,11 @@ p_bottom <- df_TW_A %>%
   geom_lv(k = 4, outlier.shape = NA, position = position_dodge(width = 0.8)) +
   geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group), width = 0.8) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(group, interval) %>% summarise(mean = mean(diff, na.rm = T)) %>% ungroup(), 
-            aes(x = interval, y = mean, group = group,
-                label = paste0(round(mean, digits = 1), " %")), 
-            position = position_dodge(width = 0.75)) +
+  geom_text(data = . %>% group_by(group, interval) %>% summarise(median = median(diff, na.rm = T)) %>% ungroup(), 
+            aes(x = interval, y = median, group = group,
+                label = paste0(round(median, digits = 1), " %")), 
+            position = position_dodge(width = 0.75), 
+            color = "white") +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
                      labels = number_format(suffix = " %")) +
@@ -1268,8 +1410,8 @@ p_top <- df_MW_A %>%
   geom_lv(k = 4, outlier.shape = NA) +
   geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  geom_text(data = . %>% group_by(method) %>% summarise(median = median(diff)) %>% ungroup(), 
+            aes(x = method, y = median, label = paste0(round(median, digits = 1), " %"))) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
                      labels = number_format(suffix = " %")) +
@@ -1278,7 +1420,7 @@ p_top <- df_MW_A %>%
   labs(fill = NULL, 
        color = NULL, 
        x = NULL, 
-       y = "Mean error in fractional savings", 
+       y = "Error in fractional savings", 
        subtitle = str_glue("All {A_building} buildings with measured weather")) +
   coord_cartesian(ylim = c(-20, 20)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
@@ -1356,8 +1498,8 @@ p_middle <- df_TW_A %>%
   geom_lv(k = 4, outlier.shape = NA) +
   geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  geom_text(data = . %>% group_by(method) %>% summarise(median = median(diff)) %>% ungroup(), 
+            aes(x = method, y = median, label = paste0(round(median, digits = 1), " %"))) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
                      labels = number_format(suffix = " %")) +
@@ -1365,7 +1507,7 @@ p_middle <- df_TW_A %>%
   scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
   labs(fill = NULL, 
        x = NULL, 
-       y = "Mean error in fractional savings", 
+       y = "Estimated error in fractional savings", 
        subtitle = str_glue("All {A_building} buildings with TOWT model and TMY weather")) +
   coord_cartesian(ylim = c(-20, 20)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
@@ -1375,7 +1517,7 @@ p_middle <- df_TW_A %>%
 ggarrange(p_top, p_middle, 
           ncol = 1, nrow = 2,
           labels = c("a)", "b)")) +
-  plot_annotation(title = "Mean error in savings estimation by different M&V methods")
+  plot_annotation(title = "Estimated error in savings estimation by different M&V methods")
 
 ggsave(filename = "mean.png", path = fig_path, units = "in", height = 6, width = 12, dpi = 300)
 
@@ -1456,8 +1598,8 @@ df_MW_A %>%
   geom_lv(k = 4, outlier.shape = NA) +
   geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  geom_text(data = . %>% group_by(method) %>% summarise(median = median(diff)) %>% ungroup(), 
+            aes(x = method, y = median, label = paste0(round(median, digits = 1), " %"))) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 6), 
                      labels = number_format(suffix = " %")) +
@@ -1465,8 +1607,8 @@ df_MW_A %>%
   scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
   labs(fill = NULL, 
        x = NULL, 
-       y = "Mean effect in fractional savings",
-       title = "Mean effect of non-routine events when using different M&V methods", 
+       y = "Estimated effect in fractional savings",
+       title = "Estimated effect of non-routine events when using different M&V methods", 
        subtitle = str_glue("All {A_building} buildings with measured weather")) +
   coord_cartesian(ylim = c(-18, 18)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
@@ -1530,8 +1672,8 @@ df_MW_A %>%
   geom_lv(k = 4, outlier.shape = NA) +
   geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = ratio)) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(ratio) %>% summarise(mean = mean(diff)) %>% ungroup(), 
-            aes(x = ratio, y = mean, label = paste0(round(mean, digits = 1), " %"))) +
+  geom_text(data = . %>% group_by(ratio) %>% summarise(median = median(diff)) %>% ungroup(), 
+            aes(x = ratio, y = median, label = paste0(round(median, digits = 1), " %"))) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
                      labels = number_format(suffix = " %")) +
@@ -1539,8 +1681,8 @@ df_MW_A %>%
   scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
   labs(fill = NULL, 
        x = NULL, 
-       y = "Mean error in fractional savings", 
-       title = "Mean error in savings estimation by different sampling ratio",
+       y = "Estimated error in fractional savings", 
+       title = "Estimated error in savings estimation by different sampling ratio",
        subtitle = str_glue("All {A_building} buildings with measured weather conditions")) +
   coord_cartesian(ylim = c(-15, 15)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
@@ -1607,9 +1749,9 @@ p_top <- df_MW_A %>%
   geom_lv(k = 4, outlier.shape = NA) +
   geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group)) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(group, interval) %>% summarise(mean = mean(diff, na.rm = T)) %>% ungroup(), 
-            aes(x = interval, y = mean, group = group,
-                label = paste0(round(mean, digits = 1), " %")), 
+  geom_text(data = . %>% group_by(group, interval) %>% summarise(median = median(diff, na.rm = T)) %>% ungroup(), 
+            aes(x = interval, y = median, group = group,
+                label = paste0(round(median, digits = 1), " %")), 
             position = position_dodge(width = 0.75)) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 5), 
@@ -1619,7 +1761,7 @@ p_top <- df_MW_A %>%
   labs(fill = NULL, 
        color = NULL, 
        x = NULL, 
-       y = "Mean error in fractional savings", 
+       y = "Estimated error in fractional savings", 
        subtitle = str_glue("All {A_building} buildings with measured weather")) +
   coord_cartesian(ylim = c(-15, 15)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
@@ -1679,9 +1821,9 @@ p_bottom <- df_TW_A %>%
   geom_lv(k = 4, outlier.shape = NA, position = position_dodge(width = 0.8)) +
   geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group), width = 0.8) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(group, interval) %>% summarise(mean = mean(diff, na.rm = T)) %>% ungroup(), 
-            aes(x = interval, y = mean, group = group,
-                label = paste0(round(mean, digits = 1), " %")), 
+  geom_text(data = . %>% group_by(group, interval) %>% summarise(median = median(diff, na.rm = T)) %>% ungroup(), 
+            aes(x = interval, y = median, group = group,
+                label = paste0(round(median, digits = 1), " %")), 
             position = position_dodge(width = 0.75)) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 5), 
@@ -1691,7 +1833,7 @@ p_bottom <- df_TW_A %>%
   labs(fill = NULL, 
        color = NULL, 
        x = NULL, 
-       y = "Mean error in fractional savings", 
+       y = "Estimated error in fractional savings", 
        subtitle = str_glue("All {A_building} buildings with TOWT model and TMY weather")) +
   coord_cartesian(ylim = c(-15, 15)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
@@ -1703,7 +1845,7 @@ ggarrange(p_top, p_bottom,
           align = "hv", 
           common.legend = T, 
           legend = "bottom") +
-  plot_annotation(title = "Mean error in savings estimation of randomized M&V by different sampling intervals")
+  plot_annotation(title = "Estimated error in savings estimation of randomized M&V by different sampling intervals")
 
 ggsave(filename = "mean_interval.png", path = fig_path, units = "in", height = 9, width = 12, dpi = 300)
 
@@ -1743,9 +1885,9 @@ p_top <- df_MW_A %>%
   geom_lv(k = 4, outlier.shape = NA, position = position_dodge(width = 0.8)) +
   geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group), width = 0.8) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(group, interval) %>% summarise(mean = mean(diff, inf.rm = T)) %>% ungroup(), 
-            aes(x = interval, y = mean, group = group,
-                label = paste0(round(mean, digits = 1), " %")), 
+  geom_text(data = . %>% group_by(group, interval) %>% summarise(median = median(diff, inf.rm = T)) %>% ungroup(), 
+            aes(x = interval, y = median, group = group,
+                label = paste0(round(median, digits = 1), " %")), 
             position = position_dodge(width = 0.75)) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 5), 
@@ -1799,9 +1941,9 @@ p_bottom <- df_TW_A %>%
   geom_lv(k = 4, outlier.shape = NA, position = position_dodge(width = 0.8)) +
   geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group), width = 0.8) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% group_by(group, interval) %>% summarise(mean = mean(diff, na.rm = T)) %>% ungroup(), 
-            aes(x = interval, y = mean, group = group,
-                label = paste0(round(mean, digits = 1), " %")), 
+  geom_text(data = . %>% group_by(group, interval) %>% summarise(median = median(diff, na.rm = T)) %>% ungroup(), 
+            aes(x = interval, y = median, group = group,
+                label = paste0(round(median, digits = 1), " %")), 
             position = position_dodge(width = 0.75)) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 5), 

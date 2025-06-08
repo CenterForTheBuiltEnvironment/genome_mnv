@@ -55,9 +55,9 @@ source(paste0(function_path, "rand_seq.R"))
 
 # define parameters
 # section run control
-run_params <- list(type = "stable", 
+run_params <- list(type = "variable", 
                    sprt = T, 
-                   sprt_cont = F, 
+                   sprt_cont = T, 
                    interval = F, 
                    null = F)
 
@@ -423,32 +423,32 @@ for (n in 1:(nrow(all_names))){
                                 "site" = site, 
                                 "conv" = cv_rmse)
   
-  # base_proj %>%
-  #   ggplot() +
-  #   geom_point(aes(x = datetime, y = eload, color = "Measurement"), alpha = 0.2, size = 0.2) +
-  #   geom_point(aes(x = datetime, y = towt, color = "Prediction"), alpha = 0.2, size = 0.2) +
-  #   geom_smooth(aes(x = datetime, y = eload, color = "Measurement"), formula = y ~ x, method = "loess", linewidth = 0.7) +
-  #   geom_smooth(aes(x = datetime, y = towt, color = "Prediction"), formula = y ~ x, method = "loess", linewidth = 0.7) +
-  #   annotate(geom = "text",
-  #            x = median(base_proj$datetime),
-  #            y = median(base_proj$eload) + 2 * sd(base_proj$eload),
-  #            label = paste0("CV(RMSE): ", round(cv_rmse, digits = 2), "%")) +
-  #   scale_color_brewer(palette = "Set1") +
-  #   scale_x_datetime(date_breaks = "2 months",
-  #                    date_labels = "%b")  +
-  #   scale_y_continuous(expand = c(0, 0),
-  #                      breaks = breaks_pretty(n = 3),
-  #                      labels = number_format(suffix = " kW")) +
-  #   labs(x = NULL,
-  #        y = NULL,
-  #        color = NULL,
-  #        title = "TOWT model prediction results") +
-  #   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-  #         legend.direction = "horizontal",
-  #         legend.position = "bottom",
-  #         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-  # 
-  # ggsave(filename = "towt_acc.png", path = sitefigs_path, units = "in", height = 6, width = 10, dpi = 300)
+  base_proj %>%
+    ggplot() +
+    geom_line(aes(x = datetime, y = eload, color = "Measurement"), alpha = 0.2, linewidth = 0.2) +
+    geom_line(aes(x = datetime, y = towt, color = "Prediction"), alpha = 0.2, linewidth = 0.2) +
+    geom_smooth(aes(x = datetime, y = eload, color = "Measurement"), formula = y ~ x, method = "loess", linewidth = 0.7) +
+    geom_smooth(aes(x = datetime, y = towt, color = "Prediction"), formula = y ~ x, method = "loess", linewidth = 0.7) +
+    annotate(geom = "text",
+             x = median(base_proj$datetime),
+             y = median(base_proj$eload) + 2 * sd(base_proj$eload),
+             label = paste0("CV(RMSE): ", round(cv_rmse, digits = 2), "%")) +
+    scale_color_brewer(palette = "Set1") +
+    scale_x_datetime(date_breaks = "2 months",
+                     date_labels = "%b")  +
+    scale_y_continuous(expand = c(0, 0),
+                       breaks = breaks_pretty(n = 3),
+                       labels = number_format(suffix = " kW")) +
+    labs(x = NULL,
+         y = NULL,
+         color = NULL,
+         title = "TOWT model prediction results") +
+    theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+          legend.direction = "horizontal",
+          legend.position = "bottom",
+          plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+  ggsave(filename = "towt_acc.png", path = sitefigs_path, units = "in", height = 6, width = 10, dpi = 300)
   
   # TOWT baseline project for post retrofit period
   towt_base <- df_base_conv %>%
@@ -642,6 +642,7 @@ for (n in 1:(nrow(all_names))){
     for (r in 1:length(cont_param$resamp)) {
       ratio <- cont_param$resamp[[r]]
       
+      # continue sampling
       cont_param$last_weeks <- block_params$n_weeks - eob
       cont_param$n_weeks <- block_params$n_weeks
       cont_param$start_date <- as.Date("2016-01-01") + weeks(eob)
@@ -651,6 +652,7 @@ for (n in 1:(nrow(all_names))){
       
       df_schedule_cont <- data.frame(datetime = date_seq,
                                      strategy = strategy)
+      
       
       df_rand_old <- df_rand %>% 
         filter(datetime < cont_param$start_date)
@@ -673,15 +675,41 @@ for (n in 1:(nrow(all_names))){
                     mean(df_rand_cont %>% filter(strategy == 2) %>% .$eload)) /
         mean(df_rand_cont %>% filter(strategy == 1) %>% .$eload) * 100
       
+      
+      # ratio from beginning
+      date_seq <- seq(from = as.Date(block_params$start_date), by = "day", length.out = block_params$n_weeks * 7)
+      strategy <- sample(c(1, 2), size = length(date_seq), replace = TRUE, prob = ratio)
+      
+      df_schedule_cont <- data.frame(datetime = date_seq,
+                                     strategy = strategy)
+      
+      df_rand_cont <- df_hourly_conv %>%
+        left_join(df_schedule_cont, by = "datetime") %>%
+        fill(strategy, .direction = "down") %>%
+        pivot_longer(c(base_eload, interv_eload), names_to = "eload_type", values_to = "eload") %>%
+        filter((strategy == 1 & eload_type == "base_eload") | (strategy == 2 & eload_type == "interv_eload")) %>%
+        select(-eload_type) %>% 
+        drop_na()
+      
+      rand_tmy_all <- saving_norm(df_rand_cont %>% mutate(week = NA), site_tmy)
+      
+      # saving calculation as mean difference
+      rand_fs_all <- (mean(df_rand_cont %>% filter(strategy == 1) %>% .$eload) -
+                    mean(df_rand_cont %>% filter(strategy == 2) %>% .$eload)) /
+        mean(df_rand_cont %>% filter(strategy == 1) %>% .$eload) * 100
+      
       cont <- data.frame("name" = name,
                          "site" = site,
                          "ratio" = r, 
                          "cont_fs" = rand_fs, 
-                         "cont_tmy" = rand_tmy)
+                         "cont_tmy" = rand_tmy, 
+                         "cont_fs_all" = rand_fs_all, 
+                         "cont_tmy_all" = rand_tmy_all)
       
       cont_saving <- rbind(cont_saving, cont)
+      
+      
     }
-    
     
     
   }
