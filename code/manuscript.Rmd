@@ -281,6 +281,30 @@ V_building <- nrow(df_fs_tmy_variable)
 A_building <- S_building + V_building
 ```
 
+### Graphical abstract {.unnumbered}
+
+```{r graphicalabstract, out.width = "80%"}
+
+knitr::include_graphics("../figs/manuscript/graphical_abs.jpg", dpi = 900)
+```
+
+### Keywords {.unnumbered}
+
+Measurement and verification (M&V); Controls; Randomized switchback
+design; Uncertainty quantification; Building energy analysis; Heating
+ventilation and air conditioning
+
+### Highlights {.unnumbered}
+
+-   Verified the improvements of the randomized switchback method using
+    a large open-source dataset
+-   Addressed the influence of non-routine events and also more subtle
+    long-term 'operational drift' in buildings
+-   Investigated the trade-off of selecting longer sampling intervals to
+    account for carryover effect and weather dependency of the method
+-   Discussed the impact of selecting different sampling ratio on the
+    M&V accuracy
+
 # Introduction
 
 ## Conventional M&V
@@ -369,7 +393,7 @@ Genome Dataset 2 (BGD2) is used, which is an extensive open-access
 dataset designed to advance research and development in building energy
 efficiency and control strategies, acting as a test-bed for modeling,
 simulation, and algorithm development [@miller_building_2020]. BGD2
-contains over 1000 buildings\' metadata and realistic operational
+contains over 1000 buildings' metadata and realistic operational
 measurements between 2016 and 2017 from across North America and Europe,
 making it one of the most comprehensive collections of building-related
 data available for scientific use. The dataset includes various
@@ -411,15 +435,15 @@ energy models [@burkhart_measurement_2014; @heo_calibration_2012;
 literature regarding the rigorous quantification of uncertainties
 directly associated with calculated savings, for instance, accounting
 for the potential bias that the baseline model might deteriorate (i.e.,
-become \'stale\') over the extended period of pre- and post-analysis.
+become 'stale') over the extended period of pre- and post-analysis.
 
 ### Changes in building baseline measurements
 
 Changes in a building that influence its energy usage and are unrelated
 to the intervention being studied by the M&V method are commonly
 referred to as non-routine events. Current guidelines define non-routine
-events as \'static factors\' that need to be adjusted after projecting
-the baseline in the post-retrofit period [@ashrae_ashrae_2023;
+events as 'static factors' that need to be adjusted after projecting the
+baseline in the post-retrofit period [@ashrae_ashrae_2023;
 @efficiency_valuation_organisation_international_2012]. A common
 non-routine event in energy-saving M&V projects is a change in occupancy
 or a significant shift in occupant behavior, equipment run time, and
@@ -447,7 +471,7 @@ comparing between baseline and intervention
 Overall, those non-routine events mostly refer to clearly observable
 changes, but there are also more gradual and subtle changes in
 buildings, which are hardly noticed. We define those gradual changes as
-\'operational drift\' in this study. One likely encountered operational
+'operational drift' in this study. One likely encountered operational
 drift situation is the filter clogging in air handling units due to
 particle accumulation. This causes supply fans to gradually consume more
 energy to maintain the required duct static pressure [@feng_newly_2019;
@@ -467,7 +491,7 @@ As mentioned, the goal of an M&V project is to determine the effect,
 typically energy savings, of some intervention in the building. In this
 study, we focus on switchable interventions and an example of such an
 intervention is a control strategy that adjusts the chilled water
-plant\'s supply water temperature, which can be commonly found in the
+plant's supply water temperature, which can be commonly found in the
 literature [@duarte_field_2023; @lee_simulationoptimization_2012;
 @qiu_chilled_2022; @jin2007; @taylor_optimizing_2012]. In our case, we
 made it even simpler by adjusting the setpoint based on outdoor weather
@@ -504,7 +528,7 @@ aim to:
 We outlined the methodology of the study in Figure \@ref(fig:flowchart)
 and extended several key components in this section.
 
-```{r flowchart, fig.cap = "Flow chart showing the methodology for comparing the estimated savings of randomized M&V with the conventional M&V", out.width="75%"}
+```{r flowchart, fig.cap = "Flow chart showing the methodology for comparing the estimated savings of randomized M&V with the conventional M&V", out.width="70%"}
 
 knitr::include_graphics(paste0(fig_path, "flowchart.png"))
 ```
@@ -633,17 +657,16 @@ For all qualified buildings, we also create a feature to identify
 buildings with very stable electricity usage overall by identifying
 those with no statistically significant difference (P-value \> 0.05)
 between the two-year electricity usage. Applying this filter to real
-buildings, only 66 buildings are labeled in this \'stable\' subset out
-of a total of more than 600 buildings. While we did not adjust for
-weather differences between the two years when generating this
-high-level feature, this result highlights that the assumption that
-buildings are typically stable over the timeframe involved in
-conventional M&V methods is rarely true. As mentioned in
-\@ref(non-routine-events-impact), such variability is largely associated
-with non-routine events, especially operational drifts since the
-assessment, even under ideal situations, lasts for two years. And
-according to the statistics shown here, it is a typical case observed in
-real buildings applications.
+buildings, only 66 buildings are labeled in this 'stable' subset out of
+a total of more than 600 buildings. While we did not adjust for weather
+differences between the two years when generating this high-level
+feature, this result highlights that the assumption that buildings are
+typically stable over the timeframe involved in conventional M&V methods
+is rarely true. As mentioned in \@ref(non-routine-events-impact), such
+variability is largely associated with non-routine events, especially
+operational drifts since the assessment, even under ideal situations,
+lasts for two years. And according to the statistics shown here, it is a
+typical case observed in real buildings applications.
 
 ## Apply virtue intervention
 
@@ -728,7 +751,7 @@ Interested readers can also change the parameters in our open-source
 code to simulate different scenarios.
 
 | Parameter              | Description                                                      | Value |
-|--------------|--------------------------------------------|--------------|
+|------------------|------------------------------------|------------------|
 | $\beta_{temp}$         | \% savings from setting $T_{interv}$ 1 °C higher than $T_{base}$ | 0.08  |
 | $\beta_{occ}$          | \% savings adjustment during occupied hours                      | 1.2   |
 | $\beta_{\text{unocc}}$ | \% savings adjustment during unoccupied hours                    | 0.8   |
@@ -760,8 +783,8 @@ and stopping criteria as:
 
 -   90% confidence that energy savings exceed or do not exceed 0% using
     the sequential probability ratio test (SPRT). Medium effect size (d
-    = 0.5) quantified by Cohen\'s d and calculated SPRT statistics
-    either fall below the lower threshold or exceed the upper threshold.
+    = 0.5) quantified by Cohen's d and calculated SPRT statistics either
+    fall below the lower threshold or exceed the upper threshold.
 
 -   Sample strategies at an equal sampling ratio (50% baseline, 50%
     intervention).
@@ -1334,7 +1357,7 @@ prediction assessment in the following table, highlighting that the
 model and overall building datasets are performing similarly.
 
 |                 | Reference study results [@granderson_accuracy_2016] | Our study results      |
-|-----------------|--------------------------------------|-----------------|
+|-------------------|-----------------------------------|-------------------|
 | 25th percentile | -5.85                                               | `r percentiles$Q1`     |
 | 50th percentile | -1.25                                               | `r percentiles$Median` |
 | 75th percentile | 3.86                                                | `r percentiles$Q3`     |
@@ -1372,8 +1395,8 @@ that the typical deviation is -1.5%, meaning that the typical building
 is decreasing energy use slightly in this dataset in the absence of any
 known intervention. Thus, if a building analyst were to apply an
 intervention to this building and use conventional M&V to measure the
-effect, they would typically \'detect\' 1.5% energy savings even when
-the intervention had no actual impact on energy performance.
+effect, they would typically 'detect' 1.5% energy savings even when the
+intervention had no actual impact on energy performance.
 
 ```{r nosaving, fig.cap="Comparison between the two M&V methods in detecting no intervention effect when buildings are subject to static non-rountine events and gradual operational drift.", fig.height=5, fig.width=12}
 
@@ -1477,17 +1500,17 @@ Root-Mean Squared Error (CV(RMSE)) as the primary error metric. CV(RMSE)
 is a normalized measure, thus it enables direct comparison across
 different modeling results. Since we have the ground-true baseline
 measurements in the post-retrofit period, we can assess the error caused
-by model adjustment (i.e., how accurate is the \'counterfactual\'
-baseline provided by the two M&V methods). Figure \@ref(fig:towtacc)
-shows the difference between the true post-retrofit baseline and
-adjusted baseline through TOWT modeling and since the quantity of the
-training set is the same, this highlights the impact of the data
-sampling technique. For example, if a non-routine event happens (such as
-a tenant occupying an entire floor of a building moving out), the TOWT
-model can yield significant deviations. This is particularly the case
-for the conventional M&V method since it samples continuously throughout
-the pre-retrofit period. However, randomized sampling is less impacted
-by these events since it samples only 50% of the pre-retrofit baseline
+by model adjustment (i.e., how accurate is the 'counterfactual' baseline
+provided by the two M&V methods). Figure \@ref(fig:towtacc) shows the
+difference between the true post-retrofit baseline and adjusted baseline
+through TOWT modeling and since the quantity of the training set is the
+same, this highlights the impact of the data sampling technique. For
+example, if a non-routine event happens (such as a tenant occupying an
+entire floor of a building moving out), the TOWT model can yield
+significant deviations. This is particularly the case for the
+conventional M&V method since it samples continuously throughout the
+pre-retrofit period. However, randomized sampling is less impacted by
+these events since it samples only 50% of the pre-retrofit baseline
 throughout a blocking period. Consequently, the figure shows, there is a
 noticeable improvement in modeling accuracy when using the randomized
 method.
@@ -1552,7 +1575,7 @@ In some cases, particularly those involving large thermal mass and
 active thermal energy storage systems or operating continuously, there
 can be a substantial time-lagged effect associated with interventions.
 This means that the effect of one control strategy may persist, or
-\'carryover\', after switching to another. To mitigate such carryover
+'carryover', after switching to another. To mitigate such carryover
 effects, building analysts may choose to drop non-consecutive days in
 the switchback experiment. For example, consider a heat pump water
 heater where the tank is charged at very different times of the day by
@@ -1866,11 +1889,11 @@ impact on the energy savings actually achieved by the building. To
 further examine its impact on M&V accuracy, Figure \@ref(fig:abscont)
 compares two sampling ratios (20%/80% and 10%/90%) and two associated
 scenarios with the previously shown results when sampling at 50%/50%.
-The \"Continued\" group (shown in a lighter color) follows the standard
+The "Continued" group (shown in a lighter color) follows the standard
 randomized M&V framework with an initial 50%/50% sampling ratio, then
 switches to the indicated sampling ratio after satisfying the stopping
 criteria, continuing this until the end of the two-year period. In
-contrast, the \"Randomized\" group uses the indicated ratio from the
+contrast, the "Randomized" group uses the indicated ratio from the
 outset and continues throughout the two year. Subplot (a) shows that
 absolute error is significantly lower without the initial 50%/50%
 sampling, due to baseline drift and non-routine events that most
