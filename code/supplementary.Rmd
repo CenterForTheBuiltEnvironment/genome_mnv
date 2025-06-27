@@ -1,8 +1,5 @@
 ---
-title: "Demonstrating the Reliability of Randomized Measurement and Verification for Switchable Control Retrofits Using a Large Open-Source Dataset"
-author:
-  - Aoyu Zou ^[Center for the Built Environment, University of California Berkeley, USA], Paul Raftery ^1^, Stefano Schiavon ^1^, Carlos Duarte ^1^, Gail Brager ^1^
-abstract: Conventional measurement and verification (M&V) methods rely on comparing pre- and post-retrofit performance to estimate energy savings. They are often time-consuming and unreliable, especially when non-routine events (step changes or more gradual changes in how a building operates) occur during the M&V process. Those events are unrelated to the intervention but significantly affect building energy consumption and thus when the analyst applies the conventional M&V method, the results can be confounded. In this study, we demonstrated that switchable interventions, such as most control retrofits, can benefit from a new M&V method that randomly samples whether to implement the baseline or the intervention strategy at a fixed interval (e.g., daily). We tested this novel randomized M&V method on a large public dataset (639 buildings) covering various climate zones and commercial building types, using a virtual chilled water supply temperature reset based on outdoor weather as the intervention. The results show that compared to the conventional method, the randomized method provides more accurate savings estimations with a 74% reduction in error and is even faster. Additionally, we found that when non-routine events are present, the randomized method estimates savings that are much closer to the ground-truth savings than the conventional method, demonstrating much improved reliability. We also assessed the impact of normalizing for different weather, starting the M&V at different time of the year, continuing randomization with a different sampling ratio after satisfying all criteria, dropping samples affected by carryover when switching between strategies, and identified the optimal sampling interval for that scenario using this large dataset.
+title: "Supplementary material"
 
 output:
   bookdown::word_document2:
@@ -10,8 +7,6 @@ output:
 editor_options: 
   markdown: 
     wrap: 72
-bibliography: references.bib
-biblio-style: apalike
 
 knit: (function(input, ...) {
     rmarkdown::render(
@@ -28,11 +23,10 @@ knitr::opts_chunk$set(echo = F,
                       message = F,
                       warning = F,
                       dev = "jpeg",
-                      # cache = T,
                       dpi = 300,
                       fig.show = "hold",
                       fig.pos = "b", 
-                      fig.path = "../figs/manuscript/figs/")
+                      fig.path = "../figs/supplementary/figs/")
 
 # str(knitr::opts_chunk$get()) # see for all options
 
@@ -281,1089 +275,25 @@ V_building <- nrow(df_fs_tmy_variable)
 A_building <- S_building + V_building
 ```
 
-# Introduction
-
-## Conventional M&V
-
-Measurement and Verification (M&V) is the process of quantifying energy
-savings from energy efficiency projects by comparing actual energy
-consumption against a baseline, adjusting for factors like weather and
-occupancy. This process ensures that improvements in energy performance
-are accurately evaluated. In the United States, practitioners often
-refer to ASHRAE Guideline 14, the International Performance Measurement
-and Verification Protocol (IPMVP), and the Federal Energy Management
-Program (FEMP) for standard guidelines [@doe_mv_2008;
-@efficiency_valuation_organisation_international_2012;
-@ashrae_ashrae_2023]. These guidelines outline standardized methods for
-quantifying energy savings, whether through calibrated simulations or
-monitored measurements for specific equipment or systems (isolation
-methods) or for entire buildings (whole-building methods). In this
-study, we will focus on the energy savings quantified at the
-whole-building level, where the measurements are obtained from utility
-bills or whole-building meters, however the overall conclusions would
-also apply to isolation methods. Typically, the process begins with
-baseline measurements taken during the year before implementing the
-energy-efficiency retrofit, followed by the same measurement procedure
-during the year after the intervention. After collecting two years of
-data, an M&V analyst fits an energy prediction model, using variables
-such as outdoor temperature and time [@mathieu_quantifying_2011] to
-project baseline energy consumption in the post-retrofit period. The
-difference between the counter-factual baseline and the measured
-intervention period energy consumption represents the energy savings.
-One of the key drawbacks of this method is its reliance on a two-year
-timeline to quantify savings, during which baseline measurements can
-become outdated due to changes in building performance caused by
-non-routine events unrelated to the intervention. Specifically, an M&V
-analyst should account for two types of baseline changes: (1) static
-changes, which are known building operational changes: such as
-renovation, equipment addition or removal; and (2) gradual changes,
-which often occur subtly and unknown, such as the incremental adoption
-of LED lighting or more efficient plug loads. Identifying and
-quantifying these changes are particularly labor-intensive and
-challenging. Consequently, those limitations reduce the feasibility of
-M&V and complicate the quantification of estimation uncertainty, thus
-impacting the accuracy and timeliness of savings assessments.
-
-## Randomized M&V
-
-To address the limitations of conventional M&V methods and the
-challenges posed by building baseline changes, we proposed a M&V method
-that adopts the randomized crossover design [@raftery2024], a gold
-standard from medical, agricultural and online controlled experimental
-(i.e. A/B testing) studies [@blackston2019; @duan2013; @gupta2019;
-@mie2022; @munro; @raseduzzaman2017]. An early application of this
-randomized design to the field of M&V in buildings was first used in
-[@raftery2018], which compared the energy performance of two different
-supply air temperature reset strategies in a building. Subsequent
-improvements to the M&V method include adding a sequential evaluation
-framework and defining stopping criteria to end the M&V period early
-after reaching a target level of uncertainty, among other improvements,
-such as using blocked randomization by weekday. The full framework is
-detailed in a previously published study [@raftery2024] along with a
-case study application to a real building, and other example use cases.
-In summary, this method provides M&V analysts with a randomized schedule
-that alternates between baseline and intervention implementation while
-ensuring balanced sampling across days of the week and seasons. For
-example, given a 10-week M&V period for one intervention, the balanced
-randomized schedule would equally sample five Mondays with the baseline
-strategy in operation and five Mondays with the intervention strategy in
-operation. The major limitation of this method is that it is only
-applicable to a subset of retrofit projects where interventions can be
-easily switched on and off, which is a small subset of all the
-interventions performed in buildings. However, for all applicable use
-cases, it allows analysts to detect energy savings sequentially shortly
-after the test begins. In addition, once the desired estimate
-uncertainty target is achieved, analysts can terminate the M&V study and
-switch to 100% intervention. The key advantage of randomization is that
-if control strategies are sampled with equal probability, the influence
-of other confounding factors such as occupancy change (a common
-non-routine event) and other more subtle long term changes in building
-energy use are likely to be evenly distributed among measurements,
-leading to a more accurate and unbiased assessment of the intervention
-effect.
-
-## BDG2 dataset
-
-To demonstrate and differences between the two M&V methods, the Building
-Genome Dataset 2 (BGD2) is used, which is an extensive open-access
-dataset designed to advance research and development in building energy
-efficiency and control strategies, acting as a test-bed for modeling,
-simulation, and algorithm development [@miller_building_2020]. BGD2
-contains over 1000 buildings\' metadata and realistic operational
-measurements between 2016 and 2017 from across North America and Europe,
-making it one of the most comprehensive collections of building-related
-data available for scientific use. The dataset includes various
-commercial building types such as offices, education facilities, public,
-and retail buildings, and provides detailed information on their
-physical characteristics (e.g. energy ratings, heating types and floor
-area) and hourly measurements of chilled and hot water, electricity, gas
-usage as well as site outdoor weather conditions. In this study, we
-mostly used the metered electricity and outdoor weather measurements for
-evaluating the M&V methods.
-
-## Literature review
-
-### Whole building approach
-
-ASHRAE Guideline 14 and the IPMVP provide options for whole-building M&V
-use cases. For code compliance using the prescriptive option, 12 months
-of baseline and 12 months of post-retrofit measurements are required. In
-addition, the expected savings should be larger than 10% and the
-baseline energy model fitting accuracy should have CV(RMSE) lower than
-25% for 12-month data collection. Thus, most research related to M&V for
-the whole-building approach focuses on the accuracy of baseline
-modeling, exploring model performance from simple regression models to
-more complex machine learning techniques. One study reviewed various
-models suitable for M&V applications as well as selected input features
-[@alrobaie_review_2022] and another study provided a definitive
-methodology to apply machine learning models for M&V use cases
-[@gallagher_development_2018]. In addition, a few studies investigated
-the critical performance metrics to evaluate the developed baseline
-models [@granderson_automated_2015; @granderson_development_2014] and
-compared a variety of models using those metrics
-[@granderson_accuracy_2016]. These studies made significant
-contributions by emphasizing the uncertainty associated with the
-model-fitting process, a key factor in accurately determining energy
-savings. Furthermore, other researchers addressed this issue by
-leveraging statistical formulation and inference to improve baseline
-energy models [@burkhart_measurement_2014; @heo_calibration_2012;
-@walter_uncertainty_2014]. However, a gap still remains in the
-literature regarding the rigorous quantification of uncertainties
-directly associated with calculated savings, for instance, accounting
-for the potential bias that the baseline model might deteriorate (i.e.,
-become \'stale\') over the extended period of pre- and post-analysis.
-
-### Changes in building baseline measurements
-
-Changes in a building that influence its energy usage and are unrelated
-to the intervention being studied by the M&V method are commonly
-referred to as non-routine events. Current guidelines define non-routine
-events as \'static factors\' that need to be adjusted after projecting
-the baseline in the post-retrofit period [@ashrae_ashrae_2023;
-@efficiency_valuation_organisation_international_2012]. A common
-non-routine event in energy-saving M&V projects is a change in occupancy
-or a significant shift in occupant behavior, equipment run time, and
-operating conditions (e.g. set points, lighting, and ventilation
-levels). However, current standards or guidelines only provide a general
-approach for consideration. For example, IPMVP requires the facility
-owner and the M&V analyst to periodically perform inspections of all
-equipment and operations during the reporting period, which is
-labor-intensive and error-prone. ASHRAE Guideline 14 recommends
-performing engineering calculations or computer software simulations to
-adjust the post-retrofit baseline. Additionally, it is relatively rare
-to have access to all measurements needed for adjustments, such as
-occupancy, and thus the analyst normally assumes those factors remain
-unchanged throughout the study. For example, some studies use linear
-interpolation to estimate counter-factual baseline for the demand
-response program [@beil_round-trip_2015; @keskar_commercial_2020].
-Consequently, one study points out that it is inaccurate to assume no
-change in the operating conditions during the response period (Huang,
-Katipamula, and Lutes 2023). Other studies realized such limitation in
-field study, and emphasized the importance of requiring matched groups
-to control for exogenous factors beyond weather differences when
-comparing between baseline and intervention
-[@demand_side_analytics_population_2022; @huang_experimental_2023].
-
-Overall, those non-routine events mostly refer to clearly observable
-changes, but there are also more gradual and subtle changes in
-buildings, which are hardly noticed. We define those gradual changes as
-\'operational drift\' in this study. One likely encountered operational
-drift situation is the filter clogging in air handling units due to
-particle accumulation. This causes supply fans to gradually consume more
-energy to maintain the required duct static pressure [@feng_newly_2019;
-@zhai_full-scale_2017]. If M&V analysts are unaware of such changes and
-lack an appropriate adjustment method (e.g., replacing filters before
-the intervention begins), the savings could be overestimated as the
-decreased energy use is incorrectly attributed to the intervention
-rather than the filter replacement. An operational drift has not been
-formally defined in the literature or standards, but in this study, we
-consider it as a special type of non-routine event, as it also
-represents a change in facility operation that occurs gradually over a
-longer period of time.
-
-## Objectives
-
-As mentioned, the goal of an M&V project is to determine the effect,
-typically energy savings, of some intervention in the building. In this
-study, we focus on switchable interventions and an example of such an
-intervention is a control strategy that adjusts the chilled water
-plant\'s supply water temperature, which can be commonly found in the
-literature [@duarte_field_2023; @lee_simulationoptimization_2012;
-@qiu_chilled_2022; @jin2007; @taylor_optimizing_2012]. In our case, we
-made it even simpler by adjusting the setpoint based on outdoor weather
-conditions (see description in Section
-\@ref(apply-virtue-intervention)). By conducting such an analysis, we
-aim to:
-
-1.  Determine, using a large sample of buildings, how much more
-    accurately the randomized M&V method would estimate the savings of
-    the proposed intervention compared to the conventional M&V, and how
-    much more quickly it would reach a result.
-
-2.  Determine how much more robust the randomized method is compared to
-    the conventional method when static non-routine events and
-    operational drift are present in the dataset. The BDG2 dataset
-    contains real-world building energy usage data collected over two
-    years, which inherently contains varying degrees of usage changes.
-    By virtually introducing intervention effects into the existing
-    dataset, we can calculate the ground-truth energy savings, which
-    serve as a reference point for method comparison.
-
-3.  Open-source implementation of the proposed randomized M&V method. We
-    ensured the reproducibility of the method by making the analysis
-    code open source, including randomized schedule generation,
-    sequential statistical analysis, energy modeling and normalized
-    saving calculation. In addition, we also included code for extended
-    use cases of the randomized method, such as changing sampling ratio
-    and sampling intervals. Using the available open resources, building
-    analysts should be able to seamlessly integrate and apply them in
-    their own M&V projects.
-
-# Method
-
-We outlined the methodology of the study in Figure \@ref(fig:flowchart)
-and extended several key components in this section.
-
-```{r flowchart, fig.cap = "Flow chart showing the methodology for comparing the estimated savings of randomized M&V with the conventional M&V", out.width="75%"}
-
-knitr::include_graphics(paste0(fig_path, "flowchart.png"))
-```
-
-## Filter and clean dataset
-
-We extracted the electricity measurements from the BDG2 dataset and
-filter out all qualified buildings based on the following criteria:
-
-1.  Missing values \< 1000: given the hourly resolution of all
-    measurements, this is equivalent to 1.5 months of missing days.
-
-2.  Mean electricity usage \> 0 kWh: target buildings should have active
-    electricity usage.
-
-3.  $\frac{abs(E_{2017} - E_{2016})}{E_{2016}}< 25\%$: any increase or
-    decrease in building electricity usage in the second year should be
-    less than 25% of that in the first year.
-
-4.  Electric EUI \< 750 kWh/$m^2$: excludes buildings at the top 5% of
-    electrical energy usage intensity according to the statistics
-    provided by the Building Performance Database
-    [@lawrence_berkeley_national_laboratory_buildings_2015;
-    @mathew_big-data_2015].
-
-5.  Warehouse and parking types are excluded: target buildings have less
-    demand flexibility to implement a chilled water set point reset
-    control.
-
-```{r stablesite, fig.cap = "Site summary of the filtered buildings from BDG2 dataset (counts < 10 are omitted for visualization; left: aggregated counts of buildings for each type; right: breakdown building counts for each building type at each location)", fig.width=8, fig.height=6}
-
-set3 <- colorRampPalette(brewer.pal('Set3',n=12))
-type_colors <- setNames(set3(13), all_types_variable$type)
-  
-stable_set <- df_energy_stable %>%
-  group_by(type) %>%
-  distinct(name) %>%
-  summarise(stable = n()) %>%
-  ungroup()
-
-variable_set <- df_energy_variable %>%
-  group_by(type) %>%
-  distinct(name) %>%
-  summarise(variable = n()) %>%
-  ungroup()
-
-p1 <- variable_set %>% 
-  left_join(stable_set, by = "type") %>% 
-  mutate(stable = replace_na(stable, 0)) %>% 
-  group_by(type) %>% 
-  summarise(n = stable + variable) %>% 
-  ungroup() %>% 
-  mutate(type = fct_reorder(type, n, .desc = F)) %>%
-  ggplot(aes(x = 1, y = n, fill = as.factor(type))) +
-  geom_col() +
-  geom_text(aes(label = ifelse(n > 10, n, "")), color = "black", position = position_stack(vjust = 0.5)) +
-  scale_y_continuous(expand = c(0, 0),
-                     breaks = breaks_pretty(n = 4)) +
-  scale_x_discrete(expand = c(0, 0.1)) +
-  scale_fill_manual(values = type_colors) +
-  labs(x = NULL,
-       y = NULL,
-       subtitle = "Combining all locations",
-       fill = NULL) +
-  theme(axis.text.x = element_blank(),
-        panel.grid.major.y = element_line(color = "grey80"),
-        legend.direction = "horizontal",
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-stable_set <- df_energy_stable %>% 
-  left_join(df_loc, by = "site") %>% 
-  group_by(type, location) %>%
-  distinct(name) %>%
-  summarise(stable = n()) %>%
-  ungroup()
-
-variable_set <- df_energy_variable %>% 
-   left_join(df_loc, by = "site") %>% 
-  group_by(type, location) %>%
-  distinct(name) %>%
-  summarise(variable = n()) %>%
-  ungroup()
-
-p2 <- variable_set %>% 
-  left_join(stable_set, by = c("type", "location")) %>% 
-  mutate(stable = replace_na(stable, 0)) %>% 
-  group_by(location, type) %>% 
-  summarise(n = stable + variable) %>% 
-  ungroup() %>% 
-  group_by(location) %>%
-  mutate(proportion = n / sum(n),
-         total = sum(n),
-         ymax = cumsum(proportion),
-         ymin = c(0, head(ymax, n = -1))) %>%
-  mutate(label_pos = (ymax + ymin) / 2) %>%
-  ungroup() %>%
-  group_by(type) %>%
-  mutate(order = sum(n)) %>%
-  ungroup() %>%
-  mutate(type = fct_reorder(type, order, .desc = F)) %>%
-  ggplot(aes(ymax = ymax, ymin = ymin, xmax = 4, xmin = 3.2, fill = type)) +
-  geom_rect() +
-  coord_polar(theta = "y") +
-  xlim(c(2, 4)) +
-  facet_wrap(~ location, nrow = 3) +
-  labs(x = NULL,
-       y = NULL,
-       subtitle = "For each location",
-       fill = NULL) +
-  scale_fill_manual(values = type_colors) +
-  geom_text(aes(x = 3.7, y = label_pos, label = ifelse(n > 10, n, ""))) +
-  geom_text(aes(x = 2, y = 0, label = paste0("Total\n", total)), color = "black", check_overlap = T) +
-  theme(legend.direction = "horizontal",
-        axis.text = element_blank(),
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-ggarrange(p1, p2,
-          ncol = 2, nrow = 1,
-          widths = c(0.2, 1),
-          common.legend = TRUE,
-          legend = "bottom") +
-  plot_annotation(title = "Summary of filtered buildings and types")
-```
-
-For all qualified buildings, we also create a feature to identify
-buildings with very stable electricity usage overall two year period by
-identifying those with no statistically significant difference (P-value
-\> 0.05) between the two-year electricity usage. Applying this filter to
-real buildings, only 66 buildings are labeled in this \'stable\' subset
-out of a total of 600 buildings. While we did not adjust for weather
-differences between the two years when generating this high-level
-feature, this result highlights that the assumption that buildings are
-typically stable over the timeframe involved in conventional M&V methods
-is rarely true. As mentioned in \@ref(non-routine-events-impact), such
-variability is largely associated with non-routine events, especially
-operational drifts since the assessment, even under ideal situations,
-lasts for two years. And according to the statistics shown here, it is a
-typical case observed in real buildings applications.
-
-## Apply virtue intervention
-
-Figure \@ref(fig:chwst) shows the algorithm for the proposed control
-intervention that resets the chiller supply temperature based on the
-outdoor weather conditions, which can be commonly found in the
-literature [@lee_chilled_2022; @congradac_recognition_2012]. For both
-strategies, we assume that the chiller operates when the outdoor
-temperature exceeds 10°C. The baseline strategy, representing the
-existing measurements from the dataset, operates with a constant water
-supply temperature. The intervention strategy, as illustrated in the
-figure, adjusts the water supply temperature dynamically, resetting it
-from 7°C to 12°C.
-
-```{r chwst, fig.cap = "Proposed intervention strategy: chilled water supply temperature reset based on outdoor temperature.", fig.width=8, fig.height=4}
-
-data.frame(
-  OAT = c(10, 15, 25, 30),  
-  Baseline = c(6, 6, 6, 6),      
-  Intervention = c(12, 12, 7, 7)
-  ) %>% 
-  pivot_longer(cols = c("Baseline", "Intervention"), names_to = "strategy", values_to = "value") %>% 
-  ggplot(aes(x = OAT, y = value, color = strategy)) +
-  geom_line(linewidth = 1.2) +
-  scale_color_manual(values = ls_colors) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = c(4, 6, 8, 10, 12),
-                     limits = c(5, 12.5),
-                     labels = number_format(suffix = " °C")) +
-  scale_x_continuous(expand = c(0, 0), 
-                     breaks = c(5, 10, 15, 20, 25, 30), 
-                     labels = number_format(suffix = " °C")) +
-  geom_vline(xintercept = 10, lty = "dashed", color = "red") +
-  annotate(geom = "text", x = 7.5, y = 8, label = "No chiller operation\nbelow 10 °C") +
-  coord_cartesian(xlim = c(5, 30)) +
-  labs(x = "Outdoor temperature", 
-       y = "Chilled water supply temperature", 
-       color = NULL, 
-       title = "Chilled water supply temperature reset intervention") +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.direction = "horizontal",
-        legend.position = "bottom",
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-```
-
-We used a simple relationship to map the chilled water supply
-temperature reset to the electrical energy savings: $$
-\text{savings} = mean(E_{CHW}) \times 25\% \times \text{perc_savings}
-$$
-
-We assume on average, HVAC systems account for approximately 50% of a
-building's total electricity consumption, and the chilled water plant
-further consumes around 50% of the HVAC electricity. While this
-assumption largely simplifies the diverse energy usage across various
-building types, for the scope of this paper, we assume that 25% of the
-total building electricity is used by the chilled water plant, $E_{CHW}$
-[@us2012commercial]. Typically, the savings from an intervention are not
-proportional to the building's hourly electricity usage, which is
-generally the challenge for M&V. To address this, we mapped the
-resulting electricity savings as a percentage of the plant's normal
-operation, calculated as its mean electricity usage over the two-year
-period. This percentage is influenced by factors such as outdoor
-temperature ($OAT$), intervention supply water temperature
-($T_{interv}$), baseline supply water temperature ($T_{base}$) and hour
-of the day ($\delta_{occ}$, binary indicator whether during peak hours
-from 9 AM to 4 PM).
-
-$$
-\text{perc_savings = }
-\begin{cases}
-0, & \text{ if } OAT < 10°C \\
-\left[ \beta_{\text{temp}} \times (\text{T}_{\text{interv}} - \text{T}_{\text{base}}) \right] \times 
-\left[ \beta_{\text{occ}} \times \delta_{occ} + \beta_{\text{unocc}} \times (1 - \delta_{occ})\right], & \text{ otherwise}
-\end{cases}
-$$
-
-Parameters and their pre-defined values are summarized in the table
-below. For simplicity, those parameters were not rigorously calibrated
-for each building and were applied uniformly in the filtered dataset.
-Interested readers can also change the parameters in our open-source
-code to simulate different scenarios.
-
-|                        |                                                                  |       |
-|--------------|--------------------------------------------|--------------|
-| Parameter              | Description                                                      | Value |
-| $\beta_{temp}$         | \% savings from setting $T_{interv}$ 1 °C higher than $T_{base}$ | 0.08  |
-| $\beta_{occ}$          | \% savings adjustment during occupied hours                      | 1.2   |
-| $\beta_{\text{unocc}}$ | \% savings adjustment during unoccupied hours                    | 0.8   |
-
-: Table 1. Parameters for calculating the intervention savings.
-
-## Run M&V methods
-
-We described in detail the workflow of both conventional and randomized
-M&V methods in the previous study [@raftery2024]. The conventional
-method is a pre- and post-comparison on a 12-month baseline and 12-month
-intervention timeline. The randomized method defines sampling
-requirements as:
-
--   Use a daily sampling interval with the sampling time at midnight
-    each day.
-
--   Block by day of the week with a block period of 12 weeks.
-
-and stopping criteria as:
-
--   A minimum and maximum of 12 and 108 weeks respectively. The
-    randomized schedule covers the entire two-year period but the
-    stopping criteria enable an early stop at the end of the satisfied
-    blocking period.
-
--   At least 80% of the dry-bulb temperature range in the annual TMY
-    data is sampled by both strategies.
-
--   90% confidence that energy savings exceed or do not exceed 0% using
-    the SPRT test. Medium effect size (d = 0.5) quantified by Cohen\'s d
-    and calculated SPRT statistics either fall below the lower threshold
-    or exceed the upper threshold.
-
--   Sample strategies at an equal sampling ratio (50% baseline, 50%
-    intervention).
-
-# Results
-
-The accuracy ($Acc$) is calculated as: $$
-Acc = \frac{E_{baseline} - E_{intervention}}{E_{baseline}}-\frac{E'_{baseline} - E'_{intervention}}{E'_{baseline}}
-$$where $E$ indicates true electricity usage and $E'$ indicates the
-estimated electricity usage either through the conventional method or
-the new randomized method. We present the distribution of savings
-estimation accuracy using boxen plots, also known as letter plots, which
-is an advanced variation of the box plot designed to extend beyond the
-interquartile range (IQR) by progressively dividing the data into
-smaller percentiles, revealing more detail in the tails of the
-distribution. We set the division parameter to k = 4, meaning the entire
-box area represents the data distribution from 6.25% to 93.75%. As the
-steps move closer to the center line (50% median), the distribution
-range progressively narrows with the next step representing 12.5% to
-87.5%, followed by 25% to 75%. In addition, for each boxen plot, we also
-showed the mean value of the distribution on top for reference.
-
-```{r abstract, fig.cap="Overall comparison results between the conventional M&V method and the proposed randomized M&V method (both upon reaching the stopping criteria for each case, and over a fixed two-year period).", fig.height=11, fig.width=12}
-
-#### GA ####
-rand_eob_S <- df_seq_fs_stable %>% 
-  filter(seq == "eob") %>% 
-  left_join(df_fs_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - fs), 
-         method = "rand_eob") %>% 
-  select(name, method, diff)
-
-conv_S <- df_fs_stable %>% 
-  filter(method != "rand") %>% 
-  pivot_wider(names_from = method, values_from = savings) %>% 
-  mutate(diff = abs(true - conv), 
-         method = "conv") %>% 
-  select(name, method, diff)
-
-rand_final_S <- df_fs_stable %>% 
-  filter(method != "conv") %>% 
-  pivot_wider(names_from = method, values_from = savings) %>% 
-  mutate(diff = abs(true - rand), 
-         method = "rand_final") %>% 
-  select(name, method, diff)
-
-df_MW_S <- rbind(rand_eob_S, conv_S, rand_final_S)
-
-# plot for the variable subset
-rand_eob_V <- df_seq_fs_variable %>% 
-  filter(seq == "eob") %>% 
-  left_join(df_fs_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site"))%>% 
-  mutate(diff = abs(savings - fs), 
-         method = "rand_eob") %>% 
-  select(name, method, diff)
-
-conv_V <- df_fs_variable %>% 
-  filter(method != "rand") %>% 
-  pivot_wider(names_from = method, values_from = savings) %>% 
-  mutate(diff = abs(true - conv), 
-         method = "conv") %>% 
-  select(name, method, diff)
-
-rand_final_V <- df_fs_variable %>% 
-  filter(method != "conv") %>% 
-  pivot_wider(names_from = method, values_from = savings) %>% 
-  mutate(diff = abs(true - rand), 
-         method = "rand_final") %>% 
-  select(name, method, diff)
-
-df_MW_V <- rbind(rand_eob_V, conv_V, rand_final_V)
-
-# plot for combined dataset
-rand_eob_A <- bind_rows(rand_eob_V, rand_eob_S) %>% 
-  select(name, rand_eob_diff = diff)
-
-conv_A <- bind_rows(conv_V, conv_S) %>% 
-  select(name, conv_diff = diff)
-
-rand_final_A <- bind_rows(rand_final_V, rand_final_S) %>% 
-  select(name, rand_final_diff = diff)
-
-df_MW_A <- rand_eob_A %>% 
-  left_join(conv_A, by = "name") %>% 
-  left_join(rand_final_A, by = "name") %>% 
-  pivot_longer(c(rand_eob_diff, conv_diff, rand_final_diff), names_to = "method", values_to = "diff")
-
-p_top <- df_MW_A %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "conv_diff" = "Conventional", "rand_eob_diff" = "Randomized", "rand_final_diff" = "Randomized\n(24 months)")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(median = median(diff)) %>% ungroup(), 
-            aes(x = method, y = median, label = paste0(round(median, digits = 1), " %")), 
-            size = 4) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       color = NULL, 
-       x = NULL, 
-       y = "Absolute error in fractional savings", 
-       subtitle = str_glue("All {A_building} buildings with measured weather")) +
-  coord_cartesian(ylim = c(0, 23)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text.x = element_blank(),
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-# TMY
-# plot for the stable subset
-rand_eob_S <- df_sprt_all_stable %>% 
-  filter(seq == "eob") %>% 
-  select(-c(seq, n_weeks)) %>% 
-  left_join(df_fs_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - annual), 
-         method = "rand_eob") %>% 
-  select(name, method, diff)
-
-conv_S <- df_fs_tmy_stable %>% 
-  left_join(df_fs_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - conv), 
-         method = "conv") %>% 
-  select(name, method, diff)
-
-rand_final_S <- df_fs_tmy_stable %>% 
-  left_join(df_fs_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - rand), 
-         method = "rand_final") %>% 
-  select(name, method, diff)
-
-df_TW_S <- rbind(rand_eob_S, conv_S, rand_final_S)
-
-# plot for the variable subset
-rand_eob_V <- df_sprt_all_variable %>% 
-  filter(seq == "eob") %>% 
-  select(-c(seq, n_weeks)) %>% 
-  left_join(df_fs_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - annual), 
-         method = "rand_eob") %>% 
-  select(name, method, diff)
-
-conv_V <- df_fs_tmy_variable %>% 
-  left_join(df_fs_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - conv), 
-         method = "conv") %>% 
-  select(name, method, diff)
-
-rand_final_V <- df_fs_tmy_variable %>% 
-  left_join(df_fs_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - rand), 
-         method = "rand_final") %>% 
-  select(name, method, diff)
-
-df_TW_V <- rbind(rand_eob_V, conv_V, rand_final_V)
-
-# plot for combined dataset
-rand_eob_A <- bind_rows(rand_eob_V, rand_eob_S) %>% 
-  select(name, rand_eob_diff = diff)
-
-conv_A <- bind_rows(conv_V, conv_S) %>% 
-  select(name, conv_diff = diff)
-
-rand_final_A <- bind_rows(rand_final_V, rand_final_S) %>% 
-  select(name, rand_final_diff = diff)
-
-df_TW_A <- rand_eob_A %>% 
-  left_join(conv_A, by = "name") %>% 
-  left_join(rand_final_A, by = "name") %>% 
-  pivot_longer(c(rand_eob_diff, conv_diff, rand_final_diff), names_to = "method", values_to = "diff")
-
-p_middle <- df_TW_A %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "conv_diff" = "Conventional", "rand_eob_diff" = "Randomized", "rand_final_diff" = "Randomized\n(24 months)")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(median = median(diff)) %>% ungroup(), 
-            aes(x = method, y = median, label = paste0(round(median, digits = 1), " %")), 
-            size = 4) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = "Absolute error in fractional savings", 
-       subtitle = str_glue("All {A_building} buildings with TOWT model and TMY weather")) +
-  coord_cartesian(ylim = c(0, 23)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-p_accuracy <- ggarrange(p_top, p_middle, 
-                        ncol = 1, nrow = 2,
-                        labels = c("a)", "b)"),
-                        common.legend = T, 
-                        legend = "bottom")
-  
-# Timeline plot
-df_time <- df_sprt_all_variable %>% 
-  filter(seq != "final") %>% 
-  bind_rows(df_sprt_all_stable %>% filter(seq != "final")) %>% 
-  select(name, seq, n_weeks)
-
-count <- list()
-n <- 1
-for (i in seq(0, 36, by = 3)){
-  
-  df_sprt <- df_time %>% 
-    filter(seq == "sprt",
-           n_weeks <= i)
-  
-  df_eob <- df_time %>% 
-    filter(seq == "eob",
-           n_weeks <= i)
-  
-  df_temp <- df_time %>% 
-    filter(seq == "temp", 
-           n_weeks <= i)
-  
-  count[[n]] <- tibble("n_weeks" = i, 
-                       "eob" = nrow(df_eob), 
-                       "temp" = nrow(df_temp), 
-                       "sprt" = nrow(df_sprt))
-  
-  n <- n + 1
-}
-
-count <- bind_rows(count) 
-
-p_timeline <- count %>% 
-  ggplot() +
-  geom_bar(data = . %>% 
-             filter(n_weeks == 24 | n_weeks == 36),
-           aes(x = n_weeks, y = eob, fill = "Buildings finishing randomized M&V"), 
-           stat = "identity", 
-           position = "stack",
-           alpha = 0.8, 
-           width = 3) +
-  geom_line(aes(x = n_weeks, y = temp, color = "Buildings satisfying 80% TMY range"),
-            alpha = 0.2) +
-  geom_point(aes(x = n_weeks, y = temp, color = "Buildings satisfying 80% TMY range"), 
-             size = 1.5) +
-  geom_line(aes(x = n_weeks, y = sprt, color = "Buildings satisfying SPRT"),
-            alpha = 0.2) +
-  geom_point(aes(x = n_weeks, y = sprt, color = "Buildings satisfying SPRT"), 
-             size = 1.5, 
-             shape = 17) +
-  geom_segment(aes(x = 36.5, y = max(eob), xend = 95.5, yend = max(eob)),
-               arrow = arrow(length = unit(0.25, "in")),   
-               linewidth = 1.1,  
-               color = "#fb8072") + 
-  annotate(geom = "text", 
-           x = 66, 
-           y = max(count$eob) - 30, 
-           size = 5,
-           label = "Excess time by conventional M&V") +
-  geom_vline(xintercept = c(12, 24, 36, 48, 96), lty = "dashed", color = "grey80") +
-  annotate(geom = "text", 
-           x = seq(6, 48, by = 12), 
-           y = 200, 
-           label = paste0("12-week\nblock"), 
-           alpha = 0.5) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = ls_colors) +
-  scale_x_continuous(expand = c(0, 0), 
-                     limits = c(0, 100),
-                     breaks = c(12, 24, 36, 48, 96), 
-                     labels = c("12 weeks", "24 weeks", "36 weeks", "1 year", "2 years")) +
-  coord_cartesian(ylim = c(0, 650)) +
-  labs(x = NULL, 
-       y = "Number of buildings", 
-       fill = NULL, 
-       color = NULL, 
-       subtitle = "timeline comparison") +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.direction = "horizontal",
-        legend.position = "bottom",
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-ggarrange(p_accuracy, p_timeline, 
-          ncol = 1, nrow = 2,
-          heights = c(2.2, 1),
-          labels = c("", "c)"),
-          common.legend = F, 
-          legend = "bottom") +
-  plot_annotation(title = "Overall accuracy and time required for savings estimation by different M&V methods")
-
-MW_summary <- df_MW_A %>% 
-  pivot_wider(names_from = "method", values_from = "diff") %>% 
-  group_by(name) %>% 
-  summarise(improv_eob = (conv_diff - rand_eob_diff) / conv_diff * 100, 
-            improv_final = (conv_diff - rand_final_diff) / conv_diff * 100) %>% 
-  ungroup() %>% 
-  summarise(across(c(improv_eob, improv_final), median))
-
-TW_summary <- df_TW_A %>% 
-  pivot_wider(names_from = "method", values_from = "diff") %>% 
-  group_by(name) %>% 
-  summarise(improv_eob = (conv_diff - rand_eob_diff) / conv_diff * 100, 
-            improv_final = (conv_diff - rand_final_diff) / conv_diff * 100, 
-            improv = ifelse(improv_eob >= 0, 1, 0)) %>% 
-  ungroup() %>% 
-  mutate(perc = sum(improv)) %>% 
-  summarise(across(c(improv_eob, improv_final, perc), median))
-```
-
-Figure \@ref(fig:abstract) shows the overall results of M&V methods
-comparison and for clarity, we plotted conventional M&V results in grey,
-randomized M&V results after satisfying all stopping criteria in green,
-and the randomized M&V results sampled for the entire 24 months in blue.
-Subplots (a) and (b) calculate the savings estimation error as the
-absolute deviation from the true savings (i.e. $|Acc|$) and show the
-results distribution using the conventional M&V method in the first
-column, the randomized M&V method that stops after satisfying all
-stopping criteria in the second column, and the randomized M&V method
-continues 50%/50% sampling throughout 2 years in the third column. In
-addition, subplot (a) shows the savings estimated from measured weather
-conditions, and subplot b) shows the savings normalized on the typical
-meteorological weather of the building location after using a
-time-of-week-temperature (TOWT) model [@mathieu_quantifying_2011]. As a
-result, the conventional M&V method exhibits a median deviation of 5% in
-savings estimation, whereas the randomized method demonstrates
-significantly smaller deviations. If the analyst stops immediately after
-satisfying all stopping criteria, the deviation is reduced to
-approximately 1.6%. Extending the M&V period to match the same time
-period of the conventional method (24 months) further improves accuracy
-to 0.7% deviation. Furthermore, by comparing subplots (a) and (b), we
-observe a minor improvement in estimation accuracy when a model is
-fitted to the data to account for weather differences. The model fitting
-is most beneficial for the shorter dataset (randomized and stopping when
-all criteria are met, typically 24-36 weeks of data), where it improves
-estimation accuracy by 0.4%. This is because the weather conditions
-between the first and second year for each of the locations are
-relatively similar on average over this time period, and thus the effect
-of adjusting for temperature as an independent variable in the model is
-relatively small. We found 83% of all filtered buildings show less error
-when using the randomized M&V, and by comparing the error distribution
-in subplot (b), we noticed a median of 74% error reduction at the time
-of satisfying all stopping criteria. Subplot (c) compares the overall
-timeline of the two M&V methods. The results show that almost all
-buildings achieve accurate M&V results and meet the stopping criteria
-within 24 weeks (for this intervention), with the remainder meeting all
-stopping criteria within 36 weeks. The additional 12 weeks are usually
-driven by a need to span sufficient weather conditions representative of
-a full year of data. Meanwhile, the red arrow highlights the excess time
-required by the conventional M&V method (24 months). Thus, the
-randomized M&V method finds more accurate results in approximately a
-quarter of the time required for conventional M&V. Even if it was the
-case that an existing 12-month baseline data was available at the start
-of the M&V process, randomized M&V would still obtain a more accurate
-result, in less time, than obtaining the 12-month retrofit dataset
-required by conventional M&V.
-
-Figure \@ref(fig:meanerr) shows the biased (instead of absolute)
-estimated deviation, highlighting that the uncertainty range associated
-with the conventional method is significantly larger compared to even
-the randomized method that only takes 36 weeks, according to subplot (c)
-in Figure \@ref(fig:abstract).
-
-```{r meanerr, fig.cap="Distribution of estimated deviation from the ground-truth savings calculated by the two M&V methods", fig.height=8, fig.width=12}
-# plot for the stable subset
-rand_eob_S <- df_seq_fs_stable %>% 
-  filter(seq == "eob") %>% 
-  left_join(df_fs_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = savings - fs, 
-         method = "rand_eob") %>% 
-  select(name, method, diff)
-
-conv_S <- df_fs_stable %>% 
-  filter(method != "rand") %>% 
-  pivot_wider(names_from = method, values_from = savings) %>% 
-  mutate(diff = true - conv, 
-         method = "conv") %>% 
-  select(name, method, diff)
-
-rand_final_S <- df_fs_stable %>% 
-  filter(method != "conv") %>% 
-  pivot_wider(names_from = method, values_from = savings) %>% 
-  mutate(diff = true - rand, 
-         method = "rand_final") %>% 
-  select(name, method, diff)
-
-df_MW_S <- rbind(rand_eob_S, conv_S, rand_final_S)
-
-# plot for the variable subset
-rand_eob_V <- df_seq_fs_variable %>% 
-  filter(seq == "eob") %>% 
-  left_join(df_fs_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site"))%>% 
-  mutate(diff = savings - fs, 
-         method = "rand_eob") %>% 
-  select(name, method, diff)
-
-conv_V <- df_fs_variable %>% 
-  filter(method != "rand") %>% 
-  pivot_wider(names_from = method, values_from = savings) %>% 
-  mutate(diff = true - conv, 
-         method = "conv") %>% 
-  select(name, method, diff)
-
-rand_final_V <- df_fs_variable %>% 
-  filter(method != "conv") %>% 
-  pivot_wider(names_from = method, values_from = savings) %>% 
-  mutate(diff = true - rand, 
-         method = "rand_final") %>% 
-  select(name, method, diff)
-
-df_MW_V <- rbind(rand_eob_V, conv_V, rand_final_V)
-
-# plot for combined dataset
-rand_eob_A <- bind_rows(rand_eob_V, rand_eob_S) %>% 
-  select(name, rand_eob_diff = diff)
-
-conv_A <- bind_rows(conv_V, conv_S) %>% 
-  select(name, conv_diff = diff)
-
-rand_final_A <- bind_rows(rand_final_V, rand_final_S) %>% 
-  select(name, rand_final_diff = diff)
-
-df_MW_A <- rand_eob_A %>% 
-  left_join(conv_A, by = "name") %>% 
-  left_join(rand_final_A, by = "name") %>% 
-  pivot_longer(c(rand_eob_diff, conv_diff, rand_final_diff), names_to = "method", values_to = "diff")
-
-p_top <- df_MW_A %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "conv_diff" = "Conventional", "rand_eob_diff" = "Randomized", "rand_final_diff" = "Randomized\n(24 months)")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(median = median(diff)) %>% ungroup(), 
-            aes(x = method, y = median, label = paste0(round(median, digits = 1), " %")), 
-            size = 4) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       color = NULL, 
-       x = NULL, 
-       y = "Error in fractional savings", 
-       subtitle = str_glue("All {A_building} buildings with measured weather")) +
-  coord_cartesian(ylim = c(-20, 20)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text.x = element_blank(),
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-# TMY
-# plot for the stable subset
-rand_eob_S <- df_sprt_all_stable %>% 
-  filter(seq == "eob") %>% 
-  select(-c(seq, n_weeks)) %>% 
-  left_join(df_fs_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = savings - annual, 
-         method = "rand_eob") %>% 
-  select(name, method, diff)
-
-conv_S <- df_fs_tmy_stable %>% 
-  left_join(df_fs_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = savings - conv, 
-         method = "conv") %>% 
-  select(name, method, diff)
-
-rand_final_S <- df_fs_tmy_stable %>% 
-  left_join(df_fs_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = savings - rand, 
-         method = "rand_final") %>% 
-  select(name, method, diff)
-
-df_TW_S <- rbind(rand_eob_S, conv_S, rand_final_S)
-
-# plot for the variable subset
-rand_eob_V <- df_sprt_all_variable %>% 
-  filter(seq == "eob") %>% 
-  select(-c(seq, n_weeks)) %>% 
-  left_join(df_fs_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = savings - annual, 
-         method = "rand_eob") %>% 
-  select(name, method, diff)
-
-conv_V <- df_fs_tmy_variable %>% 
-  left_join(df_fs_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = savings - conv, 
-         method = "conv") %>% 
-  select(name, method, diff)
-
-rand_final_V <- df_fs_tmy_variable %>% 
-  left_join(df_fs_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = savings - rand, 
-         method = "rand_final") %>% 
-  select(name, method, diff)
-
-df_TW_V <- rbind(rand_eob_V, conv_V, rand_final_V)
-
-# plot for combined dataset
-rand_eob_A <- bind_rows(rand_eob_V, rand_eob_S) %>% 
-  select(name, rand_eob_diff = diff)
-
-conv_A <- bind_rows(conv_V, conv_S) %>% 
-  select(name, conv_diff = diff)
-
-rand_final_A <- bind_rows(rand_final_V, rand_final_S) %>% 
-  select(name, rand_final_diff = diff)
-
-df_TW_A <- rand_eob_A %>% 
-  left_join(conv_A, by = "name") %>% 
-  left_join(rand_final_A, by = "name") %>% 
-  pivot_longer(c(rand_eob_diff, conv_diff, rand_final_diff), names_to = "method", values_to = "diff")
-
-p_middle <- df_TW_A %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, "conv_diff" = "Conventional", "rand_eob_diff" = "Randomized", "rand_final_diff" = "Randomized\n(24 months)")) %>% 
-  ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
-  geom_text(data = . %>% group_by(method) %>% summarise(median = median(diff)) %>% ungroup(), 
-            aes(x = method, y = median, label = paste0(round(median, digits = 1), " %")), 
-            size = 4) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = "Estimated error in fractional savings", 
-       subtitle = str_glue("All {A_building} buildings with TOWT model and TMY weather")) +
-  coord_cartesian(ylim = c(-20, 20)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-ggarrange(p_top, p_middle, 
-          ncol = 1, nrow = 2,
-          labels = c("a)", "b)")) +
-  plot_annotation(title = "Estimated error in savings estimation by different M&V methods")
-
-percentiles <- df_TW_A %>%
-  filter(method == "conv_diff") %>% 
-  summarise(
-    Q1     = round(quantile(diff, 0.25, na.rm = TRUE), digits = 2),
-    Median = round(quantile(diff, 0.50, na.rm = TRUE), digits = 2),
-    Q3     = round(quantile(diff, 0.75, na.rm = TRUE), digits = 2)
-  )
-```
-
-Additionally in the literature, we found another M&V study using over
-500+ commercial buildings (on a different open-source dataset), but
-their study scope was to compare the predictive performance of a variety
-of M&V baseline models from simple weekly mean to more complex machine
-learning methods using the normalized mean bias error (NMBE)
-[@granderson_accuracy_2016]. Since we also calculated the normalized
-savings estimation error, we compared our normalized accuracy for 600+
-buildings with the TOWT model and TMY weather with their TOWT model
-prediction assessment in the following table, highlighting that the
-model and overall building datasets are performing similarly.
-
-|                 | Reference study results [@granderson_accuracy_2016] | Our study results      |
-|-----------------|--------------------------------------|-----------------|
-| 25th percentile | -5.85                                               | `r percentiles$Q1`     |
-| 50th percentile | -1.25                                               | `r percentiles$Median` |
-| 75th percentile | 3.86                                                | `r percentiles$Q3`     |
-
-: Table 1. Savings accuracy comparison with a similar literature
-
-## Non-routine events impact
-
-```{r nosaving, fig.cap="Comparison between the two M&V methods in detecting no intervention effect when buildings are subject to static non-rountine events and gradual operational drift.", fig.height=5, fig.width=12}
-
-#### MEAN-NULL ####
+```{r absnull, fig.cap="Comparison between the two M&V methods in detecting no intervention effect (expressed without absolute calculation) when buildings are subject to baseline change.", fig.height=6, fig.width=12}
+#### ABS-NULL ####
 rand_eob_S <- df_seq_fs_null_stable %>% 
   filter(seq == "eob") %>% 
-  mutate(diff = 0 - fs, 
+  mutate(diff = abs(0 - fs), 
          method = "rand_eob") %>% 
   select(name, method, diff)
 
 conv_S <- df_fs_null_stable %>% 
   filter(method != "rand") %>% 
   pivot_wider(names_from = method, values_from = savings) %>% 
-  mutate(diff = true - conv, 
+  mutate(diff = abs(true - conv), 
          method = "conv") %>% 
   select(name, method, diff)
 
 rand_final_S <- df_fs_null_stable %>% 
   filter(method != "conv") %>% 
   pivot_wider(names_from = method, values_from = savings) %>% 
-  mutate(diff = true - rand, 
+  mutate(diff = abs(true - rand), 
          method = "rand_final") %>% 
   select(name, method, diff)
 
@@ -1372,21 +302,21 @@ df_MW_S <- rbind(rand_eob_S, conv_S, rand_final_S)
 # plot for the variable subset
 rand_eob_V <- df_seq_fs_null_variable %>% 
   filter(seq == "eob") %>% 
-  mutate(diff = 0 - fs, 
+  mutate(diff = abs(0 - fs), 
          method = "rand_eob") %>% 
   select(name, method, diff)
 
 conv_V <- df_fs_null_variable %>% 
   filter(method != "rand") %>% 
   pivot_wider(names_from = method, values_from = savings) %>% 
-  mutate(diff = true - conv, 
+  mutate(diff = abs(true - conv), 
          method = "conv") %>% 
   select(name, method, diff)
 
 rand_final_V <- df_fs_null_variable %>% 
   filter(method != "conv") %>% 
   pivot_wider(names_from = method, values_from = savings) %>% 
-  mutate(diff = true - rand, 
+  mutate(diff = abs(true - rand), 
          method = "rand_final") %>% 
   select(name, method, diff)
 
@@ -1409,177 +339,359 @@ df_MW_A <- rand_eob_A %>%
 
 df_MW_A %>% 
   mutate(method = as.factor(method), 
-         method = recode_factor(method, 
-                                "conv_diff" = "Conventional", 
-                                "rand_eob_diff" = "Randomized", 
-                                "rand_final_diff" = "Randomized\n(24 months)")) %>% 
+         method = recode_factor(method, "conv_diff" = "Conventional", "rand_eob_diff" = "Randomized", "rand_final_diff" = "Randomized\n(24 months)")) %>% 
   ggplot(aes(x = method, y = diff, fill = method)) +
   geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
   geom_lv(k = 4, outlier.shape = NA) +
   geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
-  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
   geom_text(data = . %>% group_by(method) %>% summarise(median = median(diff)) %>% ungroup(), 
             aes(x = method, y = median, label = paste0(round(median, digits = 1), " %")), 
             size = 4) +
   scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 6), 
+                     breaks = breaks_pretty(n = 4), 
                      labels = number_format(suffix = " %")) +
   scale_fill_manual(values = ls_colors) +
   scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
   labs(fill = NULL, 
        x = NULL, 
-       y = "Estimated effect in fractional savings",
-       title = "Estimated effect of non-routine events when using different M&V methods", 
-       subtitle = str_glue("All {A_building} buildings with measured weather")) +
-  coord_cartesian(ylim = c(-18, 18)) +
+       y = "Absolute effect in fractional savings", 
+       title = "Absolute effect of non-routine events when using different M&V methods", 
+       subtitle = str_glue("All {A_building} buildings wither measured weather")) +
+  coord_cartesian(ylim = c(0, 23)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
         legend.position = "none",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 ```
 
-As mentioned in Section \@ref(filter-and-clean-dataset), the majority of
-the selected buildings are affected by operational drift, which is the
-reason why we observe baseline electricity usage changes throughout the
-two-year period. To evaluate the robustness of the two M&V methods to
-the effect of operational drift and non-routine events, we repeated the
-M&V run on the original dataset prior to the application of the reset
-control. In other words, there *is no intervention applied here*, so the
-most reliable M&V method will be the one that detects the closest to 0
-kW savings using the measurements. Therefore, the $Acc$ here are
-calculated as:
+```{r meancont, fig.cap="Comparison of different sampling ratio impact on M&V estimation accuracy (expressed without absolute calculation for errors)", fig.height=8, fig.width=12}
 
-$$
-Acc = 0-\frac{E'_{baseline} - E'_{intervention}}{E'_{baseline}}
-$$
+#### MEAN-CONT ####
+df_MW_S <- df_cont_stable %>% 
+  left_join(df_fs_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - cont_fs, 
+         diff_all = savings - cont_fs_all) %>% 
+  select(name, diff, diff_all, ratio) %>% 
+  pivot_longer(c(diff, diff_all), names_to = "type", values_to = "values") %>% 
+  mutate(ratio = ifelse(ratio == 1 & type == "diff", "1_1", 
+                        ifelse(ratio == 1 & type == "diff_all", "1_2", 
+                               ifelse(ratio == 2 & type == "diff", "2_1", 
+                                      ifelse(ratio == 2 & type == "diff_all", "2_2", ratio))))) %>% 
+  bind_rows(df_fs_stable %>% 
+              filter(method != "conv") %>% 
+              pivot_wider(names_from = method, values_from = savings) %>% 
+              mutate(values = true - rand, 
+                     ratio = "0", 
+                     type = "diff_ref") %>% 
+              select(name, values, ratio, type))
 
-Figure \@ref(fig:nosaving) shows that the randomized M&V method (both at
-the time of satisfying all stopping criteria and at the end of a
-two-year period) produced consistent results. We included the absolute
-deviation ($|ACC|$) figure in the supplementary material. Similarly to
-Figure \@ref(fig:abstract), stopping when meeting all stopping criteria
-generally yields slightly larger uncertainty than continuing for 24
-months. However, it still yields a more accurate result than the
-conventional method. Interestingly, similar to
-[@granderson_accuracy_2016] where they obtained a median normalized
-deviation around -1.25%, our analysis on the conventional method shows
-that the typical deviation is -1.5%, meaning that the typical building
-is decreasing energy use slightly in this dataset in the absence of any
-known intervention. Thus, if a building analyst were to apply an
-intervention to this building and use conventional M&V to measure the
-effect, they would typically \'detect\' 1.5% energy savings even when
-the intervention had no actual impact on energy performance.
 
-# Discussion
+# plot for the variable subset
+df_MW_V <- df_cont_variable %>% 
+  left_join(df_fs_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - cont_fs, 
+         diff_all = savings - cont_fs_all) %>% 
+  select(name, diff, diff_all, ratio) %>% 
+  pivot_longer(c(diff, diff_all), names_to = "type", values_to = "values") %>% 
+  mutate(ratio = ifelse(ratio == 1 & type == "diff", "1_1", 
+                        ifelse(ratio == 1 & type == "diff_all", "1_2", 
+                               ifelse(ratio == 2 & type == "diff", "2_1", 
+                                      ifelse(ratio == 2 & type == "diff_all", "2_2", ratio))))) %>% 
+  bind_rows(df_fs_variable %>% 
+              filter(method != "conv") %>% 
+              pivot_wider(names_from = method, values_from = savings) %>% 
+              mutate(values = true - rand, 
+                     ratio = "0", 
+                     type = "diff_ref") %>% 
+              select(name, values, ratio, type))
 
-## TOWT modeling accuracy
+# plot for combined dataset
+df_MW_A <- rbind(df_MW_S, df_MW_V)
 
-To evaluate modeling accuracy, we used the Coefficient of Variation of
-Root-Mean Squared Error (CV(RMSE)) as the primary error metric. CV(RMSE)
-is a normalized measure, thus it enables direct comparison across
-different modeling results. Since we have the ground-true baseline
-measurements in the post-retrofit period, we can assess the error caused
-by model adjustment (i.e., how accurate is the \'counterfactual\'
-baseline provided by the two M&V methods). Figure \@ref(fig:towtacc)
-shows the difference between the true post-retrofit baseline and
-adjusted baseline through TOWT modeling and since the quantity of the
-training set is the same, this highlights the impact of the data
-sampling technique. For example, if a non-routine event happens (such as
-a tenant occupying an entire floor of a building moving out), the TOWT
-model can yield significant deviations. This is particularly the case
-for the conventional M&V method since it samples continuously throughout
-the pre-retrofit period. However, randomized sampling is less impacted
-by these events since it samples only 50% of the pre-retrofit baseline
-throughout a blocking period. Consequently, the figure shows, there is a
-noticeable improvement in modeling accuracy when using the randomized
-method.
-
-```{r towtacc, fig.cap="TOWT modeling accuracy distribution for all buildings included (with each data point representing one building)", fig.width=8, fig.height=4}
-
-cvrmse <- df_model_acc_stable %>% 
-  bind_rows(df_model_acc_variable) %>% 
-  pivot_longer(c(conv, rand), 
-               names_to = "method", 
-               values_to = "cvrmse") %>% 
-  mutate(method = as.factor(method), 
-         method = recode_factor(method, 
-                              "rand" = "Randomized\n(24 months)", 
-                              "conv" = "Conventional"))
-
-result <- t.test(filter(cvrmse, method == "Randomized\n(24 months)")$cvrmse, 
-                 filter(cvrmse, method == "Conventional")$cvrmse, 
-                 exact = TRUE,
-                 alternative = "less",
-                 mu = 0,
-                 conf.int = TRUE, 
-                 conf.level = 0.90,
-                 var.equal = TRUE)$p.value
-
-cvrmse %>% 
-  ggplot(aes(x = method, y = cvrmse, fill = method)) +
+p_top <- df_MW_A %>% 
+  mutate(ratio = as.factor(ratio), 
+         ratio = recode_factor(ratio, 
+                               "0" = "Randomized\n(50/50)", 
+                               "1_1" = "Continued\n(20/80)", 
+                               "1_2" = "Randomized\n(20/80)", 
+                               "2_1" = "Continued\n(10/90)", 
+                               "2_2" = "Randomized\n(10/90)")) %>% 
+  ggplot(aes(x = ratio, y = values, fill = ratio)) +
   geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
-  annotate(geom = "text", 
-           x = 1.5, 
-           y = 40, 
-           size = 4, 
-           label = paste0("P value = ", round(result, digits = 3))) +
-  geom_errorbarh(aes(xmin = 1.2, xmax = 1.8, y = 38), height = 2, linewidth = 0.25) +
+  geom_lv(k = 4, outlier.shape = NA, position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.1)) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = ratio), width = 0.75, linewidth = 0.15) +
+  geom_vline(xintercept = 1.5, color = "#fb8072", linewidth = 1, lty = "dashed") +
   geom_text(data = . %>% 
-              group_by(method) %>% 
-              summarise(mean = mean(cvrmse, na.rm = T)) %>% 
+              group_by(ratio) %>% 
+              summarise(median = median(values)) %>% 
               ungroup(), 
-            aes(x = method, y = mean, label = paste0(round(mean, digits = 0), " %"))) +
+            aes(x = ratio, y = median, label = paste0(round(median, digits = 1), " %")), 
+            size = 4) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 5), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80", "grey80", "grey80", "grey80")) + 
+  labs(fill = NULL, 
+       x = NULL, 
+       y = "Absolute error in fractional savings", 
+       subtitle = str_glue("All {A_building} buildings with measured weather conditions")) +
+  coord_cartesian(ylim = c(-12, 15)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "none",
+        axis.text.x = element_blank(), 
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+# TMY
+# plot for the stable subset
+df_TW_S <- df_cont_stable %>% 
+  left_join(df_fs_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - cont_tmy, 
+         diff_all = savings - cont_tmy_all) %>% 
+  select(name, diff, diff_all, ratio) %>% 
+  pivot_longer(c(diff, diff_all), names_to = "type", values_to = "values") %>% 
+  mutate(ratio = ifelse(ratio == 1 & type == "diff", "1_1", 
+                        ifelse(ratio == 1 & type == "diff_all", "1_2", 
+                               ifelse(ratio == 2 & type == "diff", "2_1", 
+                                      ifelse(ratio == 2 & type == "diff_all", "2_2", ratio))))) %>% 
+  bind_rows(df_fs_tmy_stable %>% 
+              left_join(df_fs_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+              mutate(values = savings - rand, 
+                     ratio = "0", 
+                     type = "diff_ref") %>% 
+              select(name, values, ratio, type))
+
+# plot for the variable subset
+df_TW_V <- df_cont_variable %>% 
+  left_join(df_fs_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - cont_tmy, 
+         diff_all = savings - cont_tmy_all) %>% 
+  select(name, diff, diff_all, ratio) %>% 
+  pivot_longer(c(diff, diff_all), names_to = "type", values_to = "values") %>% 
+  mutate(ratio = ifelse(ratio == 1 & type == "diff", "1_1", 
+                        ifelse(ratio == 1 & type == "diff_all", "1_2", 
+                               ifelse(ratio == 2 & type == "diff", "2_1", 
+                                      ifelse(ratio == 2 & type == "diff_all", "2_2", ratio))))) %>% 
+  bind_rows(df_fs_tmy_variable %>% 
+              left_join(df_fs_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+              mutate(values = savings - rand, 
+                     ratio = "0", 
+                     type = "diff_ref") %>% 
+              select(name, values, ratio, type))
+
+# plot for combined dataset
+df_TW_A <- rbind(df_TW_S, df_TW_V)
+
+p_bottom <- df_TW_A %>% 
+  mutate(ratio = as.factor(ratio), 
+         ratio = recode_factor(ratio, 
+                               "0" = "Randomized\n(50/50)", 
+                               "1_1" = "Continued\n(20/80)", 
+                               "1_2" = "Randomized\n(20/80)", 
+                               "2_1" = "Continued\n(10/90)", 
+                               "2_2" = "Randomized\n(10/90)")) %>% 
+  ggplot(aes(x = ratio, y = values, fill = ratio)) +
+  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
+  geom_lv(k = 4, outlier.shape = NA, position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.1)) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = ratio), width = 0.75, linewidth = 0.15) +
+  geom_vline(xintercept = 1.5, color = "#fb8072", linewidth = 1, lty = "dashed") +
+  geom_text(data = . %>% 
+              group_by(ratio) %>% 
+              summarise(median = median(values)) %>% 
+              ungroup(), 
+            aes(x = ratio, y = median, label = paste0(round(median, digits = 1), " %")), 
+            size = 4) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 5), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80", "grey80", "grey80", "grey80")) + 
+  labs(fill = NULL, 
+       x = NULL, 
+       y = "Absolute error in fractional savings", 
+       subtitle = str_glue("All {A_building} buildings with TOWT model and TMY weather")) +
+  coord_cartesian(ylim = c(-12, 15)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "none",
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+ggarrange(p_top, p_bottom, 
+          ncol = 1, nrow = 2,
+          labels = c("a)", "b)")) +
+  plot_annotation(title = "Absolute error in savings estimation by different sampling ratio")
+```
+
+```{r absint2y, fig.cap="Comparison of different sampling interval impact on M&V estimation accuracy over the course of two years (dropped: all non-consecutive days were dropped; kept: all measurements were kept)", fig.height=9, fig.width=12}
+# dropped version
+df_interval_keep_stable %<>% 
+  left_join(df_fs_stable %>% filter(method == "rand"), by = c("name", "site")) %>% 
+  select(-c("scenario", "method")) %>% 
+  rename("interval_fs_1" = "savings") %>% 
+  left_join(df_fs_tmy_stable, by = c("name", "site")) %>% 
+  select(-conv) %>% 
+  rename("interval_tmy_1" = "rand")
+
+df_interval_keep_variable %<>% 
+  left_join(df_fs_variable %>% filter(method == "rand"), by = c("name", "site")) %>% 
+  select(-c("scenario", "method")) %>% 
+  rename("interval_fs_1" = "savings") %>% 
+  left_join(df_fs_tmy_variable, by = c("name", "site")) %>% 
+  select(-conv) %>% 
+  rename("interval_tmy_1" = "rand")
+
+df_drop <- df_interval_drop_stable %>% 
+  bind_rows(df_interval_drop_variable) %>% 
+  select(name, contains("fs")) %>% 
+  rename("drop_1" = "interval_fs_1", 
+         "drop_2" = "interval_fs_2", 
+         "drop_3" = "interval_fs_3", 
+         "drop_7" = "interval_fs_7")  
+
+df_keep <- df_interval_keep_stable %>% 
+  bind_rows(df_interval_keep_variable) %>% 
+  select(name, contains("fs")) %>% 
+  rename("keep_1" = "interval_fs_1",
+         "keep_2" = "interval_fs_2", 
+         "keep_3" = "interval_fs_3", 
+         "keep_7" = "interval_fs_7")
+
+df_MW_A <- df_drop %>% 
+  left_join(df_keep, by = c("name")) %>%
+  left_join(rbind(df_fs_stable %>% 
+                    filter(scenario == "ref" & method == "true"), 
+                  df_fs_variable %>% 
+                    filter(scenario == "ref" & method == "true")), by = "name") %>% 
+  mutate(drop_1 = abs(savings - drop_1),
+         drop_2 = abs(savings - drop_2), 
+         drop_3 = abs(savings - drop_3), 
+         drop_7 = abs(savings - drop_7), 
+         keep_1 = abs(savings - keep_1),
+         keep_2 = abs(savings - keep_2), 
+         keep_3 = abs(savings - keep_3), 
+         keep_7 = abs(savings - keep_7)) %>% 
+  pivot_longer(cols = contains("drop") | contains("keep"),  
+               names_to = c("group", "interval"),
+               names_pattern = "(drop|keep)_(\\d+)",
+               values_to = "diff")
+
+p_top <- df_MW_A %>% 
+  mutate(interval = as.factor(interval), 
+         interval = recode_factor(interval, 
+                                  "1" = "1-day\nsampling",
+                                  "2" = "2-day\nsampling", 
+                                  "3" = "3-day\nsampling", 
+                                  "7" = "7-day\nsampling"), 
+         group = as.factor(group), 
+         group = recode_factor(group, "drop" = "Dropped", "keep" = "Kept")) %>% 
+  ggplot(aes(x = interval, y = diff, fill = group)) +
+  geom_jitter(alpha = 0.8, 
+              size = 0.5, 
+              position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.2)) +
+  geom_lv(k = 4, outlier.shape = NA, position = position_dodge(width = 0.8)) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group), width = 0.8, linewidth = 0.15) +
+  geom_text(data = . %>% group_by(group, interval) %>% summarise(median = median(diff, na.rm = T)) %>% ungroup(), 
+            aes(x = interval, y = median, group = group,
+                label = paste0(round(median, digits = 1), " %")), 
+            position = position_dodge(width = 0.75), 
+            size = 4, 
+            color = "white") +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 4), 
+                     labels = number_format(suffix = " %")) +
   scale_fill_manual(values = ls_colors) +
   scale_color_manual(values = c("grey80", "grey80")) + 
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 3), 
-                     labels = number_format(suffix = " %")) +
-  coord_cartesian(ylim = c(0, 50)) +
-  labs(x = NULL, 
-       y = NULL, 
+  labs(fill = NULL, 
        color = NULL, 
-       title = "TOWT model fitting accuracy by different M&V methods", 
-       subtitle = "CV(RMSE)") +
+       x = NULL, 
+       y = "Absolute error in fractional savings", 
+       subtitle = str_glue("All {A_building} buildings with measured weather")) +
+  coord_cartesian(ylim = c(0, 8)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.direction = "horizontal",
-        legend.position = "none",
+        legend.position = "bottom",
+        axis.text.x = element_blank(),
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+# TMY version
+df_drop <- df_interval_drop_stable %>% 
+  bind_rows(df_interval_drop_variable) %>% 
+  select(name, contains("tmy")) %>% 
+  rename("drop_1" = "interval_tmy_1",
+         "drop_2" = "interval_tmy_2", 
+         "drop_3" = "interval_tmy_3", 
+         "drop_7" = "interval_tmy_7")  
+
+df_keep <- df_interval_keep_stable %>% 
+  bind_rows(df_interval_keep_variable) %>% 
+  select(name, contains("tmy")) %>% 
+  rename("keep_1" = "interval_tmy_1",
+         "keep_2" = "interval_tmy_2", 
+         "keep_3" = "interval_tmy_3", 
+         "keep_7" = "interval_tmy_7")
+
+df_TW_A <- df_drop %>% 
+  left_join(df_keep, by = c("name")) %>%
+  left_join(rbind(df_fs_stable %>% 
+                    filter(scenario == "ref" & method == "true"), 
+                  df_fs_variable %>% 
+                    filter(scenario == "ref" & method == "true")), by = "name") %>% 
+  mutate(drop_1 = abs(savings - drop_1),
+         drop_2 = abs(savings - drop_2), 
+         drop_3 = abs(savings - drop_3), 
+         drop_7 = abs(savings - drop_7), 
+         keep_1 = abs(savings - keep_1),
+         keep_2 = abs(savings - keep_2), 
+         keep_3 = abs(savings - keep_3), 
+         keep_7 = abs(savings - keep_7)) %>% 
+  pivot_longer(cols = contains("drop") | contains("keep"),  
+               names_to = c("group", "interval"),
+               names_pattern = "(drop|keep)_(\\d+)",
+               values_to = "diff")
+
+p_bottom <- df_TW_A %>% 
+  mutate(interval = as.factor(interval), 
+         interval = recode_factor(interval, 
+                                  "1" = "1-day\nsampling",
+                                  "2" = "2-day\nsampling", 
+                                  "3" = "3-day\nsampling", 
+                                  "7" = "7-day\nsampling"), 
+         group = as.factor(group), 
+         group = recode_factor(group, "drop" = "Dropped", "keep" = "Kept")) %>% 
+  ggplot(aes(x = interval, y = diff, fill = group)) +
+  geom_jitter(alpha = 0.8, 
+              size = 0.5, 
+              position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.2)) +
+  geom_lv(k = 4, outlier.shape = NA, position = position_dodge(width = 0.8)) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group), width = 0.8, linewidth = 0.15) +
+  geom_text(data = . %>% group_by(group, interval) %>% summarise(median = median(diff, na.rm = T)) %>% ungroup(), 
+            aes(x = interval, y = median, group = group,
+                label = paste0(round(median, digits = 1), " %")), 
+            position = position_dodge(width = 0.75), 
+            size = 4,
+            color = "white") +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 4), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80")) + 
+  labs(fill = NULL, 
+       color = NULL, 
+       x = NULL, 
+       y = "Absolute error in fractional savings", 
+       subtitle = str_glue("All {A_building} buildings with TOWT model and TMY weather")) +
+  coord_cartesian(ylim = c(0, 8)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "bottom",
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+ggarrange(p_top, p_bottom, 
+          ncol = 1, nrow = 2, 
+          align = "hv", 
+          labels = c("a)", "b)"),
+          common.legend = T, 
+          legend = "bottom") +
+  plot_annotation(title = "Absolute error in savings estimation of ranodmized M&V by different sampling intervals")
 ```
 
-## Sampling interval impact
-
-In some cases, particularly those involving large thermal mass and
-active thermal energy storage systems or operating continuously, there
-can be a substantial time-lagged effect associated with interventions.
-This means that the effect of one control strategy may persist, or
-\'carryover\', after switching to another. To mitigate such carryover
-effects, building analysts may choose to drop non-consecutive days in
-the switchback experiment. For example, consider a heat pump hot water
-heater where the tank is charged at very different times of the day by
-the intervention strategy compared to the baseline strategy. When
-switching strategy, the tank may be much warmer or cooler than typical
-for that strategy, thus influencing subsequent measurements,
-particularly the performance measured on the first day (i.e., a
-non-consecutive day). In such cases, increasing the sampling interval
-(e.g., sample strategies every 2 or 3 days instead of daily) and
-discarding measurements from those non-consecutive days can eliminate
-carryover. However, this approach reduces the total data collected: for
-instance, sampling every 3 days and dropping days with non-consecutive
-control strategies would drop 1/6th  of measurements on average.
-Sampling every 2 days means dropping a quarter of the measurements.
-Therefore, by increasing the sampling interval, there is an accuracy
-penalty due to a reduction in randomization (how often samples occur),
-and when decreasing the sampling interval, there is an accuracy penalty
-from dropping more non-consecutive days. To quantify such trade-off,
-Figure \@ref(fig:absinterval) shows the accuracy of different sampling
-intervals and the consequence of dropping the non-consecutive days in
-the dataset at the time when randomized M&V produces a result (after
-satisfying all stopping criteria).
-
-```{r absinterval, fig.cap="Comparison of different sampling interval impact on M&V estimation accuracy (dropped: all non-consecutive days were dropped; kept: all measurements were kept)", fig.height=9, fig.width=12}
-
-#### ABS-INT ####
+```{r meanintspt, fig.cap="Comparison of different sampling interval impact on M&V estimation accuracy after satisfying all stopping criteria (without absolute calculation)", fig.height=9, fig.width=12}
 # sprt sequence plot for different sampling intervals
 df_seq_interval_fs_keep_stable %<>% 
   select(-c(sprt, temp, final)) %>% 
@@ -1613,7 +725,7 @@ df_MW_A <- df_drop %>%
                     filter(scenario == "ref" & method == "true"), 
                   df_fs_variable %>% 
                     filter(scenario == "ref" & method == "true")), by = "name") %>% 
-  mutate(diff = abs(savings - eob)) %>% 
+  mutate(diff = (savings - eob)) %>% 
   filter(is.finite(diff))
 
 p_top <- df_MW_A %>% 
@@ -1636,19 +748,19 @@ p_top <- df_MW_A %>%
             aes(x = interval, y = median, group = group,
                 label = paste0(round(median, digits = 1), " %")), 
             position = position_dodge(width = 0.75), 
-            color = "white", 
-            size = 4) +
+            size = 4, 
+            color = "white") +
   scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
+                     breaks = breaks_pretty(n = 5), 
                      labels = number_format(suffix = " %")) +
   scale_fill_manual(values = ls_colors) +
   scale_color_manual(values = c("grey80", "grey80")) + 
   labs(fill = NULL, 
        color = NULL, 
        x = NULL, 
-       y = "Absolute error in fractional savings", 
+       y = "Estimated error in fractional savings", 
        subtitle = str_glue("All {A_building} buildings with measured weather")) +
-  coord_cartesian(ylim = c(0, 15)) +
+  coord_cartesian(ylim = c(-12, 12)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
         legend.position = "bottom",
         axis.text.x = element_blank(),
@@ -1687,7 +799,7 @@ df_TW_A <- df_drop %>%
                     filter(scenario == "ref" & method == "true"), 
                   df_fs_variable %>% 
                     filter(scenario == "ref" & method == "true")), by = "name") %>% 
-  mutate(diff = abs(savings - eob)) %>% 
+  mutate(diff = (savings - eob)) %>% 
   filter(is.finite(diff))
 
 p_bottom <- df_TW_A %>% 
@@ -1710,19 +822,19 @@ p_bottom <- df_TW_A %>%
             aes(x = interval, y = median, group = group,
                 label = paste0(round(median, digits = 1), " %")), 
             position = position_dodge(width = 0.75), 
-            color = "white", 
-            size = 4) +
+            size = 4, 
+            color = "white") +
   scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
+                     breaks = breaks_pretty(n = 5), 
                      labels = number_format(suffix = " %")) +
   scale_fill_manual(values = ls_colors) +
   scale_color_manual(values = c("grey80", "grey80")) + 
   labs(fill = NULL, 
        color = NULL, 
        x = NULL, 
-       y = "Absolute error in fractional savings", 
+       y = "Esimated error in fractional savings", 
        subtitle = str_glue("All {A_building} buildings with TOWT model and TMY weather")) +
-  coord_cartesian(ylim = c(0, 15)) +
+  coord_cartesian(ylim = c(-12, 12)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
         legend.position = "bottom",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
@@ -1733,584 +845,168 @@ ggarrange(p_top, p_bottom,
           labels = c("a)", "b)"),
           common.legend = T, 
           legend = "bottom") +
-  plot_annotation(title = "Absolute error in savings estimation of randomized M&V after satisfying all stopping criteria")
+  plot_annotation(title = "Estimated error in savings estimation of randomized M&V after satisfying all stopping criteria")
+
 ```
 
-To quantify the impact of reduced randomness, all measurements are kept
-when calculating the distribution shown in the darker-colored set. The
-results suggest that without dropping non-consecutive days in subplot
-(a), a gradual increase in error from 1.6% to 2.3% (1.2% to 1.9% with
-weather normalization in subplot (b) when the sampling interval
-increases from daily to weekly intervals. This is due to the fact that
-increasing the sample interval means reducing randomization. To quantify
-the combined impact of data loss due to preventing the carryover effect,
-we generated the lighter-colored set, which drops all non-consecutive
-days. As a result, we noticed an increase in estimation error when
-sampling daily to 2.4% (to 1.9% when TOWT is fitted), which led to a
-similar accuracy compared to weekly intervals. Therefore, considering
-this trade-off, we recommend using a two-day sampling interval if the
-carryover effect is likely but expected to last less than one day, and
-then normalizing the estimation via energy modeling. The supplementary
-material contains similar figures showing biased deviation distribution,
-as well as the same results when continuing the randomized M&V for 24
-months. Those results indicate the same conclusion; that sampling every
-two days and dropping non-consecutive samples yields the optimal result
-when carryover effects are present.
+```{r meanint2y, fig.cap="Comparison of different sampling interval impact on M&V estimation accuracy over the course of the two years (without absolute calculation)", fig.width=12, fig.height=9}
+# dropped version
+df_drop <- df_interval_drop_stable %>% 
+  bind_rows(df_interval_drop_variable) %>% 
+  select(name, contains("fs")) %>% 
+  rename("drop_1" = "interval_fs_1", 
+         "drop_2" = "interval_fs_2", 
+         "drop_3" = "interval_fs_3", 
+         "drop_7" = "interval_fs_7")  
 
-Sampling at different intervals and excluding non-consecutive days also
-impact other stopping criteria, such as the time needed to satisfy
-statistical uncertainty and weather conditions thresholds. In Figure
-\@ref(fig:intervaltime), we compared the percentage of buildings
-satisfying all stopping criteria under different sampling intervals,
-with or without dropping non-consecutive days. The results indicate that
-randomized M&V concludes more quickly when all data are retained,
-particularly at shorter intervals, as expected. For instance, when
-sampling at a one-day interval, 89% of buildings meet all criteria
-within 24 weeks if no data are dropped, but this number decreases
-significantly to 52% when non-consecutive days (account for 1/3 of the
-data) are excluded, and 3% of the buildings require another 12 weeks to
-satisfy the weather criterion. As the sampling interval increases, this
-difference gradually diminishes: when sampling at a weekly interval,
-removing non-consecutive days has no impact on the timeline of meeting
-stopping criteria.
+df_keep <- df_interval_keep_stable %>% 
+  bind_rows(df_interval_keep_variable) %>% 
+  select(name, contains("fs")) %>% 
+  rename("keep_1" = "interval_fs_1",
+         "keep_2" = "interval_fs_2", 
+         "keep_3" = "interval_fs_3", 
+         "keep_7" = "interval_fs_7")
 
-```{r intervaltime, fig.cap="Comparison of time required to satisfy all stopping criteria when considering dropping non-consecutive days (or not)", fig.height=8, fig.width=12}
-df_drop <- bind_rows(df_seq_interval_tl_drop_stable, df_seq_interval_tl_drop_variable) %>%
-  mutate(group = "drop", 
-         temp = ifelse(base_temp >= interv_temp, base_temp, interv_temp)) %>% 
-  pivot_longer(c(sprt, temp, eob, final), names_to = "seq", values_to = "n_weeks") %>% 
-  select(name, seq, n_weeks, interval, group)
+df_MW_A <- df_drop %>% 
+  left_join(df_keep, by = c("name")) %>%
+  left_join(rbind(df_fs_stable %>% 
+                    filter(scenario == "ref" & method == "true"), 
+                  df_fs_variable %>% 
+                    filter(scenario == "ref" & method == "true")), by = "name") %>% 
+  mutate(drop_1 = savings - drop_1,
+         drop_2 = savings - drop_2, 
+         drop_3 = savings - drop_3, 
+         drop_7 = savings - drop_7, 
+         keep_1 = savings - keep_1,
+         keep_2 = savings - keep_2, 
+         keep_3 = savings - keep_3, 
+         keep_7 = savings - keep_7) %>% 
+  pivot_longer(cols = contains("drop") | contains("keep"),  
+               names_to = c("group", "interval"),
+               names_pattern = "(drop|keep)_(\\d+)",
+               values_to = "diff")
 
-interval_1_keep <- bind_rows(df_sprt_all_stable, df_sprt_all_variable) %>%
-  select(c(name, seq, n_weeks)) %>%
-  filter(seq != "final") %>%
-  mutate(seq = as.factor(seq)) %>%
-  mutate(interval = 1, 
-         group = "keep")
-  
-df_keep <- bind_rows(df_seq_interval_tl_keep_stable, df_seq_interval_tl_keep_variable) %>%
-  mutate(group = "keep", 
-         temp = ifelse(base_temp >= interv_temp, base_temp, interv_temp)) %>% 
-  pivot_longer(c(sprt, temp, eob, final), names_to = "seq", values_to = "n_weeks") %>% 
-  select(name, seq, n_weeks, interval, group) %>% 
-  bind_rows(interval_1_keep)
-
-df_MW_A <- bind_rows(df_keep, df_drop) %>% 
-  filter(seq != "final") %>% 
-  filter(seq == "eob") %>% 
-  mutate(seq = as.factor(seq), 
-         seq = recode_factor(seq, 
-                             "eob" = "Buildings finishing all criteria"), 
-         interval = as.factor(interval), 
+p_top <- df_MW_A %>% 
+  mutate(interval = as.factor(interval), 
          interval = recode_factor(interval, 
                                   "1" = "1-day\nsampling",
                                   "2" = "2-day\nsampling", 
                                   "3" = "3-day\nsampling", 
                                   "7" = "7-day\nsampling"), 
          group = as.factor(group), 
-         group = recode_factor(group, "drop" = "Dropped", "keep" = "Kept"), 
-         n_weeks = as.factor(n_weeks), 
-         n_weeks = recode_factor(n_weeks, 
-                                 "12" = "12\nweeks", 
-                                 "24" = "24\nweeks", 
-                                 "36" = "36\nweeks", 
-                                 "48" = "48\nweeks")) %>% 
-  group_by(n_weeks, group, interval) %>% 
-  summarise(n = n()) %>%
-  ungroup()
-
-levA <- levels(df_MW_A$n_weeks)
-levB <- levels(df_MW_A$group)
-levC <- levels(df_MW_A$interval)
-
-# 2. Expand to all combinations of factorA and factorB
-all_combinations <- expand_grid(
-  n_weeks = levA,
-  group = levB, 
-  interval = levC, 
-)
-
-df_MW_A <- all_combinations %>%
-  left_join(df_MW_A, by = c("n_weeks", "group", "interval")) %>% 
-  mutate(n = ifelse(is.na(n), 0, n)) %>% 
-  group_by(group, interval) %>% 
-  mutate(n = ifelse(n > sum(n) * 0.01, n, 0), 
-         perc = n / sum(n) * 100) %>% 
-  ungroup()
-
-df_MW_A %>% 
-  ggplot(aes(x = n_weeks, y = perc, fill = group)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  facet_wrap(~interval, nrow = 2) +
-  geom_text(aes(x = n_weeks, y = perc + 2, label = paste0(round(perc, digits = 0), "%"), group = group), 
-            position = position_dodge(1), 
-            size = 4) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = ls_colors) +
-  scale_y_continuous(breaks = breaks_pretty(n = 4), 
+         group = recode_factor(group, "drop" = "Dropped", "keep" = "Kept")) %>% 
+  ggplot(aes(x = interval, y = diff, fill = group)) +
+  geom_jitter(alpha = 0.8, 
+              size = 0.5, 
+              position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.2)) +
+  geom_lv(k = 4, outlier.shape = NA, position = position_dodge(width = 0.8)) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group), width = 0.8, linewidth = 0.15) +
+  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
+  geom_text(data = . %>% group_by(group, interval) %>% summarise(median = median(diff, na.rm = T)) %>% ungroup(), 
+            aes(x = interval, y = median, group = group,
+                label = paste0(round(median, digits = 1), " %")), 
+            position = position_dodge(width = 0.75), 
+            size = 4, 
+            color = "white") +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 5), 
                      labels = number_format(suffix = " %")) +
-  labs(x = NULL,
-       y = NULL,
-       fill = NULL,
-       title = "Percentage of buildings satisfying all stopping critiera", 
-       subtitle = "Counted at the end of each 12-week blocking period") +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80")) + 
+  labs(fill = NULL, 
+       color = NULL, 
+       x = NULL, 
+       y = "Estimated error in fractional savings", 
+       subtitle = str_glue("All {A_building} buildings with measured weather")) +
+  coord_cartesian(ylim = c(-10, 10)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "bottom",
+        axis.text.x = element_blank(),
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+# TMY version
+df_drop <- df_interval_drop_stable %>% 
+  bind_rows(df_interval_drop_variable) %>% 
+  select(name, contains("tmy")) %>% 
+  rename("drop_1" = "interval_tmy_1",
+         "drop_2" = "interval_tmy_2", 
+         "drop_3" = "interval_tmy_3", 
+         "drop_7" = "interval_tmy_7")  
+
+df_keep <- df_interval_keep_stable %>% 
+  bind_rows(df_interval_keep_variable) %>% 
+  select(name, contains("tmy")) %>% 
+  rename("keep_1" = "interval_tmy_1",
+         "keep_2" = "interval_tmy_2", 
+         "keep_3" = "interval_tmy_3", 
+         "keep_7" = "interval_tmy_7")
+
+df_TW_A <- df_drop %>% 
+  left_join(df_keep, by = c("name")) %>%
+  left_join(rbind(df_fs_stable %>% 
+                    filter(scenario == "ref" & method == "true"), 
+                  df_fs_variable %>% 
+                    filter(scenario == "ref" & method == "true")), by = "name") %>% 
+  mutate(drop_1 = savings - drop_1,
+         drop_2 = savings - drop_2, 
+         drop_3 = savings - drop_3, 
+         drop_7 = savings - drop_7, 
+         keep_1 = savings - keep_1,
+         keep_2 = savings - keep_2, 
+         keep_3 = savings - keep_3, 
+         keep_7 = savings - keep_7) %>% 
+  pivot_longer(cols = contains("drop") | contains("keep"),  
+               names_to = c("group", "interval"),
+               names_pattern = "(drop|keep)_(\\d+)",
+               values_to = "diff")
+
+p_bottom <- df_TW_A %>% 
+  mutate(interval = as.factor(interval), 
+         interval = recode_factor(interval, 
+                                  "1" = "1-day\nsampling",
+                                  "2" = "2-day\nsampling", 
+                                  "3" = "3-day\nsampling", 
+                                  "7" = "7-day\nsampling"), 
+         group = as.factor(group), 
+         group = recode_factor(group, "drop" = "Dropped", "keep" = "Kept")) %>% 
+  ggplot(aes(x = interval, y = diff, fill = group)) +
+  geom_jitter(alpha = 0.8, 
+              size = 0.5, 
+              position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.2)) +
+  geom_lv(k = 4, outlier.shape = NA, position = position_dodge(width = 0.8)) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group), width = 0.8, linewidth = 0.15) +
+  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
+  geom_text(data = . %>% group_by(group, interval) %>% summarise(median = median(diff, na.rm = T)) %>% ungroup(), 
+            aes(x = interval, y = median, group = group,
+                label = paste0(round(median, digits = 1), " %")), 
+            position = position_dodge(width = 0.75), 
+            size = 4, 
+            color = "white") +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 5), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80")) + 
+  labs(fill = NULL, 
+       color = NULL, 
+       x = NULL, 
+       y = "Estimated error in fractional savings", 
+       subtitle = str_glue("All {A_building} buildings with TOWT model and TMY weather")) +
+  coord_cartesian(ylim = c(-10, 10)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
         legend.position = "bottom",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-```
-
-## Sampling ratio impact
-
-In our previous study [@raftery2024], we recommended that building
-owners adjust the sampling ratio after meeting all stopping criteria, as
-continuing baseline sampling helps maintain M&V accuracy with limited
-impact on the energy savings actually achieved by the building. To
-further examine its impact on M&V accuracy, Figure \@ref(fig:abscont)
-compares two sampling ratios (20%/80% and 10%/90%) and two associated
-scenarios with the previously shown results when sampling at 50%/50%.
-The \"Continued\" group follows the standard randomized M&V framework
-with an initial 50%/50% sampling ratio, then switches to the indicated
-sampling ratio after satisfying the stopping criteria, continuing this
-until the end of the two-year period. In contrast, the \"Randomized\"
-group uses the indicated ratio from the outset and continues throughout
-the two year. Subplot (a) shows that absolute error is significantly
-lower without the initial 50%/50% sampling, due to baseline drift and
-non-routine events that most buildings experience over two years (as
-noted in Section \@ref(filter-and-clean-dataset)). Subplot (b) confirms
-this finding even after weather normalization.
-
-```{r abscont, fig.cap="Comparison of different sampling ratio impact on M&V estimation accuracy over the entire 24 months (previous results of sampling at 50%/50% shown on the left side of the red dashed line)", fig.height=6, fig.width=12}
-
-#### ABS-CONT ####
-df_MW_S <- df_cont_stable %>% 
-  left_join(df_fs_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - cont_fs), 
-         diff_all = abs(savings - cont_fs_all)) %>% 
-  select(name, diff, diff_all, ratio) %>% 
-  pivot_longer(c(diff, diff_all), names_to = "type", values_to = "values") %>% 
-  mutate(ratio = ifelse(ratio == 1 & type == "diff", "1_1", 
-                        ifelse(ratio == 1 & type == "diff_all", "1_2", 
-                               ifelse(ratio == 2 & type == "diff", "2_1", 
-                                      ifelse(ratio == 2 & type == "diff_all", "2_2", ratio))))) %>% 
-  bind_rows(df_fs_stable %>% 
-              filter(method != "conv") %>% 
-              pivot_wider(names_from = method, values_from = savings) %>% 
-              mutate(values = abs(true - rand), 
-                     ratio = "0", 
-                     type = "diff_ref") %>% 
-              select(name, values, ratio, type))
-
-
-# plot for the variable subset
-df_MW_V <- df_cont_variable %>% 
-  left_join(df_fs_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - cont_fs), 
-         diff_all = abs(savings - cont_fs_all)) %>% 
-  select(name, diff, diff_all, ratio) %>% 
-  pivot_longer(c(diff, diff_all), names_to = "type", values_to = "values") %>% 
-  mutate(ratio = ifelse(ratio == 1 & type == "diff", "1_1", 
-                        ifelse(ratio == 1 & type == "diff_all", "1_2", 
-                               ifelse(ratio == 2 & type == "diff", "2_1", 
-                                      ifelse(ratio == 2 & type == "diff_all", "2_2", ratio))))) %>% 
-  bind_rows(df_fs_variable %>% 
-              filter(method != "conv") %>% 
-              pivot_wider(names_from = method, values_from = savings) %>% 
-              mutate(values = abs(true - rand), 
-                     ratio = "0", 
-                     type = "diff_ref") %>% 
-              select(name, values, ratio, type))
-
-# plot for combined dataset
-df_MW_A <- rbind(df_MW_S, df_MW_V)
-
-p_top <- df_MW_A %>% 
-  mutate(ratio = as.factor(ratio), 
-         ratio = recode_factor(ratio, 
-                               "0" = "Randomized\n(50/50)", 
-                               "1_1" = "Continued\n(20/80)", 
-                               "1_2" = "Randomized\n(20/80)", 
-                               "2_1" = "Continued\n(10/90)", 
-                               "2_2" = "Randomized\n(10/90)")) %>% 
-  ggplot(aes(x = ratio, y = values, fill = ratio)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA, position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.1)) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = ratio), width = 0.75) +
-  geom_vline(xintercept = 1.5, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% 
-              group_by(ratio) %>% 
-              summarise(median = median(values)) %>% 
-              ungroup(), 
-            aes(x = ratio, y = median, label = paste0(round(median, digits = 1), " %")), 
-            size = 4) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = "Absolute error in fractional savings", 
-       subtitle = str_glue("All {A_building} buildings with measured weather conditions")) +
-  coord_cartesian(ylim = c(0, 15)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text.x = element_blank(), 
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-# TMY
-# plot for the stable subset
-df_TW_S <- df_cont_stable %>% 
-  left_join(df_fs_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - cont_tmy), 
-         diff_all = abs(savings - cont_tmy_all)) %>% 
-  select(name, diff, diff_all, ratio) %>% 
-  pivot_longer(c(diff, diff_all), names_to = "type", values_to = "values") %>% 
-  mutate(ratio = ifelse(ratio == 1 & type == "diff", "1_1", 
-                        ifelse(ratio == 1 & type == "diff_all", "1_2", 
-                               ifelse(ratio == 2 & type == "diff", "2_1", 
-                                      ifelse(ratio == 2 & type == "diff_all", "2_2", ratio))))) %>% 
-  bind_rows(df_fs_tmy_stable %>% 
-              left_join(df_fs_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-              mutate(values = abs(savings - rand), 
-                     ratio = "0", 
-                     type = "diff_ref") %>% 
-              select(name, values, ratio, type))
-
-# plot for the variable subset
-df_TW_V <- df_cont_variable %>% 
-  left_join(df_fs_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-  mutate(diff = abs(savings - cont_tmy), 
-         diff_all = abs(savings - cont_tmy_all)) %>% 
-  select(name, diff, diff_all, ratio) %>% 
-  pivot_longer(c(diff, diff_all), names_to = "type", values_to = "values") %>% 
-  mutate(ratio = ifelse(ratio == 1 & type == "diff", "1_1", 
-                        ifelse(ratio == 1 & type == "diff_all", "1_2", 
-                               ifelse(ratio == 2 & type == "diff", "2_1", 
-                                      ifelse(ratio == 2 & type == "diff_all", "2_2", ratio))))) %>% 
-  bind_rows(df_fs_tmy_variable %>% 
-              left_join(df_fs_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
-              mutate(values = abs(savings - rand), 
-                     ratio = "0", 
-                     type = "diff_ref") %>% 
-              select(name, values, ratio, type))
-
-# plot for combined dataset
-df_TW_A <- rbind(df_TW_S, df_TW_V)
-
-p_bottom <- df_TW_A %>% 
-  mutate(ratio = as.factor(ratio), 
-         ratio = recode_factor(ratio, 
-                               "0" = "Randomized\n(50/50)", 
-                               "1_1" = "Continued\n(20/80)", 
-                               "1_2" = "Randomized\n(20/80)", 
-                               "2_1" = "Continued\n(10/90)", 
-                               "2_2" = "Randomized\n(10/90)")) %>% 
-  ggplot(aes(x = ratio, y = values, fill = ratio)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA, position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.1)) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = ratio), width = 0.75) +
-  geom_vline(xintercept = 1.5, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% 
-              group_by(ratio) %>% 
-              summarise(median = median(values)) %>% 
-              ungroup(), 
-            aes(x = ratio, y = median, label = paste0(round(median, digits = 1), " %")), 
-            size = 4) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = "Absolute error in fractional savings", 
-       subtitle = str_glue("All {A_building} buildings with TOWT model and TMY weather")) +
-  coord_cartesian(ylim = c(0, 15)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 
 ggarrange(p_top, p_bottom, 
-          ncol = 1, nrow = 2,
-          labels = c("a)", "b)")) +
-  plot_annotation(title = "Absolute error in savings estimation by different sampling ratio")
+          ncol = 1, nrow = 2, 
+          align = "hv", 
+          labels = c("a)", "b)"),
+          common.legend = T, 
+          legend = "bottom") +
+  plot_annotation(title = "Estimated error in savings estimation of randomized M&V by different sampling intervals")
 ```
-
-To further illustrate this point, we plotted results in Figure
-\@ref(fig:stablecont) using only the 'stable' building subset (66
-buildings), as defined in Section \@ref(filter-and-clean-dataset). The
-differences between sampling strategies are much reduced in this subset
-and can be largely corrected through weather normalization modeling.
-This suggests that, consistent with our earlier findings regarding the
-conventional M&V method, initial baseline measurements provide limited
-value in maintaining M&V accuracy when the building's baseline
-performance changes over time.
-
-```{r stablecont, fig.cap="Comparison of error distribution under different sampling ratio only for the buildings in 'stable' subset" (results of sampling at 50%/50% shown on the left side of the red dashed line), fig.height=6, fig.width=12}
-p_top <- df_MW_S %>% 
-  mutate(ratio = as.factor(ratio), 
-         ratio = recode_factor(ratio, 
-                               "0" = "Randomized\n(50/50)",
-                               "1_1" = "Continued\n(20/80)", 
-                               "1_2" = "Randomized\n(20/80)", 
-                               "2_1" = "Continued\n(10/90)", 
-                               "2_2" = "Randomized\n(10/90)")) %>% 
-  ggplot(aes(x = ratio, y = values, fill = ratio)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA, position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.1)) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = ratio), width = 0.75) +
-  geom_vline(xintercept = 1.5, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% 
-              group_by(ratio) %>% 
-              summarise(median = median(values)) %>% 
-              ungroup(), 
-            aes(x = ratio, y = median, label = paste0(round(median, digits = 1), " %")), 
-            size = 4) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = "Absolute error in fractional savings", 
-       subtitle = str_glue("All {S_building} buildings with measured weather conditions")) +
-  coord_cartesian(ylim = c(0, 12)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        axis.text.x = element_blank(), 
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-p_bottom <- df_TW_S %>% 
-  mutate(ratio = as.factor(ratio), 
-         ratio = recode_factor(ratio, 
-                               "0" = "Randomized\n(50/50)",
-                               "1_1" = "Continued\n(20/80)", 
-                               "1_2" = "Randomized\n(20/80)", 
-                               "2_1" = "Continued\n(10/90)", 
-                               "2_2" = "Randomized\n(10/90)")) %>% 
-  ggplot(aes(x = ratio, y = values, fill = ratio)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
-  geom_lv(k = 4, outlier.shape = NA, position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.1)) +
-  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = ratio), width = 0.75) +
-  geom_vline(xintercept = 1.5, color = "#fb8072", linewidth = 1, lty = "dashed") +
-  geom_text(data = . %>% 
-              group_by(ratio) %>% 
-              summarise(median = median(values)) %>% 
-              ungroup(), 
-            aes(x = ratio, y = median, label = paste0(round(median, digits = 1), " %")), 
-            size = 4) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = breaks_pretty(n = 4), 
-                     labels = number_format(suffix = " %")) +
-  scale_fill_manual(values = ls_colors) +
-  scale_color_manual(values = c("grey80", "grey80", "grey80", "grey80", "grey80")) + 
-  labs(fill = NULL, 
-       x = NULL, 
-       y = "Absolute error in fractional savings", 
-       subtitle = str_glue("All {S_building} buildings with TOWT model and TMY weather")) +
-  coord_cartesian(ylim = c(0, 12)) +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.position = "none",
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-ggarrange(p_top, p_bottom, 
-          ncol = 1, nrow = 2,
-          labels = c("a)", "b)")) +
-  plot_annotation(title = "Absolute error for the subset buildings with 2-year stable usage")
-```
-
-However, as shown in Figure \@ref(fig:abstract), the highest accuracy is
-achieved when sampling at a 50%/50% ratio. Therefore, we continue to
-recommend that building owners follow the proposed framework and
-maintain a 50%/50% sampling ratio until all stopping criteria are met.
-The additional results from Figure \@ref(fig:abscont) and Figure
-\@ref(fig:stablecont) further add to the guidance: if building baseline
-changes, retrofit savings estimation should simply discard the existing
-baseline measurements and revert back to 50%/50% sampling ratio as
-described in the proposed framework.
-
-## Blocking period impact
-
-Selecting different blocking periods affects how frequently the M&V
-analyst evaluates stopping criteria and may influence the decision when
-a savings is detected at a sufficient level of certainty. Here, we
-summarize the advantages and disadvantages of shorter versus longer
-blocking periods. As discussed in our previous study, the second step of
-this randomized M&V method involves choosing an appropriate blocking
-period to minimize potential biases caused by incomplete randomization.
-For most practical scenarios, we recommend a blocking period of
-approximately 12 to 16 weeks, as it typically covers the duration of a
-season, ensuring a representative sampling of operational conditions. In
-general, longer blocking periods are advantageous when evaluating
-multiple intervention strategies or using sampling intervals greater
-than one day. In such cases, extended blocking ensures a balanced
-distribution of both day-of-week and outdoor weather conditions.
-
-Opting for a shorter blocking period, such as 6 weeks, has the potential
-benefit of allowing the stopping criteria to be met earlier. We plotted
-the percentage of buildings finishing all stopping criteria when the
-blocking period is set as 6 weeks in Figure \@ref(fig:6weekblock). As a
-result, when compared to Figure \@ref(fig:intervaltime), the only
-difference we found is when sampling at a daily interval and not
-dropping non-consecutive days, 12% of buildings can get an estimate
-earlier. This means those buildings are likely to meet all stopping
-criteria between 12 weeks and 18 weeks but when sampled over a 12-week
-block, the savings can only be determined at week 24. Although sampled
-baseline and intervention days can be different when the blocking period
-is changed, the results indicate most buildings still require 9 months
-to meet outdoor weather conditions when starting M&V from January.
-
-```{r 6weekblock, fig.cap = "Time required to satisfy all stopping criteria when using a 6-week blocking period"}
-
-knitr::include_graphics(paste0(fig_path, "6week_time.png"))
-```
-
-Sampling at a shorter blocking period also means that the analyst must
-perform the hypothesis tests more frequently, which can necessitate
-adjusting the significance level using methods such as the Bonferroni
-correction to control for increased type-I error risk. On the plus side,
-a shorter blocking period can reduce the adverse impact of missing or
-problematic data. For example, if an intervention requires fine-tuning
-after initial implementation, removing data from the first blocking
-period would be less detrimental compared to longer blocking periods,
-preserving the overall integrity of the experiment.
-
-## M&V starting time impact
-
-In this study, we set the baseline period to begin on January 1st, which
-offers the advantage of capturing colder outdoor weather conditions
-early in the M&V process. However, when the baseline measurements miss
-the initial winter period, meeting the required weather condition
-criteria can potentially take a longer time. To assess this impact, we
-repeated the randomized M&V analysis for all buildings using a new start
-date in March. As shown in Figure \@ref(fig:startT), the new M&V process
-results in a noticeable delay in satisfying the stopping criteria.
-Compared to Figure \@ref(fig:intervaltime), where a January start
-allowed most buildings to finish within 36 weeks, a March start extended
-the required duration to 48 weeks for the majority of buildings.
-Furthermore, when a longer sampling interval is used or non-consecutive
-days are excluded (to avoid carryover effects), some buildings may
-require up to 60 weeks to complete the randomized M&V. As expected, to
-collect sufficient data representing winter conditions, the sampling may
-need to continue until the next January (around week 48). However, as
-the overall data collection period extends, the influence of dropping
-non-consecutive days diminishes and becomes less of a concern.
-
-```{r startT, fig.cap = "Time required to satisfy all stopping criteria starting from March"}
-
-knitr::include_graphics(paste0(fig_path, "startT.png"))
-```
-
-Similarly, we evaluated the time required to satisfy all stopping
-criteria when using a shorter blocking period, as shown in Figure
-\@ref(fig:6weekstartT). Compared to Figure \@ref(fig:startT), a
-significant proportion of buildings completed the randomized M&V by week
-42 (mid-December), which is one blocking period earlier than having a
-12-week blocking period. In both figures, we noticed that a small
-proportion of buildings are less affected by changing the M&V start
-time, they are mostly located in climate zones with less outdoor
-temperature variations. This result further highlights that the overall
-duration of the randomized M&V process is strongly driven by outdoor
-weather. Accordingly, selecting an optimal blocking period should
-consider a historical or typical meteorological weather file to
-effectively minimize the time required. In general, starting M&V in the
-middle of the winter or summer periods will yield results spanning the
-full range of weather conditions faster than starting at other times of
-year, such as during a swing season.
 
 ```{r 6weekstartT, fig.cap = "Time required to satisfy all stopping criteria starting from March and using a shorter blocking period of 6 weeks"}
 
 knitr::include_graphics(paste0(fig_path, "6week_start_time.png"))
 ```
-
-## Limitations
-
-Aside from the general limitation that this method only applies to the
-subset of interventions in buildings that are easily switchable, we
-identify two key limitations in this study:
-
-1.  The simulated intervention (chilled water temperature reset) remains
-    somewhat generic and simplistic, considering the diverse building
-    types and climate zones in the BDG2 dataset. As the primary focus is
-    to accurately detect the intervention (or any intervention) effect
-    so for simplicity, we applied the parameters listed in Table 1
-    uniformly across all buildings.
-2.  For the main analysis, we assumed no carryover effect and that a
-    daily sampling interval would suffice for most commercial buildings,
-    but certainly exceptions exist. However, in the discussion, we
-    addressed such concern by comparing different sampling strategies
-    and the impact of dropping measurements from non-consecutive days.
-
-# Conclusion
-
-This research demonstrated the application of a randomized
-whole-building measurement and verification (M&V) method, comparing its
-performance to the conventional approach described in the IPMVP and in
-ASHRAE Guideline 14, using a large, open-source commercial building
-dataset. The randomized M&V method leverages the randomized experimental
-design concept from other scientific fields, along with statistical
-sequential inference techniques, to determine when savings are detected
-at sufficient certainty. We used a virtual control retrofit
-case---resetting the chilled water setpoint based on outdoor weather
-conditions---and applied it to over 600 filtered commercial buildings.
-By comparing the savings estimations of the conventional method with the
-novel randomized method, we found that the randomized approach provides
-faster and more robust savings estimations.
-
-Specifically, we showed that throughout 11 different locations assessed
-in this study, the randomized M&V can provide a saving estimation after
-36 weeks (with the majority finished by 24 weeks) once all stopping
-criteria are satisfied. In contrast, the conventional method requires a
-full range of baseline and intervention measurements under normal
-operating conditions, typically taking 6 - 9 months for each phase. Most
-importantly, we verified that with a reduced M&V timeline, the
-randomized method can estimate savings more accurately by showing that
-the absolute error is only 1 - 2% for a typical building. Whereas for
-the much longer two-year conventional method, the estimation error was
-approximately 5% in a typical building. We also evaluated the impact of
-non-routine events, especially more gradual and subtle operational drift
-on the proposed M&V method and the results show that baseline changes in
-the post-retrofit period can deviate savings estimated using the
-conventional method. In contrast, we found that those events have a very
-negligible impact on the savings estimated using the randomized method,
-demonstrating robustness to this issue. Furthermore, we consider
-scenarios where there is a known carryover effect from switching between
-strategies in the building and assess the impact of dropping samples
-where the strategy is non-consecutive and varying the sampling interval.
-Through that process, we showed that for the typical building, if
-carryover is present, using a 2-day sampling interval and dropping days
-with non-consecutive control strategies operating yields the optimal
-design for the median building in this dataset. Lastly, we investigated
-the time required to complete the randomized M&V method under different
-scenarios. We found that measuring a sufficient range of outdoor weather
-conditions remains the most stringent criterion. But even for the most
-non-ideal case, the randomized method can still produce an estimate much
-faster than 2 years, and produces an estimate with far lower error.
-
-# CRediT authorship contribution statement
-
-**Aoyu Zou**: Conceptualization, Data curation, Formal analysis,
-Methodology, Investigation, Software, Writing - original draft,
-Writing - review & editing. **Paul Raftery**: Conceptualization, Funding
-acquisition, Formal analysis, Methodology, Investigation, Project
-administration, Supervision, Writing - review & editing. **Stefano
-Schiavon**: Conceptualization, Methodology, Investigation, Supervision,
-Writing - review & editing. **Carlos Duarte**: Methodology,
-Investigation, Supervision, Writing - review & editing. **Gail Brager**:
-Supervision, Writing - review & editing.
-
-# Reproducibility
-
-A reproducible example with analysis code is available (MIT license) at
-<https://github.com/CenterForTheBuiltEnvironment/genome_mnv>.
-
-# Declaration of competing interest
-
-The authors declare that they have no known competing financial
-interests or personal relationships that could have appeared to
-influence the work reported in this paper.
-
-# Acknowledgements
-
-# References
