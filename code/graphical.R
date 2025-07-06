@@ -14,14 +14,15 @@ here::i_am("manuscript.rmd")
 theme_set(theme_minimal())
 
 # define base ggplot theme
-theme_update(plot.title = element_text(size = 14, colour = "grey20", face = "bold", hjust = 0.5),
-             plot.subtitle = element_text(size = 10, colour = "grey20", face = "italic", hjust = 0.5, margin = margin(b = 10)),
+theme_update(plot.title = element_text(size = 16, colour = "grey20", face = "bold", hjust = 0.5),
+             plot.subtitle = element_text(size = 14, colour = "grey20", face = "italic", hjust = 0.5, margin = margin(b = 10)),
              plot.caption = element_text(size = 10, colour = "grey20", face = "italic", hjust = 0.5),
              plot.background = element_rect(fill = "white", colour = NA),
              panel.grid.minor = element_blank(),
              panel.grid.major = element_blank(),
-             axis.text = element_text(size = 10),
-             strip.text = element_text(size = 10, color = "grey20", face = "bold"),
+             axis.text = element_text(size = 12),
+             legend.text = element_text(size = 12),
+             strip.text = element_text(size = 12, color = "grey20", face = "bold"),
              strip.background = element_blank())
 
 # colors
@@ -1920,7 +1921,7 @@ df_MW_A %>%
   ggplot(aes(x = n_weeks, y = perc, fill = group)) +
   geom_bar(stat = "identity", position = "dodge") +
   facet_wrap(~interval, nrow = 2) +
-  geom_text(aes(x = n_weeks, y = perc + 2, label = paste0(round(perc, digits = 0), "%"), group = group), position = position_dodge(1)) +
+  geom_text(aes(x = n_weeks, y = perc + 5, label = paste0(round(perc, digits = 0), "%"), group = group), position = position_dodge(1), size = 5) +
   scale_fill_manual(values = ls_colors) +
   scale_color_manual(values = ls_colors) +
   scale_y_continuous(breaks = breaks_pretty(n = 4), 
