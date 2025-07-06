@@ -49,14 +49,15 @@ here::i_am("manuscript.rmd")
 theme_set(theme_minimal())
 
 # define base ggplot theme
-theme_update(plot.title = element_text(size = 14, colour = "grey20", face = "bold", hjust = 0.5),
-             plot.subtitle = element_text(size = 10, colour = "grey20", face = "italic", hjust = 0.5, margin = margin(b = 10)),
+theme_update(plot.title = element_text(size = 16, colour = "grey20", face = "bold", hjust = 0.5),
+             plot.subtitle = element_text(size = 14, colour = "grey20", face = "italic", hjust = 0.5, margin = margin(b = 10)),
              plot.caption = element_text(size = 10, colour = "grey20", face = "italic", hjust = 0.5),
              plot.background = element_rect(fill = "white", colour = NA),
              panel.grid.minor = element_blank(),
              panel.grid.major = element_blank(),
-             axis.text = element_text(size = 10),
-             strip.text = element_text(size = 10, color = "grey20", face = "bold"),
+             axis.text = element_text(size = 12),
+             legend.text = element_text(size = 12),
+             strip.text = element_text(size = 12, color = "grey20", face = "bold"),
              strip.background = element_blank())
 
 # colors
@@ -190,7 +191,7 @@ df_loc <- read.csv("../readfiles/loc_map.csv")
 
 # stable dataset
 readfile_stable <- str_glue("../readfiles/stable/")
-fig_path = "../figs/manuscript/"
+fig_path = "../figs/supplementary/"
 
 df_energy_stable <- read_rds(paste0(readfile_stable, "df_energy.rds"))
 df_weather_stable <- read_rds(paste0(readfile_stable, "df_weather.rds"))
@@ -275,7 +276,324 @@ V_building <- nrow(df_fs_tmy_variable)
 A_building <- S_building + V_building
 ```
 
-```{r absnull, fig.cap="Comparison between the two M&V methods in detecting no intervention effect (expressed without absolute calculation) when buildings are subject to baseline change.", fig.height=6, fig.width=12}
+```{r stablesite, fig.cap = "Site summary of the filtered buildings from BDG2 dataset (counts < 10 are omitted for visualization; left: aggregated counts of buildings for each type; right: breakdown building counts for each building type at each location)", fig.width=8, fig.height=6}
+
+set3 <- colorRampPalette(brewer.pal('Set3',n=12))
+type_colors <- setNames(set3(13), all_types_variable$type)
+  
+stable_set <- df_energy_stable %>%
+  group_by(type) %>%
+  distinct(name) %>%
+  summarise(stable = n()) %>%
+  ungroup()
+
+variable_set <- df_energy_variable %>%
+  group_by(type) %>%
+  distinct(name) %>%
+  summarise(variable = n()) %>%
+  ungroup()
+
+p1 <- variable_set %>% 
+  left_join(stable_set, by = "type") %>% 
+  mutate(stable = replace_na(stable, 0)) %>% 
+  group_by(type) %>% 
+  summarise(n = stable + variable) %>% 
+  ungroup() %>% 
+  mutate(type = fct_reorder(type, n, .desc = F)) %>%
+  ggplot(aes(x = 1, y = n, fill = as.factor(type))) +
+  geom_col() +
+  geom_text(aes(label = ifelse(n > 10, n, "")), color = "black", position = position_stack(vjust = 0.5)) +
+  scale_y_continuous(expand = c(0, 0),
+                     breaks = breaks_pretty(n = 4)) +
+  scale_x_discrete(expand = c(0, 0.1)) +
+  scale_fill_manual(values = type_colors) +
+  labs(x = NULL,
+       y = NULL,
+       subtitle = "Combining all",
+       fill = NULL) +
+  theme(axis.text.x = element_blank(),
+        panel.grid.major.y = element_line(color = "grey80"),
+        legend.direction = "horizontal",
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+stable_set <- df_energy_stable %>% 
+  left_join(df_loc, by = "site") %>% 
+  group_by(type, location) %>%
+  distinct(name) %>%
+  summarise(stable = n()) %>%
+  ungroup()
+
+variable_set <- df_energy_variable %>% 
+   left_join(df_loc, by = "site") %>% 
+  group_by(type, location) %>%
+  distinct(name) %>%
+  summarise(variable = n()) %>%
+  ungroup()
+
+p2 <- variable_set %>% 
+  left_join(stable_set, by = c("type", "location")) %>% 
+  mutate(stable = replace_na(stable, 0)) %>% 
+  group_by(location, type) %>% 
+  summarise(n = stable + variable) %>% 
+  ungroup() %>% 
+  group_by(location) %>%
+  mutate(proportion = n / sum(n),
+         total = sum(n),
+         ymax = cumsum(proportion),
+         ymin = c(0, head(ymax, n = -1))) %>%
+  mutate(label_pos = (ymax + ymin) / 2) %>%
+  ungroup() %>%
+  group_by(type) %>%
+  mutate(order = sum(n)) %>%
+  ungroup() %>%
+  mutate(type = fct_reorder(type, order, .desc = F)) %>%
+  ggplot(aes(ymax = ymax, ymin = ymin, xmax = 4, xmin = 3.2, fill = type)) +
+  geom_rect() +
+  coord_polar(theta = "y") +
+  xlim(c(2, 4)) +
+  facet_wrap(~ location, nrow = 3) +
+  labs(x = NULL,
+       y = NULL,
+       subtitle = "For each location",
+       fill = NULL) +
+  scale_fill_manual(values = type_colors) +
+  geom_text(aes(x = 3.7, y = label_pos, label = ifelse(n > 10, n, ""))) +
+  geom_text(aes(x = 2, y = 0, label = paste0("Total\n", total)), color = "black", check_overlap = T) +
+  theme(legend.direction = "horizontal",
+        axis.text = element_blank(),
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+ggarrange(p1, p2,
+          ncol = 2, nrow = 1,
+          widths = c(0.2, 1),
+          common.legend = TRUE,
+          legend = "bottom") +
+  plot_annotation(title = "Summary of filtered buildings and types")
+```
+
+```{r chwst, fig.cap = "Proposed intervention strategy: chilled water supply temperature reset based on outdoor temperature.", fig.width=8, fig.height=4}
+
+data.frame(
+  OAT = c(10, 15, 25, 30),  
+  Baseline = c(6, 6, 6, 6),      
+  Intervention = c(12, 12, 7, 7)
+  ) %>% 
+  pivot_longer(cols = c("Baseline", "Intervention"), names_to = "strategy", values_to = "value") %>% 
+  ggplot(aes(x = OAT, y = value, color = strategy)) +
+  geom_line(linewidth = 1.2) +
+  scale_color_manual(values = ls_colors) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = c(4, 6, 8, 10, 12),
+                     limits = c(5, 12.5),
+                     labels = number_format(suffix = " °C")) +
+  scale_x_continuous(expand = c(0, 0), 
+                     breaks = c(5, 10, 15, 20, 25, 30), 
+                     labels = number_format(suffix = " °C")) +
+  geom_vline(xintercept = 10, lty = "dashed", color = "red") +
+  annotate(geom = "text", x = 7.5, y = 8, label = "No chiller\noperation\nbelow 10 °C", size = 5) +
+  coord_cartesian(xlim = c(5, 30)) +
+  labs(x = "Outdoor temperature", 
+       y = "Chilled water supply temperature", 
+       color = NULL, 
+       title = "Chilled water supply temperature reset intervention") +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.direction = "horizontal",
+        legend.position = "bottom",
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+```
+
+```{r meanerr, fig.cap="Distribution of estimated deviation from the ground-truth savings calculated by the two M&V methods (red dashed line highlighting 0% error)", fig.height=7, fig.width=9}
+# plot for the stable subset
+rand_eob_S <- df_seq_fs_stable %>% 
+  filter(seq == "eob") %>% 
+  left_join(df_fs_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - fs, 
+         method = "rand_eob") %>% 
+  select(name, method, diff)
+
+conv_S <- df_fs_stable %>% 
+  filter(method != "rand") %>% 
+  pivot_wider(names_from = method, values_from = savings) %>% 
+  mutate(diff = true - conv, 
+         method = "conv") %>% 
+  select(name, method, diff)
+
+rand_final_S <- df_fs_stable %>% 
+  filter(method != "conv") %>% 
+  pivot_wider(names_from = method, values_from = savings) %>% 
+  mutate(diff = true - rand, 
+         method = "rand_final") %>% 
+  select(name, method, diff)
+
+df_MW_S <- rbind(rand_eob_S, conv_S, rand_final_S)
+
+# plot for the variable subset
+rand_eob_V <- df_seq_fs_variable %>% 
+  filter(seq == "eob") %>% 
+  left_join(df_fs_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site"))%>% 
+  mutate(diff = savings - fs, 
+         method = "rand_eob") %>% 
+  select(name, method, diff)
+
+conv_V <- df_fs_variable %>% 
+  filter(method != "rand") %>% 
+  pivot_wider(names_from = method, values_from = savings) %>% 
+  mutate(diff = true - conv, 
+         method = "conv") %>% 
+  select(name, method, diff)
+
+rand_final_V <- df_fs_variable %>% 
+  filter(method != "conv") %>% 
+  pivot_wider(names_from = method, values_from = savings) %>% 
+  mutate(diff = true - rand, 
+         method = "rand_final") %>% 
+  select(name, method, diff)
+
+df_MW_V <- rbind(rand_eob_V, conv_V, rand_final_V)
+
+# plot for combined dataset
+rand_eob_A <- bind_rows(rand_eob_V, rand_eob_S) %>% 
+  select(name, rand_eob_diff = diff)
+
+conv_A <- bind_rows(conv_V, conv_S) %>% 
+  select(name, conv_diff = diff)
+
+rand_final_A <- bind_rows(rand_final_V, rand_final_S) %>% 
+  select(name, rand_final_diff = diff)
+
+df_MW_A <- rand_eob_A %>% 
+  left_join(conv_A, by = "name") %>% 
+  left_join(rand_final_A, by = "name") %>% 
+  pivot_longer(c(rand_eob_diff, conv_diff, rand_final_diff), names_to = "method", values_to = "diff")
+
+p_top <- df_MW_A %>% 
+  mutate(method = as.factor(method), 
+         method = recode_factor(method, "conv_diff" = "Conventional", "rand_eob_diff" = "Randomized", "rand_final_diff" = "Randomized\n(24 months)")) %>% 
+  ggplot(aes(x = method, y = diff, fill = method)) +
+  geom_lv(k = 4, outlier.shape = NA) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method), linewidth = 0.25) +
+  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
+  geom_text(data = . %>% group_by(method) %>% summarise(median = median(diff)) %>% ungroup(), 
+            aes(x = method, y = median, label = paste0(round(median, digits = 1), " %")), 
+            size = 5) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 5), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
+  labs(fill = NULL, 
+       color = NULL, 
+       x = NULL, 
+       y = "Estimated error in fractional savings", 
+       subtitle = str_glue("All {A_building} buildings with measured weather")) +
+  coord_cartesian(ylim = c(-15, 15)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "none",
+        axis.text.x = element_blank(),
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+# TMY
+# plot for the stable subset
+rand_eob_S <- df_sprt_all_stable %>% 
+  filter(seq == "eob") %>% 
+  select(-c(seq, n_weeks)) %>% 
+  left_join(df_fs_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - annual, 
+         method = "rand_eob") %>% 
+  select(name, method, diff)
+
+conv_S <- df_fs_tmy_stable %>% 
+  left_join(df_fs_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - conv, 
+         method = "conv") %>% 
+  select(name, method, diff)
+
+rand_final_S <- df_fs_tmy_stable %>% 
+  left_join(df_fs_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - rand, 
+         method = "rand_final") %>% 
+  select(name, method, diff)
+
+df_TW_S <- rbind(rand_eob_S, conv_S, rand_final_S)
+
+# plot for the variable subset
+rand_eob_V <- df_sprt_all_variable %>% 
+  filter(seq == "eob") %>% 
+  select(-c(seq, n_weeks)) %>% 
+  left_join(df_fs_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - annual, 
+         method = "rand_eob") %>% 
+  select(name, method, diff)
+
+conv_V <- df_fs_tmy_variable %>% 
+  left_join(df_fs_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - conv, 
+         method = "conv") %>% 
+  select(name, method, diff)
+
+rand_final_V <- df_fs_tmy_variable %>% 
+  left_join(df_fs_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = savings - rand, 
+         method = "rand_final") %>% 
+  select(name, method, diff)
+
+df_TW_V <- rbind(rand_eob_V, conv_V, rand_final_V)
+
+# plot for combined dataset
+rand_eob_A <- bind_rows(rand_eob_V, rand_eob_S) %>% 
+  select(name, rand_eob_diff = diff)
+
+conv_A <- bind_rows(conv_V, conv_S) %>% 
+  select(name, conv_diff = diff)
+
+rand_final_A <- bind_rows(rand_final_V, rand_final_S) %>% 
+  select(name, rand_final_diff = diff)
+
+df_TW_A <- rand_eob_A %>% 
+  left_join(conv_A, by = "name") %>% 
+  left_join(rand_final_A, by = "name") %>% 
+  pivot_longer(c(rand_eob_diff, conv_diff, rand_final_diff), names_to = "method", values_to = "diff")
+
+p_middle <- df_TW_A %>% 
+  mutate(method = as.factor(method), 
+         method = recode_factor(method, "conv_diff" = "Conventional", "rand_eob_diff" = "Randomized", "rand_final_diff" = "Randomized\n(24 months)")) %>% 
+  ggplot(aes(x = method, y = diff, fill = method)) +
+  geom_lv(k = 4, outlier.shape = NA) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method), linewidth = 0.25) +
+  geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1.5, lty = "dashed") +
+  geom_text(data = . %>% group_by(method) %>% summarise(median = median(diff)) %>% ungroup(), 
+            aes(x = method, y = median, label = paste0(round(median, digits = 1), " %")), 
+            size = 5) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 5), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
+  labs(fill = NULL, 
+       x = NULL, 
+       y = "Estimated error in fractional savings", 
+       subtitle = str_glue("All {A_building} buildings with TOWT model and TMY weather")) +
+  coord_cartesian(ylim = c(-15, 15)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "none",
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+ggarrange(p_top, p_middle, 
+          ncol = 1, nrow = 2,
+          labels = c("a)", "b)")) +
+  plot_annotation(title = "Estimated error in savings estimation by different M&V methods")
+
+percentiles <- df_TW_A %>%
+  filter(method == "conv_diff") %>% 
+  summarise(
+    Q1     = round(quantile(diff, 0.25, na.rm = TRUE), digits = 2),
+    Median = round(quantile(diff, 0.50, na.rm = TRUE), digits = 2),
+    Q3     = round(quantile(diff, 0.75, na.rm = TRUE), digits = 2)
+  )
+```
+
+```{r absnull, fig.cap="Comparison between the two M&V methods in detecting no intervention effect (expressed without absolute calculation) when buildings are subject to baseline change.", fig.height=4, fig.width=9}
 #### ABS-NULL ####
 rand_eob_S <- df_seq_fs_null_stable %>% 
   filter(seq == "eob") %>% 
@@ -341,12 +659,11 @@ df_MW_A %>%
   mutate(method = as.factor(method), 
          method = recode_factor(method, "conv_diff" = "Conventional", "rand_eob_diff" = "Randomized", "rand_final_diff" = "Randomized\n(24 months)")) %>% 
   ggplot(aes(x = method, y = diff, fill = method)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
   geom_lv(k = 4, outlier.shape = NA) +
   geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = method)) +
   geom_text(data = . %>% group_by(method) %>% summarise(median = median(diff)) %>% ungroup(), 
             aes(x = method, y = median, label = paste0(round(median, digits = 1), " %")), 
-            size = 4) +
+            size = 5) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
                      labels = number_format(suffix = " %")) +
@@ -355,7 +672,7 @@ df_MW_A %>%
   labs(fill = NULL, 
        x = NULL, 
        y = "Absolute effect in fractional savings", 
-       title = "Absolute effect of non-routine events when using different M&V methods", 
+       title = "Estimated absolute effect of non-routine events by different M&V methods", 
        subtitle = str_glue("All {A_building} buildings wither measured weather")) +
   coord_cartesian(ylim = c(0, 23)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
@@ -363,7 +680,7 @@ df_MW_A %>%
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 ```
 
-```{r meancont, fig.cap="Comparison of different sampling ratio impact on M&V estimation accuracy (expressed without absolute calculation for errors)", fig.height=8, fig.width=12}
+```{r meancont, fig.cap="Comparison of different sampling ratio impact on M&V estimation accuracy (expressed without absolute calculation for errors)", fig.height=7, fig.width=9}
 
 #### MEAN-CONT ####
 df_MW_S <- df_cont_stable %>% 
@@ -416,7 +733,6 @@ p_top <- df_MW_A %>%
                                "2_1" = "Continued\n(10/90)", 
                                "2_2" = "Randomized\n(10/90)")) %>% 
   ggplot(aes(x = ratio, y = values, fill = ratio)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
   geom_lv(k = 4, outlier.shape = NA, position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.1)) +
   geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = ratio), width = 0.75, linewidth = 0.15) +
   geom_vline(xintercept = 1.5, color = "#fb8072", linewidth = 1, lty = "dashed") +
@@ -425,7 +741,7 @@ p_top <- df_MW_A %>%
               summarise(median = median(values)) %>% 
               ungroup(), 
             aes(x = ratio, y = median, label = paste0(round(median, digits = 1), " %")), 
-            size = 4) +
+            size = 5) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 5), 
                      labels = number_format(suffix = " %")) +
@@ -490,7 +806,6 @@ p_bottom <- df_TW_A %>%
                                "2_1" = "Continued\n(10/90)", 
                                "2_2" = "Randomized\n(10/90)")) %>% 
   ggplot(aes(x = ratio, y = values, fill = ratio)) +
-  geom_jitter(width = 0.2, alpha = 0.8, size = 0.5) +
   geom_lv(k = 4, outlier.shape = NA, position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.1)) +
   geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = ratio), width = 0.75, linewidth = 0.15) +
   geom_vline(xintercept = 1.5, color = "#fb8072", linewidth = 1, lty = "dashed") +
@@ -499,7 +814,7 @@ p_bottom <- df_TW_A %>%
               summarise(median = median(values)) %>% 
               ungroup(), 
             aes(x = ratio, y = median, label = paste0(round(median, digits = 1), " %")), 
-            size = 4) +
+            size = 5) +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 5), 
                      labels = number_format(suffix = " %")) +
@@ -520,7 +835,162 @@ ggarrange(p_top, p_bottom,
   plot_annotation(title = "Absolute error in savings estimation by different sampling ratio")
 ```
 
-```{r absint2y, fig.cap="Comparison of different sampling interval impact on M&V estimation accuracy over the course of two years (dropped: all non-consecutive days were dropped; kept: all measurements were kept)", fig.height=9, fig.width=12}
+```{r abscont, fig.cap="Comparison of different sampling ratio impact on M&V estimation accuracy over the entire 24 months (previous results of sampling at 50%/50% shown on the left side of the red dashed line)", fig.height=7, fig.width=9}
+
+#### ABS-CONT ####
+df_MW_S <- df_cont_stable %>% 
+  left_join(df_fs_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - cont_fs), 
+         diff_all = abs(savings - cont_fs_all)) %>% 
+  select(name, diff, diff_all, ratio) %>% 
+  pivot_longer(c(diff, diff_all), names_to = "type", values_to = "values") %>% 
+  mutate(ratio = ifelse(ratio == 1 & type == "diff", "1_1", 
+                        ifelse(ratio == 1 & type == "diff_all", "1_2", 
+                               ifelse(ratio == 2 & type == "diff", "2_1", 
+                                      ifelse(ratio == 2 & type == "diff_all", "2_2", ratio))))) %>% 
+  bind_rows(df_fs_stable %>% 
+              filter(method != "conv") %>% 
+              pivot_wider(names_from = method, values_from = savings) %>% 
+              mutate(values = abs(true - rand), 
+                     ratio = "0", 
+                     type = "diff_ref") %>% 
+              select(name, values, ratio, type))
+
+
+# plot for the variable subset
+df_MW_V <- df_cont_variable %>% 
+  left_join(df_fs_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - cont_fs), 
+         diff_all = abs(savings - cont_fs_all)) %>% 
+  select(name, diff, diff_all, ratio) %>% 
+  pivot_longer(c(diff, diff_all), names_to = "type", values_to = "values") %>% 
+  mutate(ratio = ifelse(ratio == 1 & type == "diff", "1_1", 
+                        ifelse(ratio == 1 & type == "diff_all", "1_2", 
+                               ifelse(ratio == 2 & type == "diff", "2_1", 
+                                      ifelse(ratio == 2 & type == "diff_all", "2_2", ratio))))) %>% 
+  bind_rows(df_fs_variable %>% 
+              filter(method != "conv") %>% 
+              pivot_wider(names_from = method, values_from = savings) %>% 
+              mutate(values = abs(true - rand), 
+                     ratio = "0", 
+                     type = "diff_ref") %>% 
+              select(name, values, ratio, type))
+
+# plot for combined dataset
+df_MW_A <- rbind(df_MW_S, df_MW_V)
+
+p_top <- df_MW_A %>% 
+  mutate(ratio = as.factor(ratio), 
+         ratio = recode_factor(ratio, 
+                               "0" = "Randomized\n(50/50)", 
+                               "1_1" = "Continued\n(20/80)", 
+                               "1_2" = "Randomized\n(20/80)", 
+                               "2_1" = "Continued\n(10/90)", 
+                               "2_2" = "Randomized\n(10/90)")) %>% 
+  ggplot(aes(x = ratio, y = values, fill = ratio)) +
+  geom_lv(k = 4, outlier.shape = NA, position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.1)) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = ratio), width = 0.75) +
+  geom_vline(xintercept = 1.5, color = "#fb8072", linewidth = 1, lty = "dashed") +
+  geom_text(data = . %>% 
+              group_by(ratio) %>% 
+              summarise(median = median(values)) %>% 
+              ungroup(), 
+            aes(x = ratio, y = median, label = paste0(round(median, digits = 1), " %")), 
+            size = 5) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 4), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80", "grey80", "grey80", "grey80")) + 
+  labs(fill = NULL, 
+       x = NULL, 
+       y = "Absolute error in fractional savings", 
+       subtitle = str_glue("All {A_building} buildings with measured weather conditions")) +
+  coord_cartesian(ylim = c(0, 15)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "none",
+        axis.text.x = element_blank(), 
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+# TMY
+# plot for the stable subset
+df_TW_S <- df_cont_stable %>% 
+  left_join(df_fs_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - cont_tmy), 
+         diff_all = abs(savings - cont_tmy_all)) %>% 
+  select(name, diff, diff_all, ratio) %>% 
+  pivot_longer(c(diff, diff_all), names_to = "type", values_to = "values") %>% 
+  mutate(ratio = ifelse(ratio == 1 & type == "diff", "1_1", 
+                        ifelse(ratio == 1 & type == "diff_all", "1_2", 
+                               ifelse(ratio == 2 & type == "diff", "2_1", 
+                                      ifelse(ratio == 2 & type == "diff_all", "2_2", ratio))))) %>% 
+  bind_rows(df_fs_tmy_stable %>% 
+              left_join(df_fs_stable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+              mutate(values = abs(savings - rand), 
+                     ratio = "0", 
+                     type = "diff_ref") %>% 
+              select(name, values, ratio, type))
+
+# plot for the variable subset
+df_TW_V <- df_cont_variable %>% 
+  left_join(df_fs_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+  mutate(diff = abs(savings - cont_tmy), 
+         diff_all = abs(savings - cont_tmy_all)) %>% 
+  select(name, diff, diff_all, ratio) %>% 
+  pivot_longer(c(diff, diff_all), names_to = "type", values_to = "values") %>% 
+  mutate(ratio = ifelse(ratio == 1 & type == "diff", "1_1", 
+                        ifelse(ratio == 1 & type == "diff_all", "1_2", 
+                               ifelse(ratio == 2 & type == "diff", "2_1", 
+                                      ifelse(ratio == 2 & type == "diff_all", "2_2", ratio))))) %>% 
+  bind_rows(df_fs_tmy_variable %>% 
+              left_join(df_fs_variable %>% filter(scenario == "ref" & method == "true"), by = c("name", "site")) %>% 
+              mutate(values = abs(savings - rand), 
+                     ratio = "0", 
+                     type = "diff_ref") %>% 
+              select(name, values, ratio, type))
+
+# plot for combined dataset
+df_TW_A <- rbind(df_TW_S, df_TW_V)
+
+p_bottom <- df_TW_A %>% 
+  mutate(ratio = as.factor(ratio), 
+         ratio = recode_factor(ratio, 
+                               "0" = "Randomized\n(50/50)", 
+                               "1_1" = "Continued\n(20/80)", 
+                               "1_2" = "Randomized\n(20/80)", 
+                               "2_1" = "Continued\n(10/90)", 
+                               "2_2" = "Randomized\n(10/90)")) %>% 
+  ggplot(aes(x = ratio, y = values, fill = ratio)) +
+  geom_lv(k = 4, outlier.shape = NA, position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.1)) +
+  geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = ratio), width = 0.75) +
+  geom_vline(xintercept = 1.5, color = "#fb8072", linewidth = 1, lty = "dashed") +
+  geom_text(data = . %>% 
+              group_by(ratio) %>% 
+              summarise(median = median(values)) %>% 
+              ungroup(), 
+            aes(x = ratio, y = median, label = paste0(round(median, digits = 1), " %")), 
+            size = 5) +
+  scale_y_continuous(expand = c(0, 0), 
+                     breaks = breaks_pretty(n = 4), 
+                     labels = number_format(suffix = " %")) +
+  scale_fill_manual(values = ls_colors) +
+  scale_color_manual(values = c("grey80", "grey80", "grey80", "grey80", "grey80")) + 
+  labs(fill = NULL, 
+       x = NULL, 
+       y = "Absolute error in fractional savings", 
+       subtitle = str_glue("All {A_building} buildings with TOWT model and TMY weather")) +
+  coord_cartesian(ylim = c(0, 15)) +
+  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
+        legend.position = "none",
+        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
+
+ggarrange(p_top, p_bottom, 
+          ncol = 1, nrow = 2,
+          labels = c("a)", "b)")) +
+  plot_annotation(title = "Absolute error in savings estimation by different sampling ratio")
+```
+
+```{r absint2y, fig.cap="Comparison of different sampling interval impact on M&V estimation accuracy over the course of two years (dropped: all non-consecutive days were dropped; kept: all measurements were kept)", fig.height=8, fig.width=9}
 # dropped version
 df_interval_keep_stable %<>% 
   left_join(df_fs_stable %>% filter(method == "rand"), by = c("name", "site")) %>% 
@@ -583,16 +1053,13 @@ p_top <- df_MW_A %>%
          group = as.factor(group), 
          group = recode_factor(group, "drop" = "Dropped", "keep" = "Kept")) %>% 
   ggplot(aes(x = interval, y = diff, fill = group)) +
-  geom_jitter(alpha = 0.8, 
-              size = 0.5, 
-              position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.2)) +
   geom_lv(k = 4, outlier.shape = NA, position = position_dodge(width = 0.8)) +
   geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group), width = 0.8, linewidth = 0.15) +
   geom_text(data = . %>% group_by(group, interval) %>% summarise(median = median(diff, na.rm = T)) %>% ungroup(), 
             aes(x = interval, y = median, group = group,
                 label = paste0(round(median, digits = 1), " %")), 
             position = position_dodge(width = 0.75), 
-            size = 4, 
+            size = 5, 
             color = "white") +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
@@ -604,7 +1071,7 @@ p_top <- df_MW_A %>%
        x = NULL, 
        y = "Absolute error in fractional savings", 
        subtitle = str_glue("All {A_building} buildings with measured weather")) +
-  coord_cartesian(ylim = c(0, 8)) +
+  coord_cartesian(ylim = c(0, 6)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
         legend.position = "bottom",
         axis.text.x = element_blank(),
@@ -656,16 +1123,13 @@ p_bottom <- df_TW_A %>%
          group = as.factor(group), 
          group = recode_factor(group, "drop" = "Dropped", "keep" = "Kept")) %>% 
   ggplot(aes(x = interval, y = diff, fill = group)) +
-  geom_jitter(alpha = 0.8, 
-              size = 0.5, 
-              position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.2)) +
   geom_lv(k = 4, outlier.shape = NA, position = position_dodge(width = 0.8)) +
   geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group), width = 0.8, linewidth = 0.15) +
   geom_text(data = . %>% group_by(group, interval) %>% summarise(median = median(diff, na.rm = T)) %>% ungroup(), 
             aes(x = interval, y = median, group = group,
                 label = paste0(round(median, digits = 1), " %")), 
             position = position_dodge(width = 0.75), 
-            size = 4,
+            size = 5,
             color = "white") +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 4), 
@@ -677,7 +1141,7 @@ p_bottom <- df_TW_A %>%
        x = NULL, 
        y = "Absolute error in fractional savings", 
        subtitle = str_glue("All {A_building} buildings with TOWT model and TMY weather")) +
-  coord_cartesian(ylim = c(0, 8)) +
+  coord_cartesian(ylim = c(0, 6)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
         legend.position = "bottom",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
@@ -688,10 +1152,10 @@ ggarrange(p_top, p_bottom,
           labels = c("a)", "b)"),
           common.legend = T, 
           legend = "bottom") +
-  plot_annotation(title = "Absolute error in savings estimation of ranodmized M&V by different sampling intervals")
+  plot_annotation(title = "Absolute error in savings estimation of ranodmized M&V\nafter 2 years")
 ```
 
-```{r meanintspt, fig.cap="Comparison of different sampling interval impact on M&V estimation accuracy after satisfying all stopping criteria (without absolute calculation)", fig.height=9, fig.width=12}
+```{r meanintspt, fig.cap="Comparison of different sampling interval impact on M&V estimation accuracy after satisfying all stopping criteria (without absolute calculation)", fig.height=8, fig.width=9}
 # sprt sequence plot for different sampling intervals
 df_seq_interval_fs_keep_stable %<>% 
   select(-c(sprt, temp, final)) %>% 
@@ -738,9 +1202,6 @@ p_top <- df_MW_A %>%
          group = as.factor(group), 
          group = recode_factor(group, "drop" = "Dropped", "keep" = "Kept")) %>% 
   ggplot(aes(x = interval, y = diff, fill = group)) +
-  geom_jitter(alpha = 0.8, 
-              size = 0.5, 
-              position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.2)) +
   geom_lv(k = 4, outlier.shape = NA, position = position_dodge(width = 0.8)) +
   geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group), width = 0.8, linewidth = 0.15) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
@@ -748,7 +1209,7 @@ p_top <- df_MW_A %>%
             aes(x = interval, y = median, group = group,
                 label = paste0(round(median, digits = 1), " %")), 
             position = position_dodge(width = 0.75), 
-            size = 4, 
+            size = 5, 
             color = "white") +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 5), 
@@ -760,7 +1221,7 @@ p_top <- df_MW_A %>%
        x = NULL, 
        y = "Estimated error in fractional savings", 
        subtitle = str_glue("All {A_building} buildings with measured weather")) +
-  coord_cartesian(ylim = c(-12, 12)) +
+  coord_cartesian(ylim = c(-10, 10)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
         legend.position = "bottom",
         axis.text.x = element_blank(),
@@ -812,9 +1273,6 @@ p_bottom <- df_TW_A %>%
          group = as.factor(group), 
          group = recode_factor(group, "drop" = "Dropped", "keep" = "Kept")) %>% 
   ggplot(aes(x = interval, y = diff, fill = group)) +
-  geom_jitter(alpha = 0.8, 
-              size = 0.5, 
-              position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.2)) +
   geom_lv(k = 4, outlier.shape = NA, position = position_dodge(width = 0.8)) +
   geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group), width = 0.8, linewidth = 0.15) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
@@ -822,7 +1280,7 @@ p_bottom <- df_TW_A %>%
             aes(x = interval, y = median, group = group,
                 label = paste0(round(median, digits = 1), " %")), 
             position = position_dodge(width = 0.75), 
-            size = 4, 
+            size = 5, 
             color = "white") +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 5), 
@@ -834,7 +1292,7 @@ p_bottom <- df_TW_A %>%
        x = NULL, 
        y = "Esimated error in fractional savings", 
        subtitle = str_glue("All {A_building} buildings with TOWT model and TMY weather")) +
-  coord_cartesian(ylim = c(-12, 12)) +
+  coord_cartesian(ylim = c(-10, 10)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
         legend.position = "bottom",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
@@ -845,11 +1303,11 @@ ggarrange(p_top, p_bottom,
           labels = c("a)", "b)"),
           common.legend = T, 
           legend = "bottom") +
-  plot_annotation(title = "Estimated error in savings estimation of randomized M&V after satisfying all stopping criteria")
+  plot_annotation(title = "Estimated error in savings estimation of randomized M&V\nafter satisfying all stopping criteria")
 
 ```
 
-```{r meanint2y, fig.cap="Comparison of different sampling interval impact on M&V estimation accuracy over the course of the two years (without absolute calculation)", fig.width=12, fig.height=9}
+```{r meanint2y, fig.cap="Comparison of different sampling interval impact on M&V estimation accuracy over the course of the two years (without absolute calculation)", fig.width=9, fig.height=8}
 # dropped version
 df_drop <- df_interval_drop_stable %>% 
   bind_rows(df_interval_drop_variable) %>% 
@@ -896,9 +1354,6 @@ p_top <- df_MW_A %>%
          group = as.factor(group), 
          group = recode_factor(group, "drop" = "Dropped", "keep" = "Kept")) %>% 
   ggplot(aes(x = interval, y = diff, fill = group)) +
-  geom_jitter(alpha = 0.8, 
-              size = 0.5, 
-              position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.2)) +
   geom_lv(k = 4, outlier.shape = NA, position = position_dodge(width = 0.8)) +
   geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group), width = 0.8, linewidth = 0.15) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
@@ -906,7 +1361,7 @@ p_top <- df_MW_A %>%
             aes(x = interval, y = median, group = group,
                 label = paste0(round(median, digits = 1), " %")), 
             position = position_dodge(width = 0.75), 
-            size = 4, 
+            size = 5, 
             color = "white") +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 5), 
@@ -918,7 +1373,7 @@ p_top <- df_MW_A %>%
        x = NULL, 
        y = "Estimated error in fractional savings", 
        subtitle = str_glue("All {A_building} buildings with measured weather")) +
-  coord_cartesian(ylim = c(-10, 10)) +
+  coord_cartesian(ylim = c(-5, 5)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
         legend.position = "bottom",
         axis.text.x = element_blank(),
@@ -970,9 +1425,6 @@ p_bottom <- df_TW_A %>%
          group = as.factor(group), 
          group = recode_factor(group, "drop" = "Dropped", "keep" = "Kept")) %>% 
   ggplot(aes(x = interval, y = diff, fill = group)) +
-  geom_jitter(alpha = 0.8, 
-              size = 0.5, 
-              position = position_jitterdodge(dodge.width = 0.75, jitter.width = 0.2)) +
   geom_lv(k = 4, outlier.shape = NA, position = position_dodge(width = 0.8)) +
   geom_boxplot(outlier.alpha = 0, coef = 0, fill = "#00000000", aes(color = group), width = 0.8, linewidth = 0.15) +
   geom_hline(yintercept = 0, color = "#fb8072", linewidth = 1, lty = "dashed") +
@@ -980,7 +1432,7 @@ p_bottom <- df_TW_A %>%
             aes(x = interval, y = median, group = group,
                 label = paste0(round(median, digits = 1), " %")), 
             position = position_dodge(width = 0.75), 
-            size = 4, 
+            size = 5, 
             color = "white") +
   scale_y_continuous(expand = c(0, 0), 
                      breaks = breaks_pretty(n = 5), 
@@ -992,7 +1444,7 @@ p_bottom <- df_TW_A %>%
        x = NULL, 
        y = "Estimated error in fractional savings", 
        subtitle = str_glue("All {A_building} buildings with TOWT model and TMY weather")) +
-  coord_cartesian(ylim = c(-10, 10)) +
+  coord_cartesian(ylim = c(-5, 5)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
         legend.position = "bottom",
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
@@ -1003,7 +1455,7 @@ ggarrange(p_top, p_bottom,
           labels = c("a)", "b)"),
           common.legend = T, 
           legend = "bottom") +
-  plot_annotation(title = "Estimated error in savings estimation of randomized M&V by different sampling intervals")
+  plot_annotation(title = "Estimated error in savings estimation of randomized M&V\nafter 2 years")
 ```
 
 ```{r 6weekstartT, fig.cap = "Time required to satisfy all stopping criteria starting from March and using a shorter blocking period of 6 weeks"}
