@@ -1,12 +1,34 @@
 ---
 title: "Demonstrating the Reliability of Randomized Measurement and Verification for Switchable Control Retrofits Using a Large Open-Source Dataset"
 author:
-  - Aoyu Zou ^[Center for the Built Environment, University of California Berkeley, USA], Paul Raftery ^1^, Stefano Schiavon ^1^ ^[Department of Architecture, College of Environmental Design, University of California, Berkeley, USA] ^[Department of Civil and Environmental Engineering, College of Engineering, University of California, Berkeley, USA], Carlos Duarte ^1^, Gail Brager ^1^
-abstract: Conventional measurement and verification (M&V) methods rely on comparing pre- and post-retrofit performance to estimate energy savings. They are often time-consuming and unreliable, especially when non-routine events, as step changes or more gradual changes in how a building operates, occur during the M&V process. Those events are unrelated to the intervention but significantly affect building energy consumption and thus when the analyst applies the conventional M&V method, the results can be confounded. In this study, we demonstrated that switchable interventions, such as most HVAC control retrofits, can benefit from a new M&V method that randomly samples whether to implement the baseline or the intervention strategy at a fixed interval (e.g., daily). We tested this novel randomized M&V method on a large public dataset (639 buildings) covering various climate zones and commercial building types, using a virtual chilled water supply temperature reset based on outdoor weather as the intervention. The results show that compared to the conventional method, the randomized method provides more accurate savings estimations with a median of 74% accuracy improvement and is even faster (typically 36 weeks instead of 104 weeks, ~65% reduction). Additionally, we found that when non-routine events are present, the randomized method estimates savings that are much closer to the ground-truth savings than the conventional method, demonstrating much improved reliability. We also assessed the impact of normalizing for different weather, starting the M&V at different dates of the year, continuing randomization with a different sampling ratio after satisfying all criteria, and dropping samples affected by carryover effects when switching between strategies. For each scenario, we identified the optimal sampling interval using the large dataset.
+  - Aoyu Zou:
+      institute: cbe
+      correspondence: true
+  - name: Paul Raftery
+    institute: cbe
+  - name: Stefano Schiavon
+    institute: [cbe, arch, cee]
+  - name: Carlos Duarte
+    institute: cbe
+  - name: Gail Brager
+    institute: [cbe, arch]
+institute:
+  - cbe: Center for the Built Environment, University of California Berkeley, USA
+  - arch: Department of Architecture, College of Environmental Design, University of California, Berkeley, USA
+  - cee: Department of Civil and Environmental Engineering, College of Engineering, University of California, Berkeley, USA
+abstract: Conventional measurement and verification (M&V) methods for estimating energy savings rely on comparing pre- and post-retrofit performance. They are often time-consuming and unreliable, especially when non-routine events, such as step changes or more gradual changes in building operation, occur during the M&V process. When those events are unrelated to the retrofit intervention but may significantly affect building energy consumption, then when the analyst applies the conventional M&V method the results can be confounded. In this study, we demonstrated that switchable interventions, such as most HVAC control retrofits, can benefit from a new M&V method that randomly samples whether to implement the baseline or the intervention strategy at a fixed interval (e.g., daily). We tested this novel randomized M&V method on a large public dataset (639 buildings) covering various climate zones and commercial building types, using a virtual chilled water supply temperature reset based on outdoor weather as the intervention. The results show that, compared to the conventional method, the randomized method provides more accurate savings estimations with a median of 74% accuracy improvement and is even faster (typically 36 weeks instead of 104 weeks, ~65% reduction). Additionally, we found that when non-routine events are present (e.g., occupancy pattern change), the randomized method estimates savings that are much closer to the ground-truth savings than the conventional method, demonstrating much improved reliability. We also assessed the impact of normalizing for different weather, starting the M&V at different dates of the year, continuing randomization with a different sampling ratio after satisfying all criteria, and dropping samples affected by carryover effects when switching between strategies. For each scenario, we identified the optimal sampling interval using the large dataset.
 
 output:
   bookdown::word_document2:
     reference_docx: "../paper/template.docx"
+    number_sections: false
+    pandoc_args:
+      - '--lua-filter=scholarly-metadata.lua'
+      - '--lua-filter=author-info-blocks.lua'
+      
+scholarly-metadata:
+  affiliations-location: footnote
+  
 editor_options: 
   markdown: 
     wrap: 72
@@ -310,15 +332,16 @@ ventilation and air conditioning
 
 ## Conventional M&V
 
-Measurement and Verification (M&V) is the process of quantifying energy
-savings from energy efficiency projects by comparing actual energy
-consumption against a baseline, adjusting for factors like weather and
-occupancy. This process ensures that improvements in energy performance
-are accurately evaluated. In the United States, practitioners often
-refer to ASHRAE Guideline 14, the International Performance Measurement
-and Verification Protocol (IPMVP), and the Federal Energy Management
-Program (FEMP) for standard guidelines [@doe_mv_2008;
-@efficiency_valuation_organisation_international_2012;
+Measurement and Verification (M&V) is the process of quantifying
+savings, most commonly energy savings, but also potentially water and
+demand savings, from efficiency projects by comparing actual consumption
+against an established baseline, while adjusting for varying factors
+such as weather and occupancy. This process ensures that improvements in
+energy performance are accurately evaluated. In the United States,
+practitioners often refer to ASHRAE Guideline 14, the International
+Performance Measurement and Verification Protocol (IPMVP), and the
+Federal Energy Management Program (FEMP) for standard guidelines
+[@doe_mv_2008; @efficiency_valuation_organisation_international_2012;
 @ashrae_ashrae_2023]. These guidelines outline standardized methods for
 quantifying energy savings, whether through calibrated simulations or
 monitored measurements for specific equipment or systems (isolation
@@ -333,20 +356,28 @@ measurement procedure during the year after the intervention. After
 collecting two years of data, an M&V analyst fits an energy prediction
 model, using variables such as outdoor temperature and time
 [@mathieu_quantifying_2011] to project baseline energy consumption in
-the post-retrofit period. The difference between the counter-factual
-baseline and the measured intervention period energy consumption
-represents the energy savings. One of the key drawbacks of this method
-is its reliance on a two-year timeline to quantify savings, during which
-baseline measurements can become outdated due to changes in building
-performance caused by non-routine events unrelated to the intervention.
-Specifically, an M&V analyst should account for two types of baseline
-changes: (1) static changes, which are known building operational
-changes: such as renovation, equipment addition or removal, and changes
-related to tenant turnover; and (2) gradual changes, which often occur
-subtly and unknown, such as the incremental adoption of LED lighting or
-more efficient plug loads. Identifying and quantifying these changes are
-particularly labor-intensive and challenging. Consequently, those
-limitations reduce the feasibility of M&V and complicate the
+the post-retrofit time period (but without the retrofit itself). The
+difference between this counter-factual baseline and the measured energy
+consumption during the actual post-retrofit (intervention) period is the
+energy savings. However, other changes unrelated to the implemented
+strategies, such as occupancy patterns, can also contribute to the
+energy consumption difference. Although building analysts can apply
+routine adjustments to account for expected variations in independent
+variables commonly included in energy models, such as weather conditions
+and time, it is hard to accurately adjust for building performance
+change caused by non-routine events. Those events refer to less
+predictable and infrequent events that impact energy consumption but are
+unrelated to the specific intervention under study. Specifically, when
+using the conventional method, an M&V analyst should account for two
+additional types of baseline changes beyond routine adjustments: (1)
+known static changes to building operation, which are considered as
+typical non-routine events: including renovation, equipment addition or
+removal, and changes related to tenant turnover; and (2) gradual
+changes, which often occur subtly and unknown due to lack of accurate
+measurements to quantify, such as the incremental adoption of LED
+lighting or more efficient plug loads. Identifying and quantifying these
+changes are particularly labor-intensive and challenging. Consequently,
+those limitations reduce the feasibility of M&V and complicate the
 quantification of estimation uncertainty, thus impacting the accuracy
 and timeliness of savings assessments.
 
@@ -356,55 +387,59 @@ To address the limitations of conventional M&V methods and the
 challenges posed by building baseline changes, we proposed a M&V method
 that adopts the randomized crossover design [@raftery2024], a gold
 standard from medical, agricultural and online controlled experimental
-(i.e. A/B testing) studies [@blackston_comparison_2019; @duan2013;
+(i.e. A/B testing) studies [@blackston_comparison_2019; @duan2013;
 @gupta2019; @mie2022; @munro; @raseduzzaman2017]. An early application
 of this randomized design to the field of M&V in buildings was first
-used in [@raftery2018], which compared the energy performance of two
-different supply air temperature reset strategies in a building.
-Subsequent improvements to the M&V method include adding a sequential
-evaluation framework and defining stopping criteria to end the M&V
-period early after reaching a target level of uncertainty, using blocked
-randomization by weekday. The full framework is detailed in a previously
-published study [@raftery2024] along with a case study application to a
-real building, and other example use cases. In summary, this method
-provides M&V analysts with a randomized schedule that alternates between
-baseline and intervention implementation while ensuring balanced
-sampling across days of the week and seasons. For example, given a
-10-week M&V period for one intervention, the balanced randomized
-schedule would equally sample five Mondays with the baseline strategy in
-operation and five Mondays with the intervention strategy in operation.
+used in Raftery et al. [@raftery2018], which compared the energy
+performance of two different supply air temperature reset strategies in
+a building. Through random sampling, the study reached a conclusion of
+29% energy cost savings after just 6 months. Subsequent improvements to
+the M&V method included adding a sequential evaluation framework and
+defining stopping criteria to end the M&V period early after reaching a
+target level of uncertainty, using blocked randomization by weekday. The
+full framework is described in a previously published study
+[@raftery2024] along with a case study application to a real building,
+and other example use cases. In summary, this method provides M&V
+analysts with a randomized schedule that alternates between baseline and
+intervention implementation while ensuring balanced sampling across days
+of the week and seasons. For example, given a 10-week M&V period for one
+intervention, the balanced randomized schedule would equally sample five
+Mondays with the baseline strategy in operation and five Mondays with
+the intervention strategy in operation. 
+
 The major limitation of this method is that it is only applicable to a
 subset of retrofit projects where interventions can be easily switched
-on and off, which is a small subset of all the interventions performed
-in buildings. However, for all applicable use cases, it allows analysts
-to detect energy savings sequentially shortly after the test begins. In
-addition, once the desired estimate uncertainty target is achieved,
-analysts can terminate the M&V study and switch to 100% intervention.
-The key advantage of randomization is that if control strategies are
-sampled with equal probability, the influence of other confounding
-factors such as occupancy change (a common non-routine event) and other
-more subtle long term changes in building energy use are likely to be
-evenly distributed among measurements, leading to a more accurate and
-unbiased assessment of the intervention effect.
+on and off (e.g., HVAC control retrofits), which is a small subset of
+all the interventions performed in buildings. However, for all
+applicable use cases, it allows analysts to detect energy savings
+sequentially shortly after the test begins. In addition, once the
+desired estimate uncertainty target is achieved, analysts can terminate
+the M&V study and switch to 100% intervention. The key advantage of
+randomization is that when control strategies are sampled with equal
+probability, the influence of confounding factors (e.g., occupancy
+change---a common non-routine event---and other more subtle long term
+changes in building energy use) are likely to be evenly distributed
+among measurements, leading to a more accurate and unbiased assessment
+of the intervention effect.
 
 ## BDG2 dataset
 
-To demonstrate and differences between the two M&V methods, the Building
-Genome Dataset 2 (BGD2) is used, which is an extensive open-access
+To demonstrate the differences between the two M&V methods, we used the
+Building Genome Dataset 2 (BGD2), which is an extensive open-access
 dataset designed to advance research and development in building energy
 efficiency and control strategies, acting as a test-bed for modeling,
 simulation, and algorithm development [@miller_building_2020]. BGD2
-contains over 1000 buildings' metadata and realistic operational
-measurements between 2016 and 2017 from across North America and Europe,
-making it one of the most comprehensive collections of building-related
-data available for scientific use. The dataset includes various
-commercial building types such as offices, education facilities, public,
-and retail buildings, and provides detailed information on their
-physical characteristics (e.g. energy ratings, heating types and floor
-area) and hourly measurements of chilled and hot water, electricity, gas
-usage as well as site outdoor weather conditions. In this study, we
-mostly used the metered electricity and outdoor weather measurements for
-evaluating the M&V methods.
+contains over 1000 buildings' metadata and real operational measurements
+between 2016 and 2017 from across North America and Europe, making it
+one of the most comprehensive collections of building-related data
+available for scientific use. The dataset includes various commercial
+building types such as offices, education facilities, public, and retail
+buildings, and provides detailed information on their physical
+characteristics (e.g. energy ratings, heating types and floor area) and
+hourly measurements of chilled and hot water, electricity, gas usage as
+well as site outdoor weather conditions. In this study, we mostly used
+the metered electricity and outdoor weather measurements for evaluating
+the M&V methods.
 
 ## Literature review
 
@@ -412,64 +447,66 @@ evaluating the M&V methods.
 
 ASHRAE Guideline 14 and the IPMVP provide options for whole-building M&V
 use cases. For code compliance using the prescriptive option, 12 months
-of baseline and 12 months of post-retrofit measurements are required. In
-addition, the expected savings should be larger than 10% and the
-baseline energy model fitting accuracy should have CV(RMSE) lower than
-25% for 12-month data collection. Thus, most research related to M&V for
-the whole-building approach focuses on the accuracy of baseline
-modeling, exploring model performance from simple regression models to
-more complex machine learning techniques. One study reviewed various
-models suitable for M&V applications as well as selected input features
-[@alrobaie_review_2022] and another study provided a definitive
-methodology to apply machine learning models for M&V use cases
-[@gallagher_development_2018]. In addition, a few studies investigated
-the critical performance metrics to evaluate the developed baseline
-models [@granderson_automated_2015; @granderson_development_2014] and
-compared a variety of models using those metrics
-[@granderson_accuracy_2016]. These studies made significant
-contributions by emphasizing the uncertainty associated with the
-model-fitting process, a key factor in accurately determining energy
-savings. Furthermore, other researchers addressed this issue by
-leveraging statistical formulation and inference to improve baseline
-energy models [@burkhart_measurement_2014; @heo_calibration_2012;
-@walter_uncertainty_2014]. However, a gap still remains in the
-literature regarding the rigorous quantification of uncertainties
-directly associated with calculated savings, for instance, accounting
-for the potential bias that the baseline model might deteriorate (i.e.,
-become 'stale') over the extended period of pre- and post-analysis.
+of baseline and 12 months of post-retrofit measurements are required.
+Moreover, the expected savings should be larger than 10% and the
+baseline energy model fitting accuracy should have a Coefficient of
+Variation of the Root Mean Square Error, CV(RMSE), lower than 25% for
+12-month data collection. Thus, most research related to M&V for the
+whole-building approach focuses on the accuracy of baseline modeling,
+exploring model performance from simple regression models to more
+complex machine learning techniques. Alrobaie and Krarti
+[@alrobaie_review_2022] reviewed various models suitable for M&V
+applications as well as selected input features. Gallagher et al.
+[@gallagher_development_2018] provided a well-thought-out methodology to
+apply machine learning models for M&V use cases. Researchers at LBNL
+investigated the critical performance metrics to evaluate the developed
+baseline models [@granderson_automated_2015;
+@granderson_development_2014] and compared a variety of models using
+those metrics [@granderson_accuracy_2016]. These studies emphasized the
+uncertainty associated with the model-fitting process, a key factor in
+accurately determining energy savings. Furthermore, other researchers
+addressed this issue by leveraging statistical formulation and inference
+to improve baseline energy models [@burkhart_measurement_2014;
+@heo_calibration_2012; @walter_uncertainty_2014]. However, a gap still
+remains in the literature regarding how to rigorously quantify the
+uncertainties directly associated with calculated savings. For instance,
+this includes accounting for the potential bias that the baseline model
+might deteriorate over time, as well as the model no longer accurately
+representing the building energy behavior due to changes in operation,
+occupancy, equipment performance, etc.
 
 ### Changes in building baseline measurements
 
-Changes in a building that influence its energy usage and are unrelated
-to the intervention being studied by the M&V method are commonly
-referred to as non-routine events. Current guidelines define non-routine
-events as 'static factors' that need to be adjusted after projecting the
-baseline in the post-retrofit period [@ashrae_ashrae_2023;
+As mentioned earlier, non-routine events are changes in a building that
+influence its energy usage but are unrelated to the intervention being
+studied by the M&V. Current guidelines define non-routine events as
+'static factors' that need to be adjusted after projecting the baseline
+into the post-retrofit period [@ashrae_ashrae_2023;
 @efficiency_valuation_organisation_international_2012]. A common
 non-routine event in energy-saving M&V projects is a change in occupancy
 or a significant shift in occupant behavior, equipment run time, and
 operating conditions (e.g. set points, lighting, and ventilation
-levels). However, current standards or guidelines only provide a general
-approach for consideration. For example, IPMVP requires the facility
-owner and the M&V analyst to periodically perform inspections of all
-equipment and operations during the reporting period, which is
-labor-intensive and error-prone. ASHRAE Guideline 14 recommends
-performing engineering calculations or computer software simulations to
-adjust the post-retrofit baseline. Additionally, it is relatively rare
-to have access to all measurements needed for adjustments, such as
-occupancy, and thus the analyst normally assumes those factors remain
-unchanged throughout the study. For example, some studies use linear
-interpolation to estimate counter-factual baseline for the demand
-response program [@beil_round-trip_2015; @keskar_commercial_2020].
-Consequently, one study points out that it is inaccurate to assume no
-change in the operating conditions during the response period (Huang,
-Katipamula, and Lutes 2023). Other studies realized such limitation in
-field study, and emphasized the importance of requiring matched groups
-to control for exogenous factors beyond weather differences when
-comparing between baseline and intervention
+levels). However, current standards or guidelines only provide a
+reminder that non-routine events should be reported and properly
+adjusted. For example, IPMVP requires the facility owner and the M&V
+analyst to periodically perform inspections of all equipment and
+operations during the reporting period, which is labor-intensive and
+error-prone. ASHRAE Guideline 14 recommends performing engineering
+calculations or computer software simulations to adjust the
+post-retrofit baseline. Additionally, it is relatively rare to have
+access to all measurements needed for adjustments, such as occupancy,
+and thus the analyst normally assumes those factors remain unchanged
+throughout the study. For example, some studies use linear interpolation
+to estimate counter-factual baseline for the demand response program
+[@beil_round-trip_2015; @keskar_commercial_2020]. Consequently, it is
+inaccurate to assume no change in the operating conditions during the
+response period [@huang_experimental_2023]. This is a limitation in a
+field study, and it is important to require matched groups to control
+for exogenous factors beyond weather (which is usually taken into
+account) when comparing between baseline and intervention
 [@demand_side_analytics_population_2022; @huang_experimental_2023].
 
-Overall, those non-routine events mostly refer to clearly observable
+Overall, those non-routine events mainly refer to clearly observable
 changes, but there are also more gradual and subtle changes in
 buildings, which are hardly noticed. We define those gradual changes as
 'operational drift' in this study. One likely encountered operational
@@ -477,62 +514,70 @@ drift situation is the filter clogging in air handling units due to
 particle accumulation. This causes supply fans to gradually consume more
 energy to maintain the required duct static pressure [@feng_newly_2019;
 @zhai_full-scale_2017]. We found a similar concept briefly defined in
-Guideline 14 as the 'load creep' [@ashrae_ashrae_2023] during multi-year
-M&V project. However, currently there is no detailed instruction
-provided. If M&V analysts are unaware of such changes and lack an
-appropriate adjustment method (e.g., replacing filters before the
-intervention begins), the savings could be overestimated as the
-decreased energy use is incorrectly attributed to the intervention
-rather than the filter replacement. An operational drift has not been
-formally defined in the literature or standards, but in this study, we
-consider it as a special type of non-routine event, as it also
-represents a change in facility operation that occurs gradually over a
-longer period of time.
+Guideline 14 as the 'load creep' [@ashrae_ashrae_2023] during a
+multi-year M&V project. However, currently there are no detailed
+instructions provided on how to account for them. If M&V analysts are
+unaware of such changes and lack an appropriate adjustment method (e.g.,
+replacing filters before the intervention begins), the savings could be
+overestimated as the decreased energy use is incorrectly attributed to
+the intervention rather than the filter replacement. An operational
+drift has not been formally defined in the literature or standards; in
+this study, we consider it as a special type of non-routine event, as it
+also represents a change in facility operation that occurs gradually
+over a longer period of time.
 
 ## Objectives
 
-As mentioned, the goal of an M&V project is to determine the effect,
-typically energy savings, of some intervention in the building. In this
-study, we focus on switchable interventions and an example of such an
-intervention is a control strategy that adjusts the chilled water
-plant's supply water temperature, which can be commonly found in the
-literature [@duarte_field_2023; @lee_simulationoptimization_2012;
-@qiu_chilled_2022; @jin2007; @taylor_optimizing_2012]. In our case, we
-made it even simpler by adjusting the setpoint based on outdoor weather
-conditions (see description in Section
-\@ref(apply-virtue-intervention)). By conducting such an analysis, we
+One goal of an M&V project is to determine the effect, typically energy
+savings, of an intervention in the building. In this study, we focus on
+switchable interventions. An example of such an intervention is a
+control strategy that strategically adjusts the chilled water plant's
+supply water temperature with proven ability to save energy
+[@duarte_field_2023; @lee_simulationoptimization_2012;
+@qiu_chilled_2022; @jin2007; @taylor_optimizing_2012]. We used a simple
+version of the control strategy in which the setpoint is adjusted based
+on outdoor temperature (see description in Section
+\@ref(apply-virtual-intervention)). By conducting such an analysis, we
 aim to:
 
-1.  Determine, using a large sample of buildings, how much more
-    accurately the randomized M&V method would estimate the savings of
-    the proposed intervention compared to the conventional M&V, and how
-    much more quickly it would reach a result.
+1.  Determine how much more accurately the randomized M&V method would
+    estimate the savings of the intervention compared to the
+    conventional M&V, and how much more quickly it would reach a result.
 
 2.  Determine how much more robust the randomized method is compared to
     the conventional method when static non-routine events and
-    operational drift are present in the dataset. The BDG2 dataset
-    contains real-world building energy usage data collected over two
-    years, which inherently contains varying degrees of usage changes.
-    By virtually introducing intervention effects into the existing
-    dataset, we can calculate the ground-truth energy savings, which
-    serve as a reference point for method comparison.
+    operational drift are present in the dataset. 
 
-3.  Open-source implementation of the proposed randomized M&V method. We
-    ensured the reproducibility of the method by making the analysis
-    code open source, including randomized schedule generation,
-    sequential statistical analysis, energy modeling and normalized
-    saving calculation. In addition, we also included code for extended
-    use cases of the randomized method, such as changing sampling ratio
-    and sampling intervals. Using the available open resources, building
-    analysts should be able to seamlessly integrate and apply them in
-    their own M&V projects.
+3.  Make the implementation of the proposed randomized M&V method
+    open-source. 
+
+The significance of this study is that the BDG2 dataset contains
+real-world building energy usage data collected over two years, which
+inherently contains varying degrees of usage changes. In addition, by
+virtually introducing intervention effects into the existing dataset, we
+can calculate the ground-truth energy savings, which serve as a
+reference point for method comparison. Furthermore, we ensured the
+reproducibility of the method by making the analysis code open source,
+including randomized schedule generation, sequential statistical
+analysis, energy modeling and normalized saving calculation. This also
+covers the extended discussion below on sensitivity analysis and other
+use cases of the randomized method, such as changing sampling ratio and
+sampling intervals. Using the available open resources, building
+analysts should be able to seamlessly integrate and apply them in their
+own M&V projects.
 
 # Method
 
 We outlined the methodology of the study in Figure \@ref(fig:flowchart)
-and extended several key components in this section.
+and extended several key components in this section. As a summary, we
+utilized the historical measurements from a dataset that contains a
+large number of real commercial buildings as the pre-retrofit baseline
+and simulated an intervention strategy. Then, we applied both
+conventional and randomized M&V methods to the modified dataset to
+estimate intervention savings, and compare which one produces results
+closer to the simulated intervention effect.
 
-```{r flowchart, fig.cap = "Flow chart showing the methodology for comparing the estimated savings of randomized M&V with the conventional M&V", out.width="70%"}
+```{r flowchart, fig.cap = "Flow chart showing the methodology for comparing the estimated savings of randomized M&V with the conventional M&V", out.width="60%"}
 
 knitr::include_graphics(paste0(fig_path, "flowchart.png"))
 ```
@@ -540,7 +585,7 @@ knitr::include_graphics(paste0(fig_path, "flowchart.png"))
 ## Filter and clean dataset
 
 We extracted the electricity measurements from the BDG2 dataset and
-filter out all qualified buildings based on the following criteria:
+filtered out all qualified buildings based on the following criteria:
 
 1.  Missing values \< 1000: given the hourly resolution of all
     measurements, this is equivalent to 1.5 months of missing days.
@@ -549,8 +594,9 @@ filter out all qualified buildings based on the following criteria:
     electricity usage.
 
 3.  $\frac{abs(E_{2017} - E_{2016})}{E_{2016}}< 25\%$: any increase or
-    decrease in building electricity usage in the second year should be
-    less than 25% of that in the first year.
+    decrease in building electricity usage ($E$) in the second year
+    ($E_{2017}$) should be less than 25% of that in the first year
+    ($E_{2016}$).
 
 4.  Electric EUI \< 750 kWh/$m^2$: excludes buildings at the top 5% of
     electrical energy usage intensity according to the statistics
@@ -562,90 +608,61 @@ filter out all qualified buildings based on the following criteria:
     demand flexibility to implement a chilled water set point reset
     control.
 
-For all qualified buildings, we also create a feature to identify
-buildings with very stable electricity usage overall by identifying
-those with no statistically significant difference (P-value \> 0.05)
-between their two-year electricity usage. Applying this filter to real
+As a result, we kept a total of 639 buildings from 10 different
+locations for the subsequent analysis, and we included a more detailed
+summary of the building features in the supplementary material. For all
+qualified buildings, we also create a feature to identify buildings with
+very stable electricity usage overall by identifying those with no
+statistically significant difference (P-value \> 0.05) between their
+pre- and post-retrofit electricity usage. Applying this filter to real
 buildings, only 66 buildings are labeled in this 'stable' subset out of
-a total of more than 600 buildings. While we did not adjust for weather
-differences between the two years when generating this high-level
-feature, this result highlights that the assumption that buildings are
-typically stable over the timeframe involved in conventional M&V methods
-is rarely true. As mentioned in \@ref(non-routine-events-impact), such
-variability is largely associated with non-routine events, especially
-operational drifts since the assessment, even under ideal situations,
-lasts for two years. And according to the statistics shown here, it is a
-typical case observed in real buildings applications.
+a total of more than 600 buildings, corresponding to 11%. While we did
+not adjust for weather differences between the two years when generating
+this high-level feature, this result highlights that the assumption that
+buildings are typically stable over the timeframe involved in
+conventional M&V methods is rarely true; in 89% of the cases this
+assumption is not valid. As mentioned in Section
+\@ref(non-routine-events-impact), such variability is largely associated
+with non-routine events---especially operational drifts---since the
+assessment, even under ideal situations, lasts for two years. According
+to the statistics shown here, it is a typical case observed in real
+buildings applications.
 
-## Apply virtue intervention
+## Apply **virtual** intervention
 
-Figure \@ref(fig:chwst) shows the algorithm for the proposed control
-intervention that resets the chiller supply temperature based on the
-outdoor weather conditions, which can be commonly found in the
+The proposed control intervention resets the chiller supply temperature
+based on the outdoor temperature, which can be commonly found in the
 literature [@lee_chilled_2022; @congradac_recognition_2012]. For both
 strategies, we assume that the chiller operates when the outdoor
 temperature exceeds 10°C. The baseline strategy, representing the
 existing measurements from the dataset, operates with a constant water
-supply temperature. The intervention strategy, as illustrated in the
-figure, adjusts the water supply temperature dynamically, resetting it
-from 7°C to 12°C.
-
-```{r chwst, fig.cap = "Proposed intervention strategy: chilled water supply temperature reset based on outdoor temperature.", fig.width=8, fig.height=4}
-
-data.frame(
-  OAT = c(10, 15, 25, 30),  
-  Baseline = c(6, 6, 6, 6),      
-  Intervention = c(12, 12, 7, 7)
-  ) %>% 
-  pivot_longer(cols = c("Baseline", "Intervention"), names_to = "strategy", values_to = "value") %>% 
-  ggplot(aes(x = OAT, y = value, color = strategy)) +
-  geom_line(linewidth = 1.2) +
-  scale_color_manual(values = ls_colors) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = c(4, 6, 8, 10, 12),
-                     limits = c(5, 12.5),
-                     labels = number_format(suffix = " °C")) +
-  scale_x_continuous(expand = c(0, 0), 
-                     breaks = c(5, 10, 15, 20, 25, 30), 
-                     labels = number_format(suffix = " °C")) +
-  geom_vline(xintercept = 10, lty = "dashed", color = "red") +
-  annotate(geom = "text", x = 7.5, y = 8, label = "No chiller\noperation\nbelow 10 °C", size = 5) +
-  coord_cartesian(xlim = c(5, 30)) +
-  labs(x = "Outdoor temperature", 
-       y = "Chilled water supply temperature", 
-       color = NULL, 
-       title = "Chilled water supply temperature reset intervention") +
-  theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
-        legend.direction = "horizontal",
-        legend.position = "bottom",
-        plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
-
-```
+supply temperature. The intervention strategy adjusts the water supply
+temperature dynamically, resetting it from 7°C to 12°C. We included a
+visual summary of the algorithm in the supplementary material.
 
 We used a simple relationship to map the chilled water supply
-temperature reset to the electrical energy savings: $$
-\text{savings} = mean(E_{CHW}) \times 25\% \times \text{perc_savings}
+temperature reset to the electrical energy savings:$$
+\text{savings} = mean(E_{CHW}) \times 25\% \times \text{perc}
 $$
 
 We assume on average, HVAC systems account for approximately 50% of a
 building's total electricity consumption, and the chilled water plant
-further consumes around 50% of the HVAC electricity. While this
-assumption largely simplifies the diverse energy usage across various
-building types, for the scope of this paper, we assume that 25% of the
-total building electricity is used by the chilled water plant, $E_{CHW}$
-[@us2012commercial]. Typically, the savings from an intervention are not
-proportional to the building's hourly electricity usage, which is
-generally the challenge for M&V. To address this, we mapped the
-resulting electricity savings as a percentage of the plant's normal
-operation, calculated as its mean electricity usage over the two-year
-period. This percentage is influenced by factors such as outdoor
-temperature ($OAT$), intervention supply water temperature
-($T_{interv}$), baseline supply water temperature ($T_{base}$) and hour
-of the day ($\delta_{occ}$, binary indicator whether during peak hours
-from 9 AM to 4 PM).
+$E_{CHW}$ further consumes around 50% of the HVAC electricity, or 25% of
+the total building electricity [@us2012commercial]. We recognize that
+this assumption, used for the scope of this analysis, largely simplifies
+the diverse energy usage across various building types. Typically, the
+savings from an intervention are not proportional to the building's
+hourly electricity usage, which is generally a challenge for M&V. To
+address this, we mapped the resulting electricity savings as a
+percentage of the plant's normal operation, calculated as its mean
+electricity usage over the two-year period. This percentage is
+influenced by factors such as outdoor temperature ($OAT$), intervention
+supply water temperature ($T_{interv}$), baseline supply water
+temperature ($T_{base}$) and hour of the day ($\delta_{occ}$, binary
+indicator whether during peak hours from 9 AM to 4 PM).
 
 $$
-\text{perc_savings = }
+\text{perc = }
 \begin{cases}
 0, & \text{ if } OAT < 10°C \\
 \left[ \beta_{\text{temp}} \times (\text{T}_{\text{interv}} - \text{T}_{\text{base}}) \right] \times 
@@ -654,76 +671,70 @@ $$
 $$
 
 Parameters and their pre-defined values are summarized in the table
-below. For simplicity, those parameters were not rigorously calibrated
-for each building and were applied uniformly in the filtered dataset.
-Interested readers can also change the parameters in our open-source
-code to simulate different scenarios.
+below, they were obtained from a trial supply water setpoint reset
+experiment on a campus office building [@zou_quantifying_2025]. For
+simplicity, those parameters were not rigorously calibrated for each
+building and were applied uniformly in the filtered dataset. Interested
+readers can also change the parameters in our open-source code to
+simulate different scenarios.
 
 | Parameter              | Description                                                      | Value |
-|----------------|-----------------------------------------|----------------|
+|------------------|------------------------------------|------------------|
 | $\beta_{temp}$         | \% savings from setting $T_{interv}$ 1 °C higher than $T_{base}$ | 0.08  |
 | $\beta_{occ}$          | \% savings adjustment during occupied hours                      | 1.2   |
 | $\beta_{\text{unocc}}$ | \% savings adjustment during unoccupied hours                    | 0.8   |
 
 : Table 1. Parameters for calculating the intervention savings.
 
-## Run M&V methods
+## M&V methods and results analysis
 
 We described in detail the workflow of both conventional and randomized
 M&V methods in the previous study [@raftery2024]. The conventional
 method is a pre- and post-comparison on a 12-month baseline and 12-month
 intervention timeline. The randomized method defines sampling
-requirements as:
+requirements as (a) use a daily sampling interval with the sampling time
+at midnight each day and (b) block by day of the week with a block
+period of 12 weeks.
 
--   Use a daily sampling interval with the sampling time at midnight
-    each day.
+We used the following four stopping criteria: (a) a minimum and maximum
+of 12 and 108 weeks, respectively. The randomized schedule covers the
+entire two-year period but the stopping criteria enable an early stop at
+the end of the satisfied blocking period. (b) At least 80% of the
+dry-bulb temperature range in the annual TMY data is sampled by both
+strategies. (c) 90% confidence that energy savings exceed or do not
+exceed 0% using the sequential probability ratio test (SPRT). Medium
+effect size (d = 0.5) quantified by Cohen's d and calculated SPRT
+statistics either fall below the lower threshold or exceed the upper
+threshold. (d) sample strategies at an equal sampling ratio (50%
+baseline, 50% intervention).
 
--   Block by day of the week with a block period of 12 weeks.
-
-and stopping criteria as:
-
--   A minimum and maximum of 12 and 108 weeks, respectively. The
-    randomized schedule covers the entire two-year period but the
-    stopping criteria enable an early stop at the end of the satisfied
-    blocking period.
-
--   At least 80% of the dry-bulb temperature range in the annual TMY
-    data is sampled by both strategies.
-
--   90% confidence that energy savings exceed or do not exceed 0% using
-    the sequential probability ratio test (SPRT). Medium effect size (d
-    = 0.5) quantified by Cohen's d and calculated SPRT statistics either
-    fall below the lower threshold or exceed the upper threshold.
-
--   Sample strategies at an equal sampling ratio (50% baseline, 50%
-    intervention).
-
-# Results
-
-The accuracy ($Acc$) is calculated as: $$
-Acc = \frac{E_{baseline} - E_{intervention}}{E_{baseline}}-\frac{E'_{baseline} - E'_{intervention}}{E'_{baseline}}
-$$where $E$ indicates true electricity usage ($E_{intervention}$ is the
-'true' electricity usage calculated from Figure \@ref(fig:chwst) and
-above equations) and $E'$ indicates the estimated electricity usage
-either through the conventional method or the new randomized method. We
-present the distribution of savings estimation accuracy using boxen
-plots, also known as letter plots, which is an advanced variation of the
-box plot designed to extend beyond the interquartile range (IQR) by
+To summarize the M&V results and associated error to the methods, we
+present the distribution of savings estimation error using boxen plots,
+also known as letter plots, which is an advanced variation of the box
+plot designed to extend beyond the interquartile range (IQR) by
 progressively dividing the data into smaller percentiles, revealing more
 detail in the tails of the distribution. We set the division parameter
 to k = 4, meaning the entire box area represents the data distribution
 from 6.25% to 93.75%. As the steps move closer to the center line (50%
 median), the distribution range progressively narrows with the next step
 representing 12.5% to 87.5%, followed by 25% to 75%. In addition, for
-each boxen plot, we also showed the mean value of the distribution on
-top for reference.
+each boxen plot, we also showed the median value of the distribution on
+top for reference. 
 
-Figure \@ref(fig:abstract) shows the overall results of M&V methods
-comparison and for clarity, we plotted conventional M&V results in grey,
-randomized M&V results after satisfying all stopping criteria in green,
-and the randomized M&V results sampled for the entire 24 months in blue.
+# Results
+
+The savings estimation error ($Err$) is calculated as: $$
+Err = \frac{E_{baseline} - E_{intervention}}{E_{baseline}}-\frac{E'_{baseline} - E'_{intervention}}{E'_{baseline}}
+$$where $E$ indicates true electricity usage ($E_{intervention}$ is the
+'true' electricity usage calculated from Eq. (1) and (2)), and $E'$
+indicates the estimated electricity usage either through the
+conventional method or the new randomized method. Figure
+\@ref(fig:abstract) shows the overall results of M&V methods comparison
+and for clarity, we plotted conventional M&V results in grey, randomized
+M&V results after satisfying all stopping criteria in green, and the
+randomized M&V results sampled for the entire 24 months in blue.
 Subplots (a) and (b) calculate the savings estimation error as the
-absolute deviation from the true savings (i.e. $|Acc|$) and show the
+absolute deviation from the true savings (i.e. $|Err|$) and show the
 results distribution using the conventional M&V method in the first
 column, the randomized M&V method that stops after satisfying all
 stopping criteria in the second column, and the randomized M&V method
@@ -731,42 +742,47 @@ continues 50%/50% sampling throughout 2 years in the third column. In
 addition, subplot (a) shows the savings estimated from measured weather
 conditions, and subplot b) shows the savings normalized on the typical
 meteorological weather of the building location after using a
-time-of-week-temperature (TOWT) model [@mathieu_quantifying_2011]. As a
-result, the conventional M&V method exhibits a median deviation of 5% in
-savings estimation, whereas the randomized method demonstrates
-significantly smaller deviations. If the analyst stops immediately after
-satisfying all stopping criteria, the deviation is reduced to
-approximately 1.5%. Extending the M&V period to match the same time
-period of the conventional method (24 months) further improves accuracy
-to 0.7% deviation. Furthermore, by comparing subplots (a) and (b), we
-observed a minor improvement in estimation accuracy when a model is
-fitted to the data to account for weather differences. The model fitting
-is most beneficial for the shorter dataset (randomized and stopping when
-all criteria are met, typically 24-36 weeks of data), where it reduces
-deviation from 1.5% to 1.2% (around 20% improvement). This is because
-the weather conditions between the first and second year for each of the
-locations are relatively similar on average over this time period, and
-thus the effect of adjusting for temperature as an independent variable
-in the model is relatively small. We found 83% of all filtered buildings
-show less error when using the randomized M&V, and by comparing the
-error distribution in subplot (b), we noticed the medium deviation drops
-from 4.6% to 1.2% (around 74% improvement) at the time of satisfying all
-stopping criteria. Subplot (c) compares the overall timeline of the two
-M&V methods. The results show that almost all buildings achieve accurate
-M&V results and meet the stopping criteria within 24 weeks (for this
-intervention), with the remainder meeting all stopping criteria within
-36 weeks. The additional 12 weeks are usually driven by a need to span
-sufficient weather conditions representative of a full year of data.
-Meanwhile, the red arrow highlights the excess time required by the
-conventional M&V method (24 months). Thus, the randomized M&V method
-finds more accurate results in approximately a quarter of the time
-required for conventional M&V. Even if it was the case that an existing
-12-month baseline data was available at the start of the M&V process,
-randomized M&V would still obtain a more accurate result, in less time,
-than obtaining the 12-month retrofit dataset required by conventional
-M&V.
+time-of-week-temperature (TOWT) model [@mathieu_quantifyin
 
-```{r abstract, fig.cap="Overall comparison results between the conventional M&V method and the proposed randomized M&V method (both upon reaching the stopping criteria for each case, and over a fixed two-year period).", fig.height=10, fig.width=9}
+The conventional M&V method exhibits a median deviation of 4.8% in
+savings estimation and 4.6% after model normalization, whereas the
+randomized method demonstrates significantly smaller deviations. If the
+analyst stops immediately after satisfying all stopping criteria, the
+deviation is reduced to approximately 1.5% based on measured weather and
+1.2% after normalization. Extending the M&V period to match the same
+time period of the conventional method (24 months) further improves
+accuracy to 0.7% deviation and 0.6% after normalization. Overall, we
+found 83% of all filtered buildings show less error when using the
+randomized M&V, and subplot (b) indicates around 74% improvement in
+accuracy (median error dropped from 4.6% to 1.2%) at the time of
+satisfying all stopping criteria.
+
+Furthermore, by comparing subplots (a) and (b), we observed a minor
+improvement in estimation accuracy when a model is fitted to the data to
+account for weather differences. The model fitting is most beneficial
+for the shorter dataset (randomized and stopping when all criteria are
+met, typically 24-36 weeks of data), where it reduces deviation from
+1.5% to 1.2% (around 20% improvement). This is because the weather
+conditions between the first and second year for each of the locations
+are relatively similar on average over this time period, and thus the
+effect of adjusting for temperature as an independent variable in the
+model is relatively small. 
+
+Subplot (c) compares the overall timeline of the two M&V methods. The
+results show that almost all buildings achieve accurate M&V results and
+meet the stopping criteria within 24 weeks (for this intervention), with
+the remainder meeting all stopping criteria within 36 weeks. The
+additional 12 weeks are usually driven by a need to span sufficient
+weather conditions representative of a full year of data. The red arrow
+highlights the excess time required by the conventional M&V method (24
+months). Thus, the randomized M&V method finds more accurate results in
+approximately a quarter of the time required for conventional M&V. Even
+if it was the case that an existing 12-month baseline data was available
+at the start of the M&V process, randomized M&V would still obtain a
+more accurate result, in less time, than obtaining the 12-month retrofit
+dataset required by conventional M&V.
+
+```{r abstract, fig.cap="Overall comparison results between the conventional M&V method and the proposed randomized M&V method (both upon reaching the stopping criteria for each case, and over a fixed two-year period). Subplot (a) shows the savings estimated from measured weather conditions, and subplot b) shows the savings normalized on the typical meteorological weather of the building location after using a time-of-week-temperature (TOWT) model. Subplot (c) shows at the end of each blocking period the number of buildings satisfying all stopping criteria. The figure shows the randomized M&V method can provide much more accurate savings estimation than the convention method even at 36 weeks.", fig.height=10, fig.width=9}
 
 #### GA ####
 rand_eob_S <- df_seq_fs_stable %>% 
@@ -1057,13 +1073,13 @@ TW_summary <- df_TW_A %>%
   summarise(across(c(improv_eob, improv_final, perc), median))
 ```
 
-Figure \@ref(fig:meanerr) shows the biased (instead of absolute)
-estimated deviation, highlighting that the uncertainty range associated
-with the conventional method is significantly larger compared to even
-the randomized method that only takes 36 weeks, according to subplot (c)
-in Figure \@ref(fig:abstract).
+In the supplementary material, we also showed the signed/biased (instead
+of absolute) estimated deviation, highlighting that the uncertainty
+range associated with the conventional method is significantly larger
+compared to even the randomized method that only takes 36 weeks,
+according to subplot (c) in Figure \@ref(fig:abstract).
 
-```{r meanerr, fig.cap="Distribution of estimated deviation from the ground-truth savings calculated by the two M&V methods (red dashed line highlighting 0% error)", fig.height=7, fig.width=9}
+```{r meanerr, fig.cap="Distribution of estimated deviation from the ground-truth savings calculated by the two M&V methods (red dashed line highlighting 0% error)", fig.height=7, fig.width=9, include = FALSE}
 # plot for the stable subset
 rand_eob_S <- df_seq_fs_stable %>% 
   filter(seq == "eob") %>% 
@@ -1145,7 +1161,7 @@ p_top <- df_MW_A %>%
   labs(fill = NULL, 
        color = NULL, 
        x = NULL, 
-       y = "Estimated error in fractional savings", 
+       y = "Signed error in fractional savings", 
        subtitle = str_glue("All {A_building} buildings with measured weather")) +
   coord_cartesian(ylim = c(-15, 15)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
@@ -1232,7 +1248,7 @@ p_middle <- df_TW_A %>%
   scale_color_manual(values = c("grey80", "grey80", "grey80")) + 
   labs(fill = NULL, 
        x = NULL, 
-       y = "Estimated error in fractional savings", 
+       y = "Signed error in fractional savings", 
        subtitle = str_glue("All {A_building} buildings with TOWT model and TMY weather")) +
   coord_cartesian(ylim = c(-15, 15)) +
   theme(panel.grid.major.y = element_line(color = "grey80", linewidth = 0.25),
@@ -1242,7 +1258,7 @@ p_middle <- df_TW_A %>%
 ggarrange(p_top, p_middle, 
           ncol = 1, nrow = 2,
           labels = c("a)", "b)")) +
-  plot_annotation(title = "Estimated error in savings estimation by different M&V methods")
+  plot_annotation(title = "Signed error in savings estimation by different M&V methods")
 
 percentiles <- df_TW_A %>%
   filter(method == "conv_diff") %>% 
@@ -1253,19 +1269,19 @@ percentiles <- df_TW_A %>%
   )
 ```
 
-Additionally in the literature, we found another M&V study using over
-500+ commercial buildings (on a different open-source dataset), but
-their study scope was to compare the predictive performance of a variety
-of M&V baseline models from simple weekly mean to more complex machine
-learning methods using the normalized mean bias error (NMBE)
+Granderson et al. (2016), using over 500+ commercial buildings (on a
+different open-source dataset), compared the predictive performance of a
+variety of M&V baseline models from simple weekly mean to more complex
+machine learning methods using the normalized mean bias error (NMBE)
 [@granderson_accuracy_2016]. Since we also calculated the normalized
 savings estimation error, we compared our normalized accuracy for 600+
-buildings with the TOWT model and TMY weather againts their TOWT model
-prediction assessment in the following table, highlighting that the
-model and overall building datasets are performing similarly.
+buildings with the Time-Of-Week and Temperature (TOWT) model and Typical
+Meteorological Year (TMY) weather against their TOWT model prediction
+assessment in Table 2. The model and overall building datasets are
+performing similarly.
 
 |                 | Reference study results [@granderson_accuracy_2016] | Our study results      |
-|------------------|-------------------------------------|------------------|
+|-------------------|-----------------------------------|-------------------|
 | 25th percentile | -5.85                                               | `r percentiles$Q1`     |
 | 50th percentile | -1.25                                               | `r percentiles$Median` |
 | 75th percentile | 3.86                                                | `r percentiles$Q3`     |
@@ -1274,37 +1290,36 @@ model and overall building datasets are performing similarly.
 
 ## Non-routine events impact
 
-As mentioned in Section \@ref(filter-and-clean-dataset), the majority of
+As mentioned in Section \@ref(filter-and-clean-dataset), he majority of
 the selected buildings are affected by operational drift, which is the
 reason why we observe baseline electricity usage changes throughout the
 two-year period. To evaluate the robustness of the two M&V methods to
 the effect of operational drift and non-routine events, we repeated the
 M&V run on the original dataset prior to the application of the reset
-control. In other words, there *is no intervention applied here*, so the
+control. In other words, there is no intervention applied here, so the
 most reliable M&V method will be the one that detects the closest to 0
-kW savings using the measurements. Therefore, the $Acc$ here are
+kW savings using the measurements. Therefore, the $Err$ here are
 calculated as:
 
 $$
-Acc = 0-\frac{E'_{baseline} - E'_{intervention}}{E'_{baseline}}
+Err = 0-\frac{E'_{baseline} - E'_{intervention}}{E'_{baseline}}
 $$
 
 Figure \@ref(fig:nosaving) shows that the randomized M&V method (both at
 the time of satisfying all stopping criteria and at the end of a
 two-year period) produced consistent results. We included the absolute
-deviation ($|ACC|$) figure in the supplementary material. Similarly to
+error ($|Err|$) figure in the supplementary material. Similarly to
 Figure \@ref(fig:abstract), stopping when meeting all stopping criteria
 generally yields slightly larger uncertainty than continuing for 24
 months. However, it still yields a more accurate result than the
 conventional method. Interestingly, similar to
 [@granderson_accuracy_2016] where they obtained a median normalized
 deviation around -1.25%, our analysis on the conventional method shows
-that the typical deviation is -1.5%, meaning that the typical building
-is decreasing energy use slightly in this dataset in the absence of any
-known intervention. Thus, if a building analyst were to apply an
-intervention to this building and use conventional M&V to measure the
-effect, they would typically 'detect' 1.5% energy savings even when the
-intervention had no actual impact on energy performance.
+that the typical deviation is -1.5%, meaning that this method would
+predict that, in the absence of any known intervention, the typical
+building is decreasing energy use slightly in this dataset. Meanwhile,
+through random sampling, the influence of non-routine events is much
+closer to 0 with narrower uncertainty range.
 
 ```{r nosaving, fig.cap="Comparison between the two M&V methods in detecting no intervention effect when buildings are subject to static non-rountine events and gradual operational drift.", fig.height=4, fig.width=9}
 
@@ -1398,19 +1413,19 @@ df_MW_A %>%
         plot.margin = margin(t = 2, r = 7, b = 2, l = 2, unit = "mm"))
 ```
 
-# Discussion
+# Sensitivity analysis
 
 ## TOWT modeling accuracy
 
 To evaluate modeling accuracy, we used the Coefficient of Variation of
 Root-Mean Squared Error (CV(RMSE)) as the primary error metric. CV(RMSE)
 is a normalized measure, thus it enables direct comparison across
-different modeling results. Since we have the ground-true baseline
+different modeling results. Since we have the ground-truth baseline
 measurements in the post-retrofit period, we can assess the error caused
 by model adjustment (i.e., how accurate is the 'counterfactual' baseline
 provided by the two M&V methods). Figure \@ref(fig:towtacc) shows the
 difference between the true post-retrofit baseline and adjusted baseline
-through TOWT modeling and since the quantity of the training set is the
+through TOWT modeling; since the quantity of the training set is the
 same, this highlights the impact of the data sampling technique. For
 example, if a non-routine event happens (such as a tenant occupying an
 entire floor of a building moving out), the TOWT model can yield
@@ -1418,7 +1433,7 @@ significant deviations. This is particularly the case for the
 conventional M&V method since it samples continuously throughout the
 pre-retrofit period. However, randomized sampling is less impacted by
 these events since it samples only 50% of the pre-retrofit baseline
-throughout a blocking period. Consequently, the figure shows, there is a
+throughout a blocking period. Consequently, the figure shows there is a
 noticeable improvement in modeling accuracy when using the randomized
 method.
 
@@ -1478,33 +1493,34 @@ cvrmse %>%
 ## Sampling interval impact
 
 In some cases, particularly those involving large thermal mass and
-active thermal energy storage systems or operating continuously, there
-can be a substantial time-lagged effect associated with interventions.
-This means that the effect of one control strategy may persist, or
-'carryover', after switching to another. To mitigate such carryover
-effects, building analysts may choose to drop non-consecutive days in
-the switchback experiment. For example, consider a heat pump water
-heater where the tank is charged at very different times of the day by
-the intervention strategy compared to the baseline strategy. When
-switching strategy, the tank may be much warmer or cooler than typical
-for that strategy, thus influencing subsequent measurements,
-particularly the performance measured on the first day (i.e., a
-non-consecutive day). In such cases, increasing the sampling interval
-(e.g., sample strategies every 2 or 3 days instead of daily) and
-discarding measurements from those non-consecutive days can eliminate
-carryover. However, this approach reduces the total data collected: for
-instance, sampling every 3 days and dropping days with non-consecutive
-control strategies would drop 1/6 of measurements on average. Sampling
-every 2 days means dropping a quarter of the measurements. Therefore, by
-increasing the sampling interval, there is an accuracy penalty due to a
-reduction in randomization (how often samples occur), and when
-decreasing the sampling interval, there is an accuracy penalty from
-dropping more non-consecutive days. The dataset contains no specific
-information about the buildings' thermal mass condition, but to quantify
-such trade-off, we compared the accuracy of different sampling intervals
-and the consequence of dropping the non-consecutive days at the time
-when randomized M&V produces a result (after satisfying all stopping
-criteria) in Figure \@ref(fig:absinterval).
+active thermal energy storage systems or operating continuously without
+shutting down for switchover, there can be a substantial time-lagged
+effect associated with interventions. This means that the effect of one
+control strategy may persist, or 'carryover', after switching to
+another. To mitigate such carryover effects, building analysts may
+choose to drop a predetermined number of non-consecutive days in the
+switchback experiment. For example, consider a heat pump water heater
+where the tank is charged at very different times of the day by the
+intervention strategy compared to the baseline strategy. When switching
+the strategy, the tank may be much warmer or cooler than typical for
+that strategy, thus influencing subsequent measurements, particularly
+the performance measured on the first day (i.e., a non-consecutive day).
+In such cases, increasing the sampling interval (e.g., sample strategies
+every 2 or 3 days instead of daily) and discarding measurements from
+those non-consecutive days can eliminate carryover. However, this
+approach reduces the total data collected: for instance, sampling every
+3 days and dropping days with non-consecutive control strategies would
+drop 1/6 of measurements on average. Sampling every 2 days means
+dropping a quarter of the measurements. Therefore, by increasing the
+sampling interval, there is an accuracy penalty due to a reduction in
+randomization (how often samples occur); when decreasing the sampling
+interval, there is an accuracy penalty from dropping more
+non-consecutive days. The dataset contains no specific information about
+the buildings' thermal mass condition. So, to quantify such trade-off,
+we compared the accuracy of different sampling intervals and the
+consequence of dropping the non-consecutive days at the time when
+randomized M&V produces a result (after satisfying all stopping
+criteria). These results are shown in Figure \@ref(fig:absinterval).
 
 ```{r absinterval, fig.cap="Comparison of different sampling interval impact on M&V estimation accuracy (dropped: all non-consecutive days were dropped; kept: all measurements were kept)", fig.height=8, fig.width=9}
 
@@ -1657,22 +1673,25 @@ ggarrange(p_top, p_bottom,
   plot_annotation(title = "Absolute error in savings estimation of randomized M&V\nafter satisfying all stopping criteria")
 ```
 
-To quantify the impact of reduced randomness, all measurements are kept
+To quantify the impact of reduced randomness, all measurements were kept
 when calculating the distribution shown in the darker-colored set. The
 results suggest that without dropping non-consecutive days in subplot
-(a), a gradual increase in error from 1.5% to 2.3% (1.2% to 1.9% with
-weather normalization in subplot (b) when the sampling interval
-increases from daily to weekly intervals. This is due to the fact that
-increasing the sample interval means reducing randomization. To quantify
-the combined impact of data loss due to preventing the carryover effect,
-we generated the lighter-colored set, which drops all non-consecutive
-days. As a result, we noticed an increase in estimation error when
-sampling daily to 2.4% (to 1.9% when TOWT is fitted), which led to a
-similar accuracy compared to weekly intervals. Therefore, considering
-this trade-off, we recommend using a two-day sampling interval (or
-three-day sampling interval if the building owner prefers less frequent
-switchover) if the carryover effect is likely but expected to last less
-than one day, and then normalizing the estimation via energy modeling.
+(a), there was a gradual increase in error from 1.5% to 2.3% (1.2% to
+1.9% with weather normalization in subplot (b)) when the sampling
+interval increases from daily to weekly intervals. This is due to the
+fact that increasing the sample interval means reducing randomization.
+
+To quantify the combined impact of data loss due to preventing the
+carryover effect, we generated the lighter-colored set, which drops all
+non-consecutive days. As a result, we noticed an increase in estimation
+error when sampling daily to 2.4% (to 1.9% when TOWT is fitted), which
+led to a similar accuracy compared to weekly intervals. Therefore,
+considering this trade-off, we recommend using a two-day sampling
+interval (or three-day sampling interval if the building owner prefers
+less frequent switchover) if the carryover effect is likely but expected
+to last less than one day, and then normalizing the estimation via
+energy modeling.
+
 The supplementary material contains similar figures showing biased
 deviation distribution, as well as the same results when continuing the
 randomized M&V for 24 months. Those results indicate the same
@@ -1783,24 +1802,30 @@ df_MW_A %>%
 
 ## Sampling ratio impact
 
-In our previous study [@raftery2024], we recommended that building
-owners adjust the sampling ratio after meeting all stopping criteria, as
-continuing baseline sampling helps maintain M&V accuracy with limited
-impact on the energy savings actually achieved by the building. To
-further examine its impact on M&V accuracy, Figure \@ref(fig:abscont)
-compares two sampling ratios (20%/80% and 10%/90%) and two associated
+The sampling ratio determines the likelihood that the M&V analyst will
+apply the baseline or intervention, and we recommend using an equal
+sampling ratio at the outset of the M&V process. In our previous study
+[@raftery2024], we also recommended that building owners adjust the
+sampling ratio by reducing the amount of baseline sampling after meeting
+all stopping criteria. This is because, although sampling the baseline
+allows for tracking changes within buildings, it can also limit
+opportunities for building owners to implement the intervention, thereby
+reducing potential savings. To further examine its impact on M&V
+accuracy, Figure \@ref(fig:abscont) compares two sampling ratios
+(baseline/intervention: 20%/80% and 10%/90%) and two associated
 scenarios with the previously shown results when sampling at 50%/50%.
 The "Continued" group (shown in a lighter color) follows the standard
 randomized M&V framework with an initial 50%/50% sampling ratio, then
 switches to the indicated sampling ratio after satisfying the stopping
 criteria, continuing this until the end of the two-year period. In
 contrast, the "Randomized" group uses the indicated ratio from the
-outset and continues throughout the two year. Subplot (a) shows that
-absolute error is significantly lower without the initial 50%/50%
+outset and continues throughout the two years. The figure below shows
+that absolute error is significantly lower without the initial 50%/50%
 sampling, due to baseline drift and non-routine events that most
 buildings experience over two years (as noted in Section
-\@ref(filter-and-clean-dataset)). Subplot (b) confirms this finding even
-after weather normalization.
+\@ref(filter-and-clean-dataset)). This is also the case even with
+weather normalization, the results of which are included in the
+supplementary material.
 
 ```{r abscont, fig.cap="Comparison of different sampling ratio impact on M&V estimation accuracy over the entire 24 months (previous results of sampling at 50%/50% shown on the left side of the red dashed line)", fig.height=4, fig.width=9}
 
@@ -1887,49 +1912,58 @@ less influenced by non-routine events, the differences between sampling
 strategies are much reduced in this subset and can be largely corrected
 through weather normalization modeling.
 
-As shown in the previous Figure \@ref(fig:abstract), the highest
-accuracy is achieved when sampling at a 50%/50% ratio. Therefore, we
-continue to recommend that building owners follow the proposed framework
-and maintain a 50%/50% sampling ratio until all stopping criteria are
-met. The additional results from Figure \@ref(fig:abscont) further add
-to the guidance: if building baseline changes, retrofit savings
-estimation should simply discard the existing baseline measurements and
-revert back to 50%/50% sampling ratio as described in our framework. On
-the other hand, if the building owner has decided to test for two years
-and would like to capitalize more savings at the same time, sampling
-between the baseline and intervention at 10%/90% from start is
-recommended.
+As shown in the previous overall M&V method comparison Figure
+\@ref(fig:abstract) in the Results section (plotted again on the left
+side of the red dashed line), the highest accuracy is achieved when
+sampling at a 50%/50% ratio. Therefore, we continue to recommend that
+building owners follow the proposed framework and flow chart from our
+previous study [@raftery2024], and maintain a 50%/50% sampling ratio
+until all stopping criteria are met. If building owners choose to adjust
+the sampling ratio afterwards and a change in the building baseline is
+detected, the updated savings estimation should exclude the baseline
+measured prior to the sampling ratio change. As shown in the figure,
+additional baseline measurements before the ratio change do not
+contribute to reducing errors or uncertainty. The results also indicate
+that, if the building owner plans to conduct a two-year test and aims to
+maximize savings, it is recommended to implement a 10%/90% sampling
+ratio between the baseline and intervention from the outset.
 
 ## Blocking period impact
 
-Selecting different blocking periods affects how frequently the M&V
-analyst evaluates stopping criteria and may influence the decision when
-a savings is detected at a sufficient level of certainty. Here, we
-summarize the advantages and disadvantages of shorter versus longer
-blocking periods. As discussed in our previous study, the second step of
-this randomized M&V method involves choosing an appropriate blocking
-period to minimize potential biases caused by incomplete randomization.
-For most practical scenarios, we recommend a blocking period of
-approximately 12 to 16 weeks, as it typically covers the duration of a
-season, ensuring a representative sampling of operational conditions. In
-general, longer blocking periods are advantageous when evaluating
-multiple intervention strategies or using sampling intervals greater
-than one day. In such cases, extended blocking ensures a balanced
-distribution of both day-of-week and outdoor weather conditions.
+A blocking period refers to the given period during which an equal
+number of baseline and intervention days are sampled, and the associated
+day-of-week factors are balanced between the two. Selecting different
+blocking periods affects how frequently the M&V analyst evaluates
+stopping criteria and may influence the decision when the saving is
+detected at a sufficient level of certainty. Here, we summarize the
+advantages and disadvantages of shorter versus longer blocking periods.
+The second step of the randomized M&V method involves choosing an
+appropriate blocking period to minimize potential biases caused by
+incomplete randomization. For most practical scenarios, we recommend a
+blocking period of approximately 12 to 16 weeks, as it typically covers
+the duration of a season, ensuring a representative sampling of
+operational conditions. In general, longer blocking periods are
+advantageous when evaluating multiple intervention strategies or using
+sampling intervals greater than one day. In such cases, extended
+blocking ensures a balanced distribution of both day-of-week and outdoor
+weather conditions.
 
 Opting for a shorter blocking period, such as 6 weeks, has the potential
-benefit of allowing the stopping criteria to be met earlier. We plotted
-the percentage of buildings finishing all stopping criteria when the
-blocking period is set as 6 weeks in Figure \@ref(fig:6weekblock). As a
-result, when compared to Figure \@ref(fig:intervaltime), the only
-difference we found is when sampling at a daily interval and not
-dropping non-consecutive days, 12% of buildings can get an estimate
-earlier. This means those buildings are likely to meet all stopping
-criteria between 12 weeks and 18 weeks but when sampled over a 12-week
-block, the savings can only be determined at week 24. Although sampled
-baseline and intervention days can be different when the blocking period
-is changed, the results indicate most buildings still require 9 months
-to meet outdoor weather conditions when starting M&V from January.
+benefit of allowing the stopping criteria to be met earlier. We assessed
+the use of a 6-week blocking period to see whether buildings finished
+earlier in the original 12-week blocking period can reduce the time
+required with a shorter blocking period. We plotted the percentage of
+buildings finishing all stopping criteria when the blocking period is
+set as 6 weeks in Figure \@ref(fig:6weekblock). When compared to Figure
+\@ref(fig:intervaltime), the only difference we found is when sampling
+at a daily interval and not dropping non-consecutive days, 12% of
+buildings can get an estimate earlier. This means those buildings are
+likely to meet all stopping criteria between 12 weeks and 18 weeks but
+when sampled over a 12-week block, the savings can only be determined at
+week 24. Although sampled baseline and intervention days can be
+different when the blocking period is changed, the results indicate most
+buildings still require 9 months to meet outdoor weather conditions when
+starting M&V from January.
 
 ```{r 6weekblock, fig.cap = "Time required to satisfy all stopping criteria when using a 6-week blocking period"}
 
@@ -1944,7 +1978,10 @@ a shorter blocking period can reduce the adverse impact of missing or
 problematic data. For example, if an intervention requires fine-tuning
 after initial implementation, removing data from the first blocking
 period would be less detrimental compared to longer blocking periods,
-preserving the overall integrity of the experiment.
+preserving the overall integrity of the experiment. Based on these
+analyses we recommend to use a blocking period of 6 weeks when sampled
+at a daily interval, but a longer blocking period such as 12 weeks when
+a longer sampling interval is required.
 
 ## M&V starting time impact
 
@@ -1957,15 +1994,16 @@ showed that M&V accuracy, especially model fitting, depends on both
 monitoring duration and starting month, with optimal modeling achieved
 when sufficient weather variation is captured [@singh_predicting_2014].
 To assess this impact in our switchback randomization, we repeated the
-randomized M&V analysis for all buildings using a new start date in
-March. As shown in Figure \@ref(fig:startT), the new M&V process results
-in a noticeable delay in satisfying the stopping criteria. Compared to
-Figure \@ref(fig:intervaltime), where a January start allowed most
-buildings to finish within 36 weeks, a March start extended the required
-duration to 48 weeks for the majority of buildings. Furthermore, when a
-longer sampling interval is used or non-consecutive days are excluded
-(to avoid carryover effects), some buildings may require up to 60 weeks
-to complete the randomized M&V. As expected, to collect sufficient data
+randomized M&V analysis for all buildings using a new start date in the
+swing season in March. As shown in Figure \@ref(fig:startT), the new M&V
+process results in a noticeable delay in satisfying the stopping
+criteria. Compared to Figure \@ref(fig:intervaltime), where a January
+start allowed most buildings to finish within 36 weeks (\~8 months), a
+March start extended the required duration to 48 weeks (\~11 months) for
+the majority of buildings. Furthermore, when a longer sampling interval
+is used or non-consecutive days are excluded (to avoid carryover
+effects), some buildings may require up to 60 weeks (\~14 months) to
+complete the randomized M&V. As expected, to collect sufficient data
 representing winter conditions, the sampling may need to continue until
 the next January (around week 48). However, as the overall data
 collection period extends, the influence of dropping non-consecutive
@@ -1989,68 +2027,68 @@ swing season.
 
 ## Limitations
 
-Aside from the general limitation that this method only applies to the
-subset of interventions in buildings that are easily switchable, we
-identify two key limitations in this study:
-
-1.  The simulated intervention (chilled water temperature reset) remains
-    somewhat generic and simplistic, considering the diverse building
-    types and climate zones in the BDG2 dataset. As the primary focus is
-    to accurately detect the intervention (or any intervention) effect
-    so for simplicity, we applied the parameters listed in Table 1
-    uniformly across all buildings.
-2.  For the main analysis, we assumed no carryover effect and that a
-    daily sampling interval would suffice for most commercial buildings,
-    but certainly exceptions exist. However, in the discussion, we
-    addressed such concern by comparing different sampling strategies
-    and the impact of dropping measurements from non-consecutive days.
+We identify two key limitations in this study. First, the simulated
+intervention (chilled water temperature reset) remains somewhat generic
+and simplistic, considering the diverse building types and climate zones
+in the BDG2 dataset. As the primary focus is to accurately detect the
+intervention (or any intervention) effect so for simplicity, we applied
+the parameters listed in Table 1 uniformly across all buildings.
+Secondly, for the main analysis, we assumed no carryover effect and that
+a daily sampling interval would suffice for most commercial buildings,
+but certainly exceptions exist. However, in the sensitivity analysis, we
+addressed such concern by comparing different sampling strategies and
+the impact of dropping measurements from non-consecutive days.
 
 # Conclusion
 
-This research demonstrated the application of a randomized
-whole-building measurement and verification (M&V) method, comparing its
-performance to the conventional approach described in the IPMVP and in
-ASHRAE Guideline 14, using a large, open-source commercial building
-dataset. The randomized M&V method leverages the randomized experimental
-design concept from other scientific fields, along with statistical
-sequential inference techniques, to determine when savings are detected
-at sufficient certainty. We used a virtual control retrofit
-case---resetting the chilled water setpoint based on outdoor weather
-conditions---and applied it to over 600 filtered commercial buildings.
-By comparing the savings estimations of the conventional method with the
-novel randomized method, we found that the randomized approach provides
-faster and more robust savings estimations.
+We assessed the performance of a randomized whole-building measurement
+and verification (M&V) method by comparing it to the conventional M&V
+approach described in the IPMVP and in ASHRAE Guideline 14, using a
+large, open-source commercial building dataset. The randomized M&V
+method leverages the randomized experimental design concept from other
+scientific fields, along with statistical sequential inference
+techniques, to determine when savings are detected at sufficient
+certainty. We used a virtual control retrofit case, resetting the
+chilled water setpoint based on outdoor temperature, and applied it to
+over 600 commercial buildings. By comparing the savings estimations of
+the conventional method with the novel randomized method, we found that
+the randomized approach provides faster and more robust savings
+estimations.
 
 Specifically, we showed that throughout 11 different locations assessed
 in this study, the randomized M&V can provide a savings estimation after
 36 weeks (with the majority finished by 24 weeks) once all stopping
 criteria are satisfied. In contrast, the conventional method requires a
 full range of baseline and intervention measurements under normal
-operating conditions, typically taking 6 - 9 months for each phase. Most
-importantly, we verified that with a reduced M&V timeline, the
-randomized method can estimate savings more accurately by showing that
-the absolute error is only 1 - 2% for a typical building. Whereas for
-the much longer two-year conventional method, the estimation error was
-approximately 5% in a typical building. We also evaluated the impact of
-non-routine events, especially more gradual and subtle operational drift
-on the proposed M&V method and the results show that baseline changes in
-the post-retrofit period can deviate savings estimated using the
-conventional method. In contrast, we found that those events have a very
-negligible impact on the savings estimated using the randomized method,
-demonstrating robustness to this issue. Furthermore, we consider
-scenarios where there is a known carryover effect from switching between
-strategies in the building and assess the impact of dropping samples
-when the strategy is non-consecutive and varying the sampling interval.
-Through that process, we showed that for the typical building, if
-carryover is present, using a 2-day sampling interval and dropping days
-with non-consecutive control strategies operating yields the optimal
-design for the median building in this dataset. Lastly, we investigated
-the time required to complete the randomized M&V method under different
-scenarios. We found that measuring a sufficient range of outdoor weather
-conditions remains the most stringent criterion. However, even in the
-most non-ideal case, the randomized method can still produce an estimate
-much faster than two years, and produces an estimate with far lower
-error.
+operating conditions, typically requiring each operational strategy to
+be measured for a full year. Moreover, we verified that, even if the
+randomized M&V requires less time, it is more accurate showing an
+absolute error of 1 - 2%. Whereas for the much longer two-year
+conventional method, the estimation error was approximately 5%. 
+
+We also evaluated the impact of non-routine events, particularly more
+gradual and subtle operational drift, on the proposed M&V method; the
+results show that baseline changes in the post-retrofit period are very
+common for realistic buildings and can deviate savings estimated using
+the conventional method. In contrast, we found that those events have a
+very negligible impact on the savings estimated using the randomized
+method, demonstrating robustness to this issue. 
+
+Furthermore, we considered scenarios where there is a known carryover
+effect from switching between strategies in the building and assessed
+the impact of dropping samples when the strategy is non-consecutive and
+varying the sampling interval. Through that process, we showed that for
+the typical building, when carryover is present, using a 2-day sampling
+interval and excluding days with non-consecutive control strategies
+operating yields the optimal design for the median building in this
+dataset. 
+
+Lastly, we investigated the sensitivity of time required to complete the
+randomized M&V method under different scenarios. We found that measuring
+a sufficient range of outdoor weather conditions remains the most
+stringent criterion. However, even in the most non-ideal case, the
+randomized method can still produce an estimate much faster than two
+years and  and with significantly lower error.
 
 # CRediT authorship contribution statement
 
@@ -2059,10 +2097,10 @@ Methodology, Investigation, Software, Writing - original draft,
 Writing - review & editing. **Paul Raftery**: Conceptualization, Funding
 acquisition, Formal analysis, Methodology, Investigation, Project
 administration, Supervision, Writing - review & editing. **Stefano
-Schiavon**: Conceptualization, Methodology, Investigation, Supervision,
-Writing - review & editing. **Carlos Duarte**: Methodology,
-Investigation, Supervision, Writing - review & editing. **Gail Brager**:
-Supervision, Writing - review & editing.
+Schiavon**: Conceptualization, Methodology, Visualizations,
+Investigation, Supervision, Writing - review & editing. **Carlos
+Duarte**: Methodology, Investigation, Supervision, Writing - review &
+editing. **Gail Brager**: Supervision, Writing - review & editing.
 
 # Reproducibility
 
@@ -2071,9 +2109,12 @@ A reproducible example with analysis code is available (MIT license) at
 
 # Declaration of competing interest
 
-The authors declare that they have no known competing financial
-interests or personal relationships that could have appeared to
-influence the work reported in this paper.
+The Center for the Built Environment (CBE) at the University of
+California, Berkeley, with which the authors are affiliated, is advised,
+and funded in part, by many partners that represent a diversity of
+organizations from the building industry, including manufacturers,
+building owners, facility managers, contractors, architects, engineers,
+government agencies, and utilities.
 
 # Acknowledgements
 
